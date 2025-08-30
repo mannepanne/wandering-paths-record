@@ -18,12 +18,21 @@ export default {
 			}
 		},
 		extend: {
+			fontFamily: {
+				'geo': ['Space Grotesk', 'system-ui', 'sans-serif'],
+				'mono': ['JetBrains Mono', 'monospace'],
+			},
 			colors: {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',
 				background: 'hsl(var(--background))',
 				foreground: 'hsl(var(--foreground))',
+				'warm-stone': 'hsl(var(--warm-stone))',
+				'burnt-orange': 'hsl(var(--burnt-orange))',
+				'deep-burgundy': 'hsl(var(--deep-burgundy))',
+				'olive-green': 'hsl(var(--olive-green))',
+				'charcoal': 'hsl(var(--charcoal))',
 				primary: {
 					DEFAULT: 'hsl(var(--primary))',
 					foreground: 'hsl(var(--primary-foreground))'

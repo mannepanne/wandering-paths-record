@@ -1,0 +1,17 @@
+I want to build a mobile enabled website where I can record places I want to visit. Physical places like restaurants (that's the top priority), galleries, exhibitions, libraries, bookshops, and in other ways interesting locations. The key is that it's a physical place.
+
+Purpose of this is to make it possible for me to really quickly record an interesting place that I want to visit in the future, and later, when I know I am going to that area I can easily look up local things I have recorded in the past.
+
+A new place is added simply by adding their website, and relevant meta data like business name or place name, address, what type of place it is (eg restaurant, gallery, monument...), 1 to 5 star rating based on what people say about it online, etc, gets extracted from public web sources and stored in a listing. If it is a place serving food it records what kind of food and any must try dishes.
+
+Places can have either a status of "must visit" or "visited".
+
+When a place is first added, it always gets the status "must visit". The status is later manually changed to "visited" after I have been there.
+
+For places that are "visited" I can add my own separate 1 to 5 star rating. I can also add a short description of my experience. I want to be able to record how many times I have been there, if I decide to go back again.
+
+There should be a password protected admin area to edit all the data (a magic link sign in is fine, it will only be me as the only user).
+
+There should be a pubilc facing area that shows the places on a Google Map, and it should also be possible to see a list. It should be possible to filter which places are shown using "all" or specific types of places, and see only "must try", or see only "visited".
+
+Design wise I want a modern design, preferably something Bauhaus / brutalist inspired. Palette should be muted colours, with an autumn feel. Typography needs to be distinctive, and suitable for a geographical location based theme.

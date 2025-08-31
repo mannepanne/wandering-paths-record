@@ -1,73 +1,96 @@
-# Welcome to your Lovable project
+# Restaurant Record
 
-## Project info
+A restaurant curation and discovery application for tracking exceptional dining experiences around the world.
 
-**URL**: https://lovable.dev/projects/3e6fb383-2f1c-4c45-b00b-37588736b5db
+## Overview
 
-## How can I edit this code?
+Restaurant Record helps you discover, organize, and remember exceptional restaurants. Track must-visit dining destinations, record culinary experiences, and build your own curated collection of remarkable restaurants.
 
-There are several ways of editing your application.
+### Key Features
 
-**Use Lovable**
+- **Restaurant Discovery**: Curate exceptional restaurants from around the world
+- **Personal Tracking**: Mark restaurants as "must-visit" or "visited" with personal ratings and notes
+- **Smart Filtering**: Filter by cuisine type and visit status
+- **Rich Details**: Store cuisine types, must-try dishes, price ranges, atmosphere, dietary options, and booking requirements
+- **Admin Panel**: Add restaurants via URL extraction with intelligent content analysis
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/3e6fb383-2f1c-4c45-b00b-37588736b5db) and start prompting.
+## Tech Stack
 
-Changes made via Lovable will be committed automatically to this repo.
+- **Frontend**: React 18 + TypeScript + Vite
+- **UI Components**: shadcn/ui + Radix UI primitives
+- **Styling**: Tailwind CSS with custom earth-tone design system
+- **State Management**: React Query (TanStack Query)
+- **Routing**: React Router v6
+- **Backend**: Planned Supabase integration
 
-**Use your preferred IDE**
+## Development
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Prerequisites
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- Node.js (install with [nvm](https://github.com/nvm-sh/nvm#installing-and-updating))
+- npm
 
-Follow these steps:
+### Getting Started
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
+```bash
+# Install dependencies
 npm i
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start development server
 npm run dev
+
+# Build for production
+npm run build
+
+# Run linter
+npm run lint
+
+# Preview production build
+npm run preview
 ```
 
-**Edit a file directly in GitHub**
+### Project Structure
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```
+src/
+├── components/
+│   ├── ui/           # shadcn/ui components
+│   ├── PlaceCard.tsx # Core restaurant display component
+│   ├── AdminPanel.tsx # Admin interface for adding restaurants
+│   ├── FilterBar.tsx # Restaurant filtering by cuisine
+│   └── MapView.tsx   # Map view toggle
+├── pages/
+│   ├── Index.tsx     # Main application
+│   └── NotFound.tsx  # 404 page
+├── hooks/            # Custom React hooks
+└── lib/              # Utilities
+```
 
-**Use GitHub Codespaces**
+## Design System
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+The app uses an earth-toned "brutalist" design aesthetic:
 
-## What technologies are used for this project?
+- **Colors**: Warm stone, burnt orange, deep burgundy, olive green, charcoal
+- **Typography**: Space Grotesk for headings, JetBrains Mono for code/data
+- **Components**: Bold, high-contrast UI with strong visual hierarchy
 
-This project is built with:
+## Current Status
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+The application currently runs with mock data. Full functionality requires:
 
-## How can I deploy this project?
+- [ ] Supabase database setup
+- [ ] Magic link authentication
+- [ ] Automated restaurant metadata extraction
+- [ ] Map integration for restaurant locations
 
-Simply open [Lovable](https://lovable.dev/projects/3e6fb383-2f1c-4c45-b00b-37588736b5db) and click on Share -> Publish.
+## Deployment
 
-## Can I connect a custom domain to my Lovable project?
+This project is built with [Lovable](https://lovable.dev) and can be deployed directly through their platform:
 
-Yes, you can!
+1. Visit the [Lovable Project](https://lovable.dev/projects/3e6fb383-2f1c-4c45-b00b-37588736b5db)
+2. Click Share → Publish
+3. Optional: Connect a custom domain via Project → Settings → Domains
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## Contributing
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+This is a personal curation tool, but the codebase demonstrates modern React patterns with TypeScript, component-based architecture, and design system implementation.

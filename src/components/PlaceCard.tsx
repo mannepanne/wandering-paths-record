@@ -2,35 +2,21 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MapPin, Star, Globe, Clock } from "lucide-react";
-
-interface Place {
-  id: string;
-  name: string;
-  type: string;
-  address: string;
-  website?: string;
-  rating?: number;
-  status: 'must-visit' | 'visited';
-  personalRating?: number;
-  description?: string;
-  visitCount?: number;
-  cuisine?: string;
-  mustTryDishes?: string[];
-}
+import { Restaurant } from "@/types/place";
 
 interface PlaceCardProps {
-  place: Place;
+  place: Restaurant;
   onStatusChange?: (id: string, status: 'must-visit' | 'visited') => void;
   onEdit?: (id: string) => void;
 }
 
 export const PlaceCard = ({ place, onStatusChange, onEdit }: PlaceCardProps) => {
-  const getTypeColor = (type: string) => {
-    switch (type.toLowerCase()) {
-      case 'restaurant': return 'bg-burnt-orange text-white';
-      case 'gallery': return 'bg-deep-burgundy text-white';
-      case 'library': return 'bg-olive-green text-white';
-      case 'bookshop': return 'bg-charcoal text-white';
+  const getPriceColor = (priceRange?: string) => {
+    switch (priceRange) {
+      case '$': return 'bg-olive-green text-white';
+      case '$$': return 'bg-burnt-orange text-white';
+      case '$$$': return 'bg-deep-burgundy text-white';
+      case '$$$$': return 'bg-charcoal text-white';
       default: return 'bg-secondary text-secondary-foreground';
     }
   };
@@ -55,27 +41,34 @@ export const PlaceCard = ({ place, onStatusChange, onEdit }: PlaceCardProps) => 
               {place.name}
             </CardTitle>
             <div className="flex items-center gap-2">
-              <Badge className={`${getTypeColor(place.type)} font-mono text-xs`}>
-                {place.type}
-              </Badge>
+              {place.cuisine && (
+                <Badge className="bg-burnt-orange text-white font-mono text-xs">
+                  {place.cuisine}
+                </Badge>
+              )}
+              {place.price_range && (
+                <Badge className={`${getPriceColor(place.price_range)} font-mono text-xs`}>
+                  {place.price_range}
+                </Badge>
+              )}
               <Badge variant={place.status === 'visited' ? 'default' : 'secondary'} className="font-mono text-xs">
                 {place.status}
               </Badge>
             </div>
           </div>
           <div className="flex flex-col items-end gap-1">
-            {place.rating && (
+            {place.public_rating && (
               <div className="flex items-center gap-1">
-                {renderStars(place.rating)}
+                {renderStars(Math.round(place.public_rating))}
                 <span className="text-xs font-mono text-muted-foreground ml-1">
-                  {place.rating}/5
+                  {place.public_rating}/5
                 </span>
               </div>
             )}
-            {place.personalRating && place.status === 'visited' && (
+            {place.personal_rating && place.status === 'visited' && (
               <div className="flex items-center gap-1">
                 <span className="text-xs font-mono text-muted-foreground">Me:</span>
-                {renderStars(place.personalRating)}
+                {renderStars(place.personal_rating)}
               </div>
             )}
           </div>
@@ -88,17 +81,31 @@ export const PlaceCard = ({ place, onStatusChange, onEdit }: PlaceCardProps) => 
           <p className="text-sm text-muted-foreground leading-relaxed">{place.address}</p>
         </div>
 
-        {place.cuisine && (
+        {place.atmosphere && (
           <div className="text-sm">
-            <span className="font-medium text-foreground">Cuisine: </span>
-            <span className="text-muted-foreground">{place.cuisine}</span>
+            <span className="font-medium text-foreground">Atmosphere: </span>
+            <span className="text-muted-foreground">{place.atmosphere}</span>
           </div>
         )}
 
-        {place.mustTryDishes && place.mustTryDishes.length > 0 && (
+        {place.must_try_dishes && place.must_try_dishes.length > 0 && (
           <div className="text-sm">
             <span className="font-medium text-foreground">Must try: </span>
-            <span className="text-muted-foreground">{place.mustTryDishes.join(', ')}</span>
+            <span className="text-muted-foreground">{place.must_try_dishes.join(', ')}</span>
+          </div>
+        )}
+
+        {place.dietary_options && place.dietary_options.length > 0 && (
+          <div className="text-sm">
+            <span className="font-medium text-foreground">Dietary: </span>
+            <span className="text-muted-foreground">{place.dietary_options.join(', ')}</span>
+          </div>
+        )}
+
+        {place.booking_required !== undefined && (
+          <div className="text-sm">
+            <span className="font-medium text-foreground">Booking: </span>
+            <span className="text-muted-foreground">{place.booking_required ? 'Required' : 'Walk-ins welcome'}</span>
           </div>
         )}
 
@@ -109,10 +116,10 @@ export const PlaceCard = ({ place, onStatusChange, onEdit }: PlaceCardProps) => 
           </div>
         )}
 
-        {place.visitCount && place.visitCount > 1 && (
+        {place.visit_count && place.visit_count > 1 && (
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
             <Clock className="w-4 h-4" />
-            <span>Visited {place.visitCount} times</span>
+            <span>Visited {place.visit_count} times</span>
           </div>
         )}
 

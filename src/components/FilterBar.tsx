@@ -1,24 +1,35 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Filter } from "lucide-react";
+import { Filter, MapPin, Navigation, Search, X } from "lucide-react";
 
 interface FilterBarProps {
-  selectedType: string;
+  selectedCuisine: string;
   selectedStatus: string;
-  onTypeChange: (type: string) => void;
+  onCuisineChange: (cuisine: string) => void;
   onStatusChange: (status: string) => void;
-  placeCount: number;
+  restaurantCount: number;
+  onLocationSearch?: (location: string) => void;
+  onNearMe?: () => void;
+  searchLocation?: string;
 }
 
-const placeTypes = [
-  { value: "all", label: "All Places" },
-  { value: "restaurant", label: "Restaurants" },
-  { value: "gallery", label: "Galleries" },
-  { value: "library", label: "Libraries" },
-  { value: "bookshop", label: "Bookshops" },
-  { value: "exhibition", label: "Exhibitions" },
-  { value: "monument", label: "Monuments" },
+const cuisineTypes = [
+  { value: "all", label: "All Cuisines" },
+  { value: "Italian", label: "Italian" },
+  { value: "French", label: "French" },
+  { value: "British", label: "British" },
+  { value: "Indian", label: "Indian" },
+  { value: "Chinese", label: "Chinese" },
+  { value: "Japanese", label: "Japanese" },
+  { value: "Mexican", label: "Mexican" },
+  { value: "Thai", label: "Thai" },
+  { value: "Mediterranean", label: "Mediterranean" },
+  { value: "American", label: "American" },
+  { value: "Turkish", label: "Turkish" },
+  { value: "Lebanese", label: "Lebanese" },
 ];
 
 const statusOptions = [
@@ -28,31 +39,116 @@ const statusOptions = [
 ];
 
 export const FilterBar = ({ 
-  selectedType, 
+  selectedCuisine, 
   selectedStatus, 
-  onTypeChange, 
+  onCuisineChange, 
   onStatusChange, 
-  placeCount 
+  restaurantCount,
+  onLocationSearch,
+  onNearMe,
+  searchLocation
 }: FilterBarProps) => {
+  const [locationInput, setLocationInput] = useState(searchLocation || "");
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+
+  const handleLocationSearch = () => {
+    if (locationInput.trim() && onLocationSearch) {
+      onLocationSearch(locationInput.trim());
+    }
+  };
+
+  const handleNearMe = async () => {
+    if (!onNearMe) return;
+    
+    setIsLoadingLocation(true);
+    try {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          () => {
+            onNearMe();
+            setIsLoadingLocation(false);
+          },
+          (error) => {
+            console.error('Location access denied:', error);
+            setIsLoadingLocation(false);
+          }
+        );
+      } else {
+        console.error('Geolocation not supported');
+        setIsLoadingLocation(false);
+      }
+    } catch (error) {
+      console.error('Error getting location:', error);
+      setIsLoadingLocation(false);
+    }
+  };
+
+  const clearLocationSearch = () => {
+    setLocationInput("");
+    if (onLocationSearch) {
+      onLocationSearch("");
+    }
+  };
   return (
     <div className="bg-card border-2 border-border p-4 rounded-sm card-shadow">
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-muted-foreground" />
-          <span className="font-geo font-medium text-foreground">Filters</span>
+      <div className="flex flex-wrap gap-3 items-center justify-between">
+        {/* Location Search */}
+        <div className="flex items-center gap-2 min-w-0 flex-1 max-w-lg">
+          <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+          <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">Near:</span>
+          <div className="relative flex-1 min-w-0">
+            <Input
+              placeholder="City, address..."
+              value={locationInput}
+              onChange={(e) => setLocationInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleLocationSearch()}
+              className="border-charcoal pr-8"
+            />
+            {locationInput && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearLocationSearch}
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 p-0 hover:bg-muted"
+              >
+                <X className="w-3 h-3" />
+              </Button>
+            )}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleLocationSearch}
+            disabled={!locationInput.trim()}
+            className="gap-1"
+          >
+            <Search className="w-3 h-3" />
+            Search
+          </Button>
+          <Button
+            variant="brutalist"
+            size="sm"
+            onClick={handleNearMe}
+            disabled={isLoadingLocation}
+            className="gap-1 bg-burnt-orange hover:bg-burnt-orange/90 text-white"
+          >
+            <Navigation className="w-3 h-3" />
+            {isLoadingLocation ? 'Locating...' : 'Near Me'}
+          </Button>
         </div>
         
+        {/* Cuisine and Status Filters */}
         <div className="flex flex-wrap gap-3 items-center">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-muted-foreground">Type:</span>
-            <Select value={selectedType} onValueChange={onTypeChange}>
+            <span className="text-sm font-medium text-muted-foreground">Cuisine:</span>
+            <Select value={selectedCuisine} onValueChange={onCuisineChange}>
               <SelectTrigger className="w-40 border-charcoal">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {placeTypes.map((type) => (
-                  <SelectItem key={type.value} value={type.value}>
-                    {type.label}
+                {cuisineTypes.map((cuisine) => (
+                  <SelectItem key={cuisine.value} value={cuisine.value}>
+                    {cuisine.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -75,9 +171,6 @@ export const FilterBar = ({
             </Select>
           </div>
           
-          <Badge variant="secondary" className="font-mono">
-            {placeCount} places
-          </Badge>
         </div>
       </div>
     </div>

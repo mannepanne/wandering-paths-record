@@ -1,62 +1,75 @@
 import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlaceCard } from "@/components/PlaceCard";
 import { FilterBar } from "@/components/FilterBar";
 import { MapView } from "@/components/MapView";
 import { AdminPanel } from "@/components/AdminPanel";
-import { MapPin, Plus, Shield, Compass } from "lucide-react";
-import heroImage from "@/assets/hero-places.jpg";
+import { MapPin, Plus, Shield, Compass, Settings } from "lucide-react";
+import { placesService } from "@/services/places";
+import { Place } from "@/types/place";
 
-// Mock data for demonstration
-const mockPlaces = [
-  {
-    id: "1",
-    name: "Noma",
-    type: "restaurant",
-    address: "Refshalevej 96, 1432 Copenhagen, Denmark",
-    website: "https://noma.dk",
-    rating: 5,
-    status: "must-visit" as const,
-    cuisine: "Nordic",
-    mustTryDishes: ["Fermented vegetables", "Sea buckthorn", "Pine oil"]
-  },
-  {
-    id: "2", 
-    name: "Tate Modern",
-    type: "gallery",
-    address: "Bankside, London SE1 9TG, UK",
-    website: "https://tate.org.uk",
-    rating: 4,
-    status: "visited" as const,
-    personalRating: 5,
-    description: "Incredible contemporary art collection. The turbine hall installation was breathtaking.",
-    visitCount: 2
-  },
-  {
-    id: "3",
-    name: "Shakespeare and Company",
-    type: "bookshop", 
-    address: "37 Rue de la Bûcherie, 75005 Paris, France",
-    website: "https://shakespeareandcompany.com",
-    rating: 4,
-    status: "visited" as const,
-    personalRating: 4,
-    description: "Charming English bookstore with a rich literary history. Perfect for browsing."
-  }
-];
 
 const Index = () => {
   const [currentView, setCurrentView] = useState<'public' | 'admin'>('public');
   const [isMapView, setIsMapView] = useState(false);
   const [selectedType, setSelectedType] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
-
-  const filteredPlaces = mockPlaces.filter(place => {
-    const typeMatch = selectedType === 'all' || place.type === selectedType;
-    const statusMatch = selectedStatus === 'all' || place.status === selectedStatus;
-    return typeMatch && statusMatch;
+  const [searchLocation, setSearchLocation] = useState('');
+  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
+  
+  const queryClient = useQueryClient();
+  
+  // Fetch places from Supabase
+  const { data: places = [], isLoading, error } = useQuery({
+    queryKey: ['places', selectedType, selectedStatus],
+    queryFn: () => placesService.getFilteredPlaces({
+      type: selectedType,
+      status: selectedStatus
+    })
   });
+  
+  // Mutation for updating place status
+  const updatePlaceStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: 'must-visit' | 'visited' }) => 
+      placesService.updatePlaceStatus(id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['places'] });
+    }
+  });
+
+  const handleLocationSearch = (location: string) => {
+    setSearchLocation(location);
+    // TODO: Implement actual location-based filtering when backend is ready
+    console.log('Searching for places near:', location);
+  };
+
+  const handleNearMe = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setUserLocation({ lat: latitude, lng: longitude });
+          setSearchLocation('Current location');
+          // TODO: Implement actual nearby filtering when backend is ready
+          console.log('User location:', latitude, longitude);
+        },
+        (error) => {
+          console.error('Error getting location:', error);
+        }
+      );
+    }
+  };
+
+  const handleStatusChange = (id: string, status: 'must-visit' | 'visited') => {
+    updatePlaceStatusMutation.mutate({ id, status });
+  };
+  
+  const handleEdit = (id: string) => {
+    console.log('Editing place:', id);
+    // TODO: Implement edit functionality
+  };
 
   if (currentView === 'admin') {
     return (
@@ -69,7 +82,7 @@ const Index = () => {
           </div>
         </nav>
         <div className="container mx-auto px-4 py-8 max-w-4xl">
-          <AdminPanel />
+          <AdminPanel onBack={() => setCurrentView('public')} />
         </div>
       </div>
     );
@@ -77,77 +90,103 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Hero Section */}
-      <section 
-        className="relative h-96 flex items-center justify-center overflow-hidden"
-        style={{
-          backgroundImage: `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.6)), url(${heroImage})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center'
-        }}
-      >
-        <div className="text-center space-y-6 px-4 max-w-2xl">
-          <h1 className="text-4xl md:text-5xl font-geo font-bold text-white leading-tight">
-            Discover Places Worth Visiting
+      {/* Header Bar */}
+      <nav className="border-b-2 border-border bg-card p-4">
+        <div className="container mx-auto flex justify-between items-center max-w-6xl">
+          <h1 className="text-xl font-geo font-bold text-foreground">
+            Restaurant Record
           </h1>
-          <p className="text-lg text-white/90 leading-relaxed">
-            Curate and explore remarkable locations from restaurants to galleries, 
-            libraries to hidden gems around the world.
-          </p>
-          <div className="flex gap-4 justify-center flex-wrap">
-            <Button variant="hero" size="lg" className="gap-2">
-              <Compass className="w-5 h-5" />
-              Explore Places
+          <div className="flex gap-2">
+            <Button 
+              variant="brutalist" 
+              size="sm"
+              className="gap-2 bg-olive-green hover:bg-olive-green/90 text-white"
+              onClick={() => setIsMapView(!isMapView)}
+            >
+              <MapPin className="w-4 h-4" />
+              {isMapView ? 'List View' : 'Map View'}
             </Button>
             <Button 
-              variant="outline" 
-              size="lg" 
-              className="gap-2 bg-white/10 text-white border-white hover:bg-white hover:text-charcoal"
+              variant="brutalist" 
+              size="sm"
+              className="gap-2"
               onClick={() => setCurrentView('admin')}
             >
-              <Shield className="w-5 h-5" />
-              Admin Access
+              <Shield className="w-4 h-4" />
+              Admin
             </Button>
           </div>
         </div>
-        
-        {/* Decorative elements */}
-        <div className="absolute top-1/4 left-1/4 w-16 h-16 bg-burnt-orange/30 rotate-45 blur-sm"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-20 h-20 bg-deep-burgundy/30 rounded-full blur-sm"></div>
-      </section>
+      </nav>
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8 max-w-6xl">
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Filter Bar */}
           <FilterBar
             selectedType={selectedType}
             selectedStatus={selectedStatus}
             onTypeChange={setSelectedType}
             onStatusChange={setSelectedStatus}
-            placeCount={filteredPlaces.length}
+            placeCount={places.length}
+            onLocationSearch={handleLocationSearch}
+            onNearMe={handleNearMe}
+            searchLocation={searchLocation}
           />
 
-          {/* Map Toggle */}
-          <MapView 
-            isMapView={isMapView}
-            onViewToggle={() => setIsMapView(!isMapView)}
-          />
+          {/* Map View */}
+          {isMapView && (
+            <Card className="border-2 border-border">
+              <CardContent className="p-0">
+                <div className="h-96 bg-gradient-earth rounded-sm flex items-center justify-center relative overflow-hidden">
+                  <div className="text-center space-y-3">
+                    <MapPin className="w-12 h-12 text-olive-green mx-auto" />
+                    <div className="space-y-2">
+                      <h3 className="text-lg font-geo font-medium text-foreground">
+                        Map Integration Ready
+                      </h3>
+                      <p className="text-sm text-muted-foreground max-w-md">
+                        Connect to Supabase to enable interactive map features with your saved places.
+                      </p>
+                    </div>
+                    <Button variant="brutalist" className="gap-2">
+                      <Settings className="w-4 h-4" />
+                      Setup Map
+                    </Button>
+                  </div>
+                  {/* Decorative geometric shapes */}
+                  <div className="absolute top-4 left-4 w-16 h-16 bg-burnt-orange/20 rotate-45"></div>
+                  <div className="absolute bottom-4 right-4 w-12 h-12 bg-deep-burgundy/20 rounded-full"></div>
+                  <div className="absolute top-1/2 left-1/4 w-8 h-8 bg-olive-green/30 rotate-45"></div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Places List */}
           {!isMapView && (
             <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h2 className="text-xl font-geo font-semibold text-foreground">
-                  Places Collection
-                </h2>
-                <Button variant="brutalist" className="gap-2">
-                  <Plus className="w-4 h-4" />
-                  Add Place
-                </Button>
-              </div>
 
-              {filteredPlaces.length === 0 ? (
+              {isLoading ? (
+                <Card className="border-2 border-border">
+                  <CardContent className="py-12 text-center">
+                    <div className="text-lg font-geo font-medium text-foreground mb-2">
+                      Loading places...
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : error ? (
+                <Card className="border-2 border-border border-red-200">
+                  <CardContent className="py-12 text-center">
+                    <div className="text-lg font-geo font-medium text-red-600 mb-2">
+                      Error loading places
+                    </div>
+                    <p className="text-muted-foreground">
+                      {error.message}
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : places.length === 0 ? (
                 <Card className="border-2 border-border">
                   <CardContent className="py-12 text-center">
                     <MapPin className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -161,16 +200,18 @@ const Index = () => {
                 </Card>
               ) : (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {filteredPlaces.map((place) => (
+                  {places.map((place) => (
                     <PlaceCard 
                       key={place.id} 
-                      place={place}
-                      onStatusChange={(id, status) => {
-                        console.log(`Changing status of ${id} to ${status}`);
+                      place={{
+                        ...place,
+                        rating: place.public_rating,
+                        personalRating: place.personal_rating,
+                        visitCount: place.visit_count,
+                        mustTryDishes: place.must_try_dishes
                       }}
-                      onEdit={(id) => {
-                        console.log(`Editing place ${id}`);
-                      }}
+                      onStatusChange={handleStatusChange}
+                      onEdit={handleEdit}
                     />
                   ))}
                 </div>
@@ -184,7 +225,7 @@ const Index = () => {
       <footer className="border-t-2 border-border bg-card mt-16">
         <div className="container mx-auto px-4 py-8 text-center">
           <p className="text-sm text-muted-foreground font-mono">
-            Built with Lovable • Powered by Supabase
+            Places to visit • Sights to see
           </p>
         </div>
       </footer>

@@ -26,6 +26,7 @@ const Index = () => {
     lat: number;
     lng: number;
   } | null>(null);
+  const [editingRestaurant, setEditingRestaurant] = useState<Place | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -85,8 +86,11 @@ const Index = () => {
   };
 
   const handleEdit = (id: string) => {
-    console.log("Editing place:", id);
-    // TODO: Implement edit functionality
+    const restaurant = places.find(place => place.id === id);
+    if (restaurant) {
+      setEditingRestaurant(restaurant);
+      setCurrentView("admin");
+    }
   };
 
   if (currentView === "admin") {
@@ -94,13 +98,25 @@ const Index = () => {
       <div className="min-h-screen bg-background">
         <nav className="border-b-2 border-border bg-card p-4">
           <div className="container mx-auto flex justify-between items-center">
-            <Button variant="ghost" onClick={() => setCurrentView("public")}>
+            <Button 
+              variant="ghost" 
+              onClick={() => {
+                setCurrentView("public");
+                setEditingRestaurant(null);
+              }}
+            >
               ← Back to Public View
             </Button>
           </div>
         </nav>
         <div className="container mx-auto px-4 py-8 max-w-4xl">
-          <AdminPanel onBack={() => setCurrentView("public")} />
+          <AdminPanel 
+            onBack={() => {
+              setCurrentView("public");
+              setEditingRestaurant(null);
+            }}
+            editingRestaurant={editingRestaurant}
+          />
         </div>
       </div>
     );

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,12 +14,14 @@ import { PlacePreview } from "@/components/PlacePreview";
 import { useRestaurantExtraction } from "@/hooks/useRestaurantExtraction";
 import { ExtractedRestaurantData, ExtractionCache } from "@/services/claudeExtractor";
 import { restaurantService } from "@/services/restaurants";
+import { Restaurant } from "@/types/place";
 
 interface AdminPanelProps {
   onBack?: () => void;
+  editingRestaurant?: Restaurant | null;
 }
 
-export const AdminPanel = ({ onBack }: AdminPanelProps) => {
+export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
   const [newPlaceUrl, setNewPlaceUrl] = useState("");
   const [formData, setFormData] = useState<Partial<ExtractedRestaurantData> | null>(null);
   const { user, loading, signOut } = useAuth();
@@ -38,6 +40,50 @@ export const AdminPanel = ({ onBack }: AdminPanelProps) => {
       setCacheStats(ExtractionCache.getStats());
     }
   }, [formData, extraction.isExtracting]);
+
+  // Query to fetch restaurant addresses when editing
+  const { data: restaurantAddresses } = useQuery({
+    queryKey: ['restaurant-addresses', editingRestaurant?.id],
+    queryFn: () => restaurantService.getRestaurantAddresses(editingRestaurant!.id),
+    enabled: !!editingRestaurant,
+  });
+
+  // Populate form when editing a restaurant
+  useEffect(() => {
+    if (editingRestaurant && restaurantAddresses) {
+      setFormData({
+        name: editingRestaurant.name,
+        addressSummary: editingRestaurant.address,
+        website: editingRestaurant.website,
+        publicRating: editingRestaurant.public_rating,
+        description: editingRestaurant.description,
+        cuisine: editingRestaurant.cuisine,
+        mustTryDishes: editingRestaurant.must_try_dishes,
+        priceRange: editingRestaurant.price_range,
+        atmosphere: editingRestaurant.atmosphere,
+        dietaryOptions: editingRestaurant.dietary_options,
+        locations: restaurantAddresses.length > 0 
+          ? restaurantAddresses.map(addr => ({
+              locationName: addr.location_name || '',
+              fullAddress: addr.full_address,
+              phone: addr.phone || '',
+              openingHours: typeof addr.opening_hours === 'object' && addr.opening_hours?.hours 
+                ? addr.opening_hours.hours 
+                : addr.opening_hours || ''
+            }))
+          : [{
+              locationName: '',
+              fullAddress: editingRestaurant.address,
+              phone: '',
+              openingHours: ''
+            }]
+      });
+      setNewPlaceUrl(editingRestaurant.website || '');
+    } else if (editingRestaurant && !restaurantAddresses) {
+      // If we have a restaurant but addresses haven't loaded yet, wait
+      return;
+    }
+  }, [editingRestaurant, restaurantAddresses]);
   
   // Mutation for saving new restaurant
   const createRestaurantMutation = useMutation({
@@ -74,6 +120,67 @@ export const AdminPanel = ({ onBack }: AdminPanelProps) => {
     },
     onError: (error) => {
       console.error('Error creating restaurant:', error);
+    }
+  });
+
+  // Mutation for updating existing restaurant
+  const updateRestaurantMutation = useMutation({
+    mutationFn: (restaurantData: Partial<ExtractedRestaurantData>) => {
+      if (!editingRestaurant) throw new Error("No restaurant to update");
+      
+      const updatedRestaurant = {
+        id: editingRestaurant.id,
+        name: restaurantData.name || editingRestaurant.name,
+        address: restaurantData.addressSummary || editingRestaurant.address,
+        website: restaurantData.website || editingRestaurant.website,
+        public_rating: restaurantData.publicRating,
+        personal_rating: editingRestaurant.personal_rating, // Keep existing personal rating
+        status: editingRestaurant.status, // Keep existing status
+        description: restaurantData.description,
+        cuisine: restaurantData.cuisine,
+        must_try_dishes: restaurantData.mustTryDishes,
+        price_range: restaurantData.priceRange,
+        atmosphere: restaurantData.atmosphere,
+        dietary_options: restaurantData.dietaryOptions,
+        chef_name: restaurantData.chefName
+      };
+      
+      // Convert locations to address format for the service
+      const addresses = restaurantData.locations?.map(loc => ({
+        location_name: loc.locationName,
+        full_address: loc.fullAddress,
+        phone: loc.phone,
+        opening_hours: loc.openingHours ? { hours: loc.openingHours } : undefined
+      }));
+      
+      return restaurantService.updateRestaurantWithAddresses(updatedRestaurant, addresses);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['places'] });
+      setFormData(null);
+      setNewPlaceUrl("");
+      extraction.reset();
+      if (onBack) onBack();
+    },
+    onError: (error) => {
+      console.error('Error updating restaurant:', error);
+    }
+  });
+
+  // Mutation for deleting a restaurant
+  const deleteRestaurantMutation = useMutation({
+    mutationFn: (restaurantId: string) => {
+      return restaurantService.deleteRestaurant(restaurantId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['places'] });
+      setFormData(null);
+      setNewPlaceUrl("");
+      extraction.reset();
+      if (onBack) onBack();
+    },
+    onError: (error) => {
+      console.error('Error deleting restaurant:', error);
     }
   });
   
@@ -137,7 +244,11 @@ export const AdminPanel = ({ onBack }: AdminPanelProps) => {
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (formData) {
-      createRestaurantMutation.mutate(formData);
+      if (editingRestaurant) {
+        updateRestaurantMutation.mutate(formData);
+      } else {
+        createRestaurantMutation.mutate(formData);
+      }
     }
   };
 
@@ -149,6 +260,18 @@ export const AdminPanel = ({ onBack }: AdminPanelProps) => {
     setFormData(null);
     setNewPlaceUrl("");
     extraction.reset();
+  };
+
+  const handleDeleteRestaurant = () => {
+    if (!editingRestaurant) return;
+    
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${editingRestaurant.name}"? This action cannot be undone.`
+    );
+    
+    if (confirmed) {
+      deleteRestaurantMutation.mutate(editingRestaurant.id);
+    }
   };
 
   const handleClearCache = () => {
@@ -227,10 +350,13 @@ export const AdminPanel = ({ onBack }: AdminPanelProps) => {
         <CardHeader className="bg-gradient-earth">
           <CardTitle className="flex items-center gap-2 text-foreground">
             <Plus className="w-5 h-5" />
-            Add New Restaurant
+            {editingRestaurant ? 'Edit Restaurant' : 'Add New Restaurant'}
           </CardTitle>
           <CardDescription>
-            Enter a restaurant website URL to automatically extract information using Claude AI
+            {editingRestaurant 
+              ? 'Update the restaurant details below or extract fresh data from a URL'
+              : 'Enter a restaurant website URL to automatically extract information using Claude AI'
+            }
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 pt-6">
@@ -519,18 +645,18 @@ export const AdminPanel = ({ onBack }: AdminPanelProps) => {
                 <Button
                   type="submit"
                   variant="brutalist"
-                  disabled={createRestaurantMutation.isPending || !formData.name}
+                  disabled={(createRestaurantMutation.isPending || updateRestaurantMutation.isPending) || !formData.name}
                   className="gap-2"
                 >
-                  {createRestaurantMutation.isPending ? (
+                  {(createRestaurantMutation.isPending || updateRestaurantMutation.isPending) ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Saving...
+                      {editingRestaurant ? 'Updating...' : 'Saving...'}
                     </>
                   ) : (
                     <>
                       <Plus className="w-4 h-4" />
-                      Save Restaurant
+                      {editingRestaurant ? 'Update Restaurant' : 'Save Restaurant'}
                     </>
                   )}
                 </Button>
@@ -538,10 +664,31 @@ export const AdminPanel = ({ onBack }: AdminPanelProps) => {
                   type="button"
                   variant="outline"
                   onClick={handleClearForm}
-                  disabled={createRestaurantMutation.isPending}
+                  disabled={createRestaurantMutation.isPending || updateRestaurantMutation.isPending}
                 >
                   Clear Form
                 </Button>
+                {editingRestaurant && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleDeleteRestaurant}
+                    disabled={deleteRestaurantMutation.isPending || updateRestaurantMutation.isPending}
+                    className="gap-2 border-red-300 text-red-600 hover:bg-red-50"
+                  >
+                    {deleteRestaurantMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Deleting...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="w-4 h-4" />
+                        Delete Restaurant
+                      </>
+                    )}
+                  </Button>
+                )}
               </div>
             </form>
           </CardContent>

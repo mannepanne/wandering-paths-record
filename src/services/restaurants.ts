@@ -93,6 +93,22 @@ export const restaurantService = {
     return data || [];
   },
 
+  // Get single restaurant by ID
+  async getRestaurantById(id: string): Promise<Restaurant> {
+    const { data, error } = await supabase
+      .from('restaurants')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error('Error fetching restaurant by ID:', error);
+      throw error;
+    }
+
+    return data;
+  },
+
   // Create a new restaurant with addresses
   async createRestaurant(
     restaurant: Omit<Restaurant, 'id' | 'created_at' | 'updated_at' | 'locations'>,
@@ -146,16 +162,28 @@ export const restaurantService = {
     return data;
   },
 
-  // Delete a restaurant (addresses will be deleted automatically due to CASCADE)
+  // Delete a restaurant and all related addresses
   async deleteRestaurant(id: string): Promise<void> {
-    const { error } = await supabase
+    // First, delete all associated addresses
+    const { error: addressError } = await supabase
+      .from('restaurant_addresses')
+      .delete()
+      .eq('restaurant_id', id);
+
+    if (addressError) {
+      console.error('Error deleting restaurant addresses:', addressError);
+      throw addressError;
+    }
+
+    // Then delete the main restaurant record
+    const { error: restaurantError } = await supabase
       .from('restaurants')
       .delete()
       .eq('id', id);
 
-    if (error) {
-      console.error('Error deleting restaurant:', error);
-      throw error;
+    if (restaurantError) {
+      console.error('Error deleting restaurant:', restaurantError);
+      throw restaurantError;
     }
   },
 
@@ -234,6 +262,64 @@ export const restaurantService = {
       console.error('Error deleting restaurant address:', error);
       throw error;
     }
+  },
+
+  // Update restaurant with addresses (for editing functionality)
+  async updateRestaurantWithAddresses(
+    restaurant: Restaurant, 
+    addresses?: Omit<RestaurantAddress, 'id' | 'restaurant_id' | 'created_at' | 'updated_at'>[]
+  ): Promise<Restaurant> {
+    // Update the main restaurant record
+    const { data: updatedRestaurant, error: restaurantError } = await supabase
+      .from('restaurants')
+      .update({ 
+        ...restaurant, 
+        updated_at: new Date().toISOString() 
+      })
+      .eq('id', restaurant.id)
+      .select()
+      .single();
+
+    if (restaurantError) {
+      console.error('Error updating restaurant:', restaurantError);
+      throw restaurantError;
+    }
+
+    // If addresses are provided, replace all existing addresses
+    if (addresses) {
+      // Delete all existing addresses for this restaurant
+      const { error: deleteError } = await supabase
+        .from('restaurant_addresses')
+        .delete()
+        .eq('restaurant_id', restaurant.id);
+
+      if (deleteError) {
+        console.error('Error deleting existing addresses:', deleteError);
+        throw deleteError;
+      }
+
+      // Insert new addresses if any are provided
+      if (addresses.length > 0) {
+        const addressInserts = addresses.map(addr => ({
+          ...addr,
+          restaurant_id: restaurant.id,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }));
+
+        const { error: insertError } = await supabase
+          .from('restaurant_addresses')
+          .insert(addressInserts);
+
+        if (insertError) {
+          console.error('Error inserting new addresses:', insertError);
+          throw insertError;
+        }
+      }
+    }
+
+    // Return the updated restaurant with addresses
+    return this.getRestaurantById(restaurant.id);
   }
 };
 

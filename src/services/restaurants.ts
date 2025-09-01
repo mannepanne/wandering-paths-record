@@ -109,6 +109,24 @@ export const restaurantService = {
     return data;
   },
 
+  // Get distinct cuisines that exist in the database
+  async getDistinctCuisines(): Promise<string[]> {
+    const { data, error } = await supabase
+      .from('restaurants')
+      .select('cuisine')
+      .not('cuisine', 'is', null)
+      .not('cuisine', 'eq', '');
+
+    if (error) {
+      console.error('Error fetching distinct cuisines:', error);
+      throw error;
+    }
+
+    // Extract unique cuisines, filter out nulls/empty, and sort
+    const uniqueCuisines = [...new Set(data.map(row => row.cuisine).filter(Boolean))];
+    return uniqueCuisines.sort();
+  },
+
   // Create a new restaurant with addresses
   async createRestaurant(
     restaurant: Omit<Restaurant, 'id' | 'created_at' | 'updated_at' | 'locations'>,

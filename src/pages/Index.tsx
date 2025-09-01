@@ -13,7 +13,7 @@ import { FilterBar } from "@/components/FilterBar";
 import { MapView } from "@/components/MapView";
 import { AdminPanel } from "@/components/AdminPanel";
 import { MapPin, Plus, Shield, Compass, Settings } from "lucide-react";
-import { placesService } from "@/services/restaurants";
+import { placesService, restaurantService } from "@/services/restaurants";
 import { Place } from "@/types/place";
 
 const Index = () => {
@@ -39,9 +39,17 @@ const Index = () => {
     queryKey: ["places", selectedType, selectedStatus],
     queryFn: () =>
       placesService.getFilteredPlaces({
-        type: selectedType,
+        cuisine: selectedType,
         status: selectedStatus,
       }),
+  });
+
+  // Fetch available cuisines for the filter dropdown
+  const {
+    data: availableCuisines = [],
+  } = useQuery({
+    queryKey: ["cuisines"],
+    queryFn: () => restaurantService.getDistinctCuisines(),
   });
 
   // Mutation for updating place status
@@ -158,14 +166,15 @@ const Index = () => {
         <div className="space-y-4">
           {/* Filter Bar */}
           <FilterBar
-            selectedType={selectedType}
+            selectedCuisine={selectedType}
             selectedStatus={selectedStatus}
-            onTypeChange={setSelectedType}
+            onCuisineChange={setSelectedType}
             onStatusChange={setSelectedStatus}
-            placeCount={places.length}
+            restaurantCount={places.length}
             onLocationSearch={handleLocationSearch}
             onNearMe={handleNearMe}
             searchLocation={searchLocation}
+            availableCuisines={availableCuisines}
           />
 
           {/* Map View */}

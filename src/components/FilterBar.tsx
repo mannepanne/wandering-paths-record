@@ -14,23 +14,9 @@ interface FilterBarProps {
   onLocationSearch?: (location: string) => void;
   onNearMe?: () => void;
   searchLocation?: string;
+  availableCuisines?: string[];
 }
 
-const cuisineTypes = [
-  { value: "all", label: "All Cuisines" },
-  { value: "Italian", label: "Italian" },
-  { value: "French", label: "French" },
-  { value: "British", label: "British" },
-  { value: "Indian", label: "Indian" },
-  { value: "Chinese", label: "Chinese" },
-  { value: "Japanese", label: "Japanese" },
-  { value: "Mexican", label: "Mexican" },
-  { value: "Thai", label: "Thai" },
-  { value: "Mediterranean", label: "Mediterranean" },
-  { value: "American", label: "American" },
-  { value: "Turkish", label: "Turkish" },
-  { value: "Lebanese", label: "Lebanese" },
-];
 
 const statusOptions = [
   { value: "all", label: "All Status" },
@@ -46,10 +32,20 @@ export const FilterBar = ({
   restaurantCount,
   onLocationSearch,
   onNearMe,
-  searchLocation
+  searchLocation,
+  availableCuisines = []
 }: FilterBarProps) => {
   const [locationInput, setLocationInput] = useState(searchLocation || "");
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+
+  // Create dynamic cuisine options based on available cuisines from database
+  const cuisineTypes = [
+    { value: "all", label: "All Cuisines" },
+    ...availableCuisines.map(cuisine => ({
+      value: cuisine,
+      label: cuisine
+    }))
+  ];
 
   const handleLocationSearch = () => {
     if (locationInput.trim() && onLocationSearch) {

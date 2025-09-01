@@ -14,6 +14,7 @@ import { PlacePreview } from "@/components/PlacePreview";
 import { useRestaurantExtraction } from "@/hooks/useRestaurantExtraction";
 import { ExtractedRestaurantData, ExtractionCache } from "@/services/claudeExtractor";
 import { restaurantService } from "@/services/restaurants";
+import { geocodingUtility, GeocodingProgress } from "@/services/geocodingUtility";
 import { Restaurant } from "@/types/place";
 
 interface AdminPanelProps {
@@ -34,12 +35,35 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
   // Cache management
   const [cacheStats, setCacheStats] = useState(ExtractionCache.getStats());
   
+  // Geocoding management
+  const [geocodingStats, setGeocodingStats] = useState({
+    total: 0,
+    geocoded: 0,
+    needsGeocoding: 0,
+    percentage: 0
+  });
+  const [geocodingProgress, setGeocodingProgress] = useState<GeocodingProgress | null>(null);
+  
   // Update cache stats when extraction completes
   useEffect(() => {
     if (formData && !extraction.isExtracting) {
       setCacheStats(ExtractionCache.getStats());
     }
   }, [formData, extraction.isExtracting]);
+
+  // Load geocoding stats on component mount
+  useEffect(() => {
+    const loadGeocodingStats = async () => {
+      try {
+        const stats = await geocodingUtility.getGeocodingStats();
+        setGeocodingStats(stats);
+      } catch (error) {
+        console.error('Error loading geocoding stats:', error);
+      }
+    };
+    
+    loadGeocodingStats();
+  }, []);
 
   // Query to fetch restaurant addresses when editing
   const { data: restaurantAddresses } = useQuery({
@@ -66,6 +90,8 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
           ? restaurantAddresses.map(addr => ({
               locationName: addr.location_name || '',
               fullAddress: addr.full_address,
+              city: addr.city || '',
+              country: addr.country || '',
               phone: addr.phone || '',
               openingHours: typeof addr.opening_hours === 'object' && addr.opening_hours?.hours 
                 ? addr.opening_hours.hours 
@@ -74,6 +100,8 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
           : [{
               locationName: '',
               fullAddress: editingRestaurant.address,
+              city: '',
+              country: '',
               phone: '',
               openingHours: ''
             }]
@@ -106,6 +134,8 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
       const addresses = restaurantData.locations?.map(loc => ({
         location_name: loc.locationName,
         full_address: loc.fullAddress,
+        city: loc.city,
+        country: loc.country,
         phone: loc.phone,
         opening_hours: loc.openingHours ? { hours: loc.openingHours } : undefined
       }));
@@ -149,6 +179,8 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
       const addresses = restaurantData.locations?.map(loc => ({
         location_name: loc.locationName,
         full_address: loc.fullAddress,
+        city: loc.city,
+        country: loc.country,
         phone: loc.phone,
         opening_hours: loc.openingHours ? { hours: loc.openingHours } : undefined
       }));
@@ -237,7 +269,32 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
     
     const extractedData = await extraction.extractFromUrl(newPlaceUrl.trim());
     if (extractedData) {
-      setFormData(extractedData);
+      console.log('Raw extracted data:', extractedData);
+      
+      // Ensure locations array exists and has proper structure
+      const processedData = {
+        ...extractedData,
+        locations: extractedData.locations && extractedData.locations.length > 0 
+          ? extractedData.locations.map(loc => ({
+              locationName: loc.locationName || '',
+              fullAddress: loc.fullAddress || '',
+              city: loc.city || '',
+              country: loc.country || '',
+              phone: loc.phone || '',
+              openingHours: loc.openingHours || ''
+            }))
+          : [{
+              locationName: '',
+              fullAddress: extractedData.addressSummary || '',
+              city: '',
+              country: '',
+              phone: extractedData.phone || '',
+              openingHours: ''
+            }]
+      };
+      
+      console.log('Processed data for form:', processedData);
+      setFormData(processedData);
     }
   };
 
@@ -281,6 +338,47 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
     handleClearForm();
   };
 
+  const handleStartGeocoding = async () => {
+    try {
+      setGeocodingProgress({
+        total: 0,
+        processed: 0,
+        success: 0,
+        errors: [],
+        isComplete: false
+      });
+
+      const finalProgress = await geocodingUtility.batchGeocodeAddresses((progress) => {
+        setGeocodingProgress({ ...progress });
+      });
+
+      // Refresh stats after completion
+      const updatedStats = await geocodingUtility.getGeocodingStats();
+      setGeocodingStats(updatedStats);
+      
+      // Clear progress after a brief delay
+      setTimeout(() => {
+        setGeocodingProgress(null);
+      }, 3000);
+
+    } catch (error) {
+      console.error('Error during batch geocoding:', error);
+      setGeocodingProgress(prev => prev ? {
+        ...prev,
+        errors: [...prev.errors, `Geocoding error: ${error}`]
+      } : null);
+    }
+  };
+
+  const handleRefreshGeocodingStats = async () => {
+    try {
+      const stats = await geocodingUtility.getGeocodingStats();
+      setGeocodingStats(stats);
+    } catch (error) {
+      console.error('Error refreshing geocoding stats:', error);
+    }
+  };
+
   const handleLocationChange = (index: number, field: string, value: string) => {
     if (!formData?.locations) return;
     
@@ -294,6 +392,8 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
     const newLocation = {
       locationName: '',
       fullAddress: '',
+      city: '',
+      country: '',
       phone: '',
       openingHours: ''
     };
@@ -548,6 +648,26 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
                                 size="sm"
                               />
                             </div>
+                            <div>
+                              <label className="text-xs font-medium text-muted-foreground">City</label>
+                              <Input
+                                value={location.city || ''}
+                                onChange={(e) => handleLocationChange(index, 'city', e.target.value)}
+                                placeholder="e.g., London, Edinburgh"
+                                className="mt-1"
+                                size="sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs font-medium text-muted-foreground">Country</label>
+                              <Input
+                                value={location.country || ''}
+                                onChange={(e) => handleLocationChange(index, 'country', e.target.value)}
+                                placeholder="e.g., United Kingdom, UK"
+                                className="mt-1"
+                                size="sm"
+                              />
+                            </div>
                             <div className="md:col-span-2">
                               <label className="text-xs font-medium text-muted-foreground">Full Address</label>
                               <Input
@@ -760,6 +880,107 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
           {cacheStats.totalEntries > 0 && (
             <div className="text-sm text-muted-foreground bg-olive-green/10 p-3 rounded-lg">
               ⚡ <strong>Cache active.</strong> Repeated extractions of the same URLs will be instant. Clear cache to force fresh extractions.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Geocoding Management */}
+      <Card className="border-2 border-accent">
+        <CardHeader className="bg-gradient-earth">
+          <CardTitle className="flex items-center gap-2 text-foreground">
+            <MapPin className="w-5 h-5" />
+            Location Geocoding
+          </CardTitle>
+          <CardDescription>
+            Add coordinates to restaurant addresses for location-based search functionality
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 pt-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="text-center p-3 bg-muted rounded-lg">
+              <div className="text-2xl font-bold text-foreground">{geocodingStats.total}</div>
+              <div className="text-sm text-muted-foreground">Total Addresses</div>
+            </div>
+            <div className="text-center p-3 bg-muted rounded-lg">
+              <div className="text-2xl font-bold text-olive-green">{geocodingStats.geocoded}</div>
+              <div className="text-sm text-muted-foreground">With Coordinates</div>
+            </div>
+            <div className="text-center p-3 bg-muted rounded-lg">
+              <div className="text-2xl font-bold text-burnt-orange">{geocodingStats.needsGeocoding}</div>
+              <div className="text-sm text-muted-foreground">Need Geocoding</div>
+            </div>
+            <div className="text-center p-3 bg-muted rounded-lg">
+              <div className="text-2xl font-bold text-foreground">{geocodingStats.percentage}%</div>
+              <div className="text-sm text-muted-foreground">Complete</div>
+            </div>
+          </div>
+
+          {geocodingProgress && (
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Geocoding Progress</span>
+                <span>{geocodingProgress.processed} / {geocodingProgress.total}</span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-2">
+                <div 
+                  className="bg-olive-green h-2 rounded-full transition-all duration-300"
+                  style={{ 
+                    width: geocodingProgress.total > 0 
+                      ? `${(geocodingProgress.processed / geocodingProgress.total) * 100}%` 
+                      : '0%' 
+                  }}
+                ></div>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Success: {geocodingProgress.success}, Errors: {geocodingProgress.errors.length}
+                {!geocodingProgress.isComplete && (
+                  <span className="ml-2">
+                    <Loader2 className="inline w-3 h-3 animate-spin" />
+                    Processing...
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+          
+          <div className="flex gap-3 pt-2">
+            <Button
+              variant="brutalist"
+              onClick={handleStartGeocoding}
+              disabled={!!geocodingProgress || geocodingStats.needsGeocoding === 0}
+              className="gap-2 bg-olive-green hover:bg-olive-green/90 text-white"
+            >
+              <MapPin className="w-4 h-4" />
+              {geocodingProgress ? 'Geocoding...' : 'Start Geocoding'}
+            </Button>
+            <Button
+              variant="ghost" 
+              size="sm"
+              onClick={handleRefreshGeocodingStats}
+              disabled={!!geocodingProgress}
+              className="gap-2"
+            >
+              <BarChart3 className="w-4 h-4" />
+              Refresh Stats
+            </Button>
+          </div>
+          
+          {geocodingStats.needsGeocoding === 0 && geocodingStats.total > 0 && (
+            <div className="text-sm text-muted-foreground bg-olive-green/10 p-3 rounded-lg">
+              ✅ <strong>All addresses geocoded!</strong> Location-based search is fully functional.
+            </div>
+          )}
+          
+          {geocodingStats.needsGeocoding > 0 && (
+            <div className="text-sm text-muted-foreground bg-burnt-orange/10 p-3 rounded-lg">
+              📍 <strong>{geocodingStats.needsGeocoding} addresses need coordinates.</strong> Run geocoding to enable location-based search for these restaurants.
+            </div>
+          )}
+
+          {geocodingStats.total === 0 && (
+            <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+              💡 <strong>No restaurant addresses found.</strong> Add some restaurants first to use the geocoding feature.
             </div>
           )}
         </CardContent>

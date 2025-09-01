@@ -19,6 +19,8 @@ export interface RestaurantExtractionResult {
 export interface ExtractedLocation {
   locationName: string; // "Shoreditch", "King's Cross"
   fullAddress: string; // "7 Boundary St, Shoreditch, London E2 7JE"
+  city?: string; // "London", "Edinburgh"
+  country?: string; // "United Kingdom", "UK"
   phone?: string;
   openingHours?: string;
 }
@@ -249,7 +251,7 @@ ${allContent.slice(0, 15000)} // Larger limit for restaurant analysis
 EXTRACT THE FOLLOWING and return as JSON:
 {
   "name": "Official restaurant name",
-  "address": "Full address if found",
+  "addressSummary": "Brief address summary (e.g., 'Shoreditch, London' or 'Multiple locations in London & Edinburgh')",
   "phone": "Phone number if found", 
   "chefName": "Head chef name if mentioned",
   "cuisine": "Standardized cuisine type (Italian/French/British/Modern European/Asian Fusion/etc)",
@@ -259,7 +261,17 @@ EXTRACT THE FOLLOWING and return as JSON:
   "atmosphere": "1-2 sentences about ambiance and dining experience", 
   "bookingRequired": true/false,
   "mustTryDishes": ["dish1", "dish2", "dish3"],
-  "publicRating": null // We'll get this from Google Maps later
+  "publicRating": null, // We'll get this from Google Maps later
+  "locations": [
+    {
+      "locationName": "Area/neighborhood name (e.g., 'Shoreditch', 'King's Cross')",
+      "fullAddress": "Complete street address with postcode",
+      "city": "City name (e.g., 'London', 'Edinburgh')",
+      "country": "Country name (e.g., 'United Kingdom', 'UK')",
+      "phone": "Location-specific phone if different from main",
+      "openingHours": "Opening hours if found (e.g., 'Mon-Fri 8:00-23:00, Sat-Sun 9:00-23:00')"
+    }
+  ]
 }
 
 GUIDELINES:
@@ -268,15 +280,41 @@ GUIDELINES:
 - Must-try dishes should come from menus or reviews, not generic items
 - Be concise but descriptive
 - Return null for fields you cannot determine
+
+LOCATION EXTRACTION GUIDELINES:
+- For single location restaurants, include one location object with all address details
+- For multi-location restaurants, create separate objects for each location
+- CRITICAL: city and country are MANDATORY fields - never leave them null or empty
+- locationName should be the neighborhood/area (Shoreditch, Covent Garden, etc.)
+- fullAddress should be the complete street address with postcode
+- If multiple locations exist, ensure each has its own city/country even if the same
+- For UK addresses, country should be "United Kingdom" (preferred) or "UK"
+- If city is not explicitly mentioned, infer from address or neighborhood (e.g., Shoreditch -> London)
+- Ensure locations array is always populated with at least one location
+- NEVER return a location object without both city and country fields populated
 `;
 
     const response = await this.callClaudeApi(prompt);
-    const data = JSON.parse(response);
+    console.log('Raw Claude API response:', response);
     
-    return {
+    const data = JSON.parse(response);
+    console.log('Parsed Claude extraction data:', data);
+    
+    // Post-process to ensure city and country fields are populated
+    const processedLocations = data.locations?.map((location: any) => ({
+      ...location,
+      city: location.city || this.inferCityFromLocation(location) || 'London',
+      country: location.country || 'United Kingdom'
+    })) || [];
+
+    const result = {
       ...data,
-      website: url
+      website: url,
+      locations: processedLocations
     };
+    
+    console.log('Final extraction result with processed locations:', result);
+    return result;
   }
 
   private async enhanceWithReviews(restaurantData: ExtractedRestaurantData): Promise<ExtractedRestaurantData> {
@@ -332,11 +370,45 @@ GUIDELINES:
     return result.content[0].text;
   }
 
+  private inferCityFromLocation(location: any): string | null {
+    // Try to infer city from locationName or fullAddress
+    const locationName = location.locationName?.toLowerCase() || '';
+    const fullAddress = location.fullAddress?.toLowerCase() || '';
+    
+    // Common UK locations that should map to London
+    const londonAreas = [
+      'shoreditch', 'bermondsey', 'peckham', 'hackney', 'bethnal green',
+      'spitalfields', 'whitechapel', 'borough', 'southwark', 'tower bridge',
+      'london bridge', 'kings cross', 'islington', 'camden', 'fitzrovia',
+      'covent garden', 'soho', 'mayfair', 'marylebone', 'bloomsbury',
+      'clerkenwell', 'farringdon', 'barbican', 'holborn', 'strand',
+      'westminster', 'pimlico', 'belgravia', 'knightsbridge', 'chelsea',
+      'kensington', 'notting hill', 'paddington', 'bayswater', 'marylebone',
+      'regent street', 'oxford street', 'bond street', 'piccadilly',
+      'leicester square', 'trafalgar square', 'canary wharf', 'greenwich',
+      'dulwich', 'east dulwich', 'north dulwich', 'west dulwich'
+    ];
+    
+    // Check if any London area matches
+    for (const area of londonAreas) {
+      if (locationName.includes(area) || fullAddress.includes(area)) {
+        return 'London';
+      }
+    }
+    
+    // Check if "london" appears in the address
+    if (fullAddress.includes('london')) {
+      return 'London';
+    }
+    
+    return null;
+  }
+
   private calculateConfidence(data: ExtractedRestaurantData): 'high' | 'medium' | 'low' {
     let score = 0;
     
     if (data.name && data.name !== 'Unknown') score += 2;
-    if (data.address) score += 2; 
+    if (data.addressSummary) score += 2; 
     if (data.cuisine) score += 1;
     if (data.description && data.description.length > 20) score += 1;
     if (data.mustTryDishes && data.mustTryDishes.length > 0) score += 1;

@@ -64,13 +64,21 @@ export const restaurantService = {
     return data || [];
   },
 
-  // Get restaurants with filters
+  // Get restaurants with filters (including location-based filtering)
   async getFilteredRestaurants(filters: {
     cuisine?: string;
     status?: string;
+    location?: {
+      lat: number;
+      lng: number;
+      maxWalkingMinutes?: number;
+    };
   }): Promise<Restaurant[]> {
+    // If location filtering is needed, use the view with addresses
+    const tableName = filters.location ? 'restaurants_with_locations' : 'restaurants';
+    
     let query = supabase
-      .from('restaurants')
+      .from(tableName)
       .select('*');
 
     if (filters.cuisine && filters.cuisine !== 'all') {
@@ -90,7 +98,35 @@ export const restaurantService = {
       throw error;
     }
 
-    return data || [];
+    let results = data || [];
+
+    // Apply location-based filtering if specified
+    if (filters.location && results.length > 0) {
+      const { locationService } = await import('./locationService');
+      const maxWalkingMinutes = filters.location.maxWalkingMinutes || 20;
+      
+      results = results.filter(restaurant => {
+        // Check if any location of this restaurant is within walking distance
+        if (restaurant.locations && restaurant.locations.length > 0) {
+          return restaurant.locations.some((address: any) => {
+            if (address.latitude && address.longitude) {
+              return locationService.isWithinWalkingDistance(
+                { lat: filters.location!.lat, lng: filters.location!.lng },
+                { lat: address.latitude, lng: address.longitude },
+                maxWalkingMinutes
+              );
+            }
+            return false;
+          });
+        }
+        
+        // Fallback: try to geocode the restaurant's main address if no coordinates
+        // Note: This would be slow, so we should prioritize having coordinates in the database
+        return false;
+      });
+    }
+
+    return results;
   },
 
   // Get single restaurant by ID

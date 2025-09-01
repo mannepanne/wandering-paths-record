@@ -10,6 +10,44 @@ const PORT = 3001;
 app.use(cors());
 app.use(express.json());
 
+// Helper function to infer city from location data
+function inferCityFromLocation(location) {
+  if (!location) return null;
+  
+  // Try to infer city from locationName or fullAddress
+  const locationName = (location.locationName || '').toLowerCase();
+  const fullAddress = (location.fullAddress || '').toLowerCase();
+  
+  // Common UK locations that should map to London
+  const londonAreas = [
+    'shoreditch', 'bermondsey', 'peckham', 'hackney', 'bethnal green',
+    'spitalfields', 'whitechapel', 'borough', 'southwark', 'tower bridge',
+    'london bridge', 'kings cross', 'islington', 'camden', 'fitzrovia',
+    'covent garden', 'soho', 'mayfair', 'marylebone', 'bloomsbury',
+    'clerkenwell', 'farringdon', 'barbican', 'holborn', 'strand',
+    'westminster', 'pimlico', 'belgravia', 'knightsbridge', 'chelsea',
+    'kensington', 'notting hill', 'paddington', 'bayswater', 'marylebone',
+    'regent street', 'oxford street', 'bond street', 'piccadilly',
+    'leicester square', 'trafalgar square', 'canary wharf', 'greenwich',
+    'dulwich', 'east dulwich', 'north dulwich', 'west dulwich', 'brockley',
+    'deptford', 'new cross', 'lewisham', 'catford', 'tooting'
+  ];
+  
+  // Check if any London area matches
+  for (const area of londonAreas) {
+    if (locationName.includes(area) || fullAddress.includes(area)) {
+      return 'London';
+    }
+  }
+  
+  // Check if "london" appears in the address
+  if (fullAddress.includes('london')) {
+    return 'London';
+  }
+  
+  return null;
+}
+
 // Helper function to extract JSON from Claude's response
 function extractJSONFromResponse(response) {
   try {
@@ -379,6 +417,8 @@ EXTRACT THE FOLLOWING and return as JSON:
     {
       "locationName": "Area/neighborhood name (e.g., 'Shoreditch', 'King's Cross')",
       "fullAddress": "Complete address with postcode if available",
+      "city": "City name (e.g., 'London', 'Edinburgh')",
+      "country": "Country name (e.g., 'United Kingdom', 'UK')",
       "phone": "Location-specific phone if different from main",
       "openingHours": "Location hours if found"
     }
@@ -397,6 +437,18 @@ GUIDELINES:
 - EXTRACT ADDRESSES: Use any street addresses, postcodes, or location details found in ADDRESS: or LOCATION_DETAIL: sections
 - PHONE NUMBERS: Use specific phone numbers found in PHONE: sections for each location if available
 - OPENING HOURS: Use opening hours found in HOURS: sections for location-specific times
+
+LOCATION EXTRACTION GUIDELINES:
+- For single location restaurants, include one location object with all address details
+- For multi-location restaurants, create separate objects for each location
+- CRITICAL: city and country are MANDATORY fields - never leave them null or empty
+- locationName should be the neighborhood/area (Shoreditch, Covent Garden, etc.)
+- fullAddress should be the complete street address with postcode
+- If multiple locations exist, ensure each has its own city/country even if the same
+- For UK addresses, country should be "United Kingdom" (preferred) or "UK"
+- If city is not explicitly mentioned, infer from address or neighborhood (e.g., Shoreditch -> London)
+- Ensure locations array is always populated with at least one location
+- NEVER return a location object without both city and country fields populated
 `;
 
     const restaurantResponse = await callClaudeApi(restaurantPrompt, apiKey);
@@ -424,6 +476,16 @@ GUIDELINES:
     
     const restaurantData = extractJSONFromResponse(restaurantResponse);
     console.log('✅ Restaurant data extracted:', restaurantData);
+    
+    // Post-process to ensure city and country fields are populated
+    if (restaurantData.locations && restaurantData.locations.length > 0) {
+      restaurantData.locations = restaurantData.locations.map(location => ({
+        ...location,
+        city: location.city || inferCityFromLocation(location) || 'London',
+        country: location.country || 'United Kingdom'
+      }));
+      console.log('✅ Restaurant data with processed locations:', restaurantData);
+    }
 
     // Improve fallback for multi-location restaurants with poor address data
     if (restaurantData.locations && restaurantData.locations.length > 0) {

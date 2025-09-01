@@ -26,6 +26,10 @@ const Index = () => {
     lat: number;
     lng: number;
   } | null>(null);
+  const [searchLocationCoords, setSearchLocationCoords] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
   const [editingRestaurant, setEditingRestaurant] = useState<Place | null>(null);
 
   const queryClient = useQueryClient();
@@ -36,11 +40,12 @@ const Index = () => {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["places", selectedType, selectedStatus],
+    queryKey: ["places", selectedType, selectedStatus, searchLocationCoords],
     queryFn: () =>
       placesService.getFilteredPlaces({
         cuisine: selectedType,
         status: selectedStatus,
+        location: searchLocationCoords || undefined,
       }),
   });
 
@@ -66,10 +71,29 @@ const Index = () => {
     },
   });
 
-  const handleLocationSearch = (location: string) => {
+  const handleLocationSearch = async (location: string) => {
     setSearchLocation(location);
-    // TODO: Implement actual location-based filtering when backend is ready
-    console.log("Searching for places near:", location);
+    
+    if (!location.trim()) {
+      // Clear location search
+      setSearchLocationCoords(null);
+      return;
+    }
+    
+    try {
+      const { locationService } = await import("@/services/locationService");
+      const coords = await locationService.geocodeLocation(location);
+      
+      if (coords) {
+        setSearchLocationCoords(coords);
+        console.log("Found coordinates for", location, ":", coords);
+      } else {
+        console.log("Could not find location:", location);
+        // You might want to show a user-friendly error message here
+      }
+    } catch (error) {
+      console.error("Error searching for location:", error);
+    }
   };
 
   const handleNearMe = () => {
@@ -77,13 +101,17 @@ const Index = () => {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
-          setUserLocation({ lat: latitude, lng: longitude });
+          const coords = { lat: latitude, lng: longitude };
+          
+          setUserLocation(coords);
+          setSearchLocationCoords(coords);
           setSearchLocation("Current location");
-          // TODO: Implement actual nearby filtering when backend is ready
-          console.log("User location:", latitude, longitude);
+          
+          console.log("User location:", coords);
         },
         (error) => {
           console.error("Error getting location:", error);
+          // You might want to show a user-friendly error message here
         },
       );
     }

@@ -1,48 +1,66 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { PlaceCard } from "@/components/PlaceCard";
 import { FilterBar } from "@/components/FilterBar";
 import { MapView } from "@/components/MapView";
 import { AdminPanel } from "@/components/AdminPanel";
 import { MapPin, Plus, Shield, Compass, Settings } from "lucide-react";
-import { placesService } from "@/services/places";
+import { placesService } from "@/services/restaurants";
 import { Place } from "@/types/place";
 
-
 const Index = () => {
-  const [currentView, setCurrentView] = useState<'public' | 'admin'>('public');
+  const [currentView, setCurrentView] = useState<"public" | "admin">("public");
   const [isMapView, setIsMapView] = useState(false);
-  const [selectedType, setSelectedType] = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState('all');
-  const [searchLocation, setSearchLocation] = useState('');
-  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
-  
+  const [selectedType, setSelectedType] = useState("all");
+  const [selectedStatus, setSelectedStatus] = useState("all");
+  const [searchLocation, setSearchLocation] = useState("");
+  const [userLocation, setUserLocation] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
+
   const queryClient = useQueryClient();
-  
+
   // Fetch places from Supabase
-  const { data: places = [], isLoading, error } = useQuery({
-    queryKey: ['places', selectedType, selectedStatus],
-    queryFn: () => placesService.getFilteredPlaces({
-      type: selectedType,
-      status: selectedStatus
-    })
+  const {
+    data: places = [],
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["places", selectedType, selectedStatus],
+    queryFn: () =>
+      placesService.getFilteredPlaces({
+        type: selectedType,
+        status: selectedStatus,
+      }),
   });
-  
+
   // Mutation for updating place status
   const updatePlaceStatusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: 'must-visit' | 'visited' }) => 
-      placesService.updatePlaceStatus(id, status),
+    mutationFn: ({
+      id,
+      status,
+    }: {
+      id: string;
+      status: "must-visit" | "visited";
+    }) => placesService.updatePlaceStatus(id, status),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['places'] });
-    }
+      queryClient.invalidateQueries({ queryKey: ["places"] });
+    },
   });
 
   const handleLocationSearch = (location: string) => {
     setSearchLocation(location);
     // TODO: Implement actual location-based filtering when backend is ready
-    console.log('Searching for places near:', location);
+    console.log("Searching for places near:", location);
   };
 
   const handleNearMe = () => {
@@ -51,38 +69,38 @@ const Index = () => {
         (position) => {
           const { latitude, longitude } = position.coords;
           setUserLocation({ lat: latitude, lng: longitude });
-          setSearchLocation('Current location');
+          setSearchLocation("Current location");
           // TODO: Implement actual nearby filtering when backend is ready
-          console.log('User location:', latitude, longitude);
+          console.log("User location:", latitude, longitude);
         },
         (error) => {
-          console.error('Error getting location:', error);
-        }
+          console.error("Error getting location:", error);
+        },
       );
     }
   };
 
-  const handleStatusChange = (id: string, status: 'must-visit' | 'visited') => {
+  const handleStatusChange = (id: string, status: "must-visit" | "visited") => {
     updatePlaceStatusMutation.mutate({ id, status });
   };
-  
+
   const handleEdit = (id: string) => {
-    console.log('Editing place:', id);
+    console.log("Editing place:", id);
     // TODO: Implement edit functionality
   };
 
-  if (currentView === 'admin') {
+  if (currentView === "admin") {
     return (
       <div className="min-h-screen bg-background">
         <nav className="border-b-2 border-border bg-card p-4">
           <div className="container mx-auto flex justify-between items-center">
-            <Button variant="ghost" onClick={() => setCurrentView('public')}>
+            <Button variant="ghost" onClick={() => setCurrentView("public")}>
               ← Back to Public View
             </Button>
           </div>
         </nav>
         <div className="container mx-auto px-4 py-8 max-w-4xl">
-          <AdminPanel onBack={() => setCurrentView('public')} />
+          <AdminPanel onBack={() => setCurrentView("public")} />
         </div>
       </div>
     );
@@ -94,23 +112,23 @@ const Index = () => {
       <nav className="border-b-2 border-border bg-card p-4">
         <div className="container mx-auto flex justify-between items-center max-w-6xl">
           <h1 className="text-xl font-geo font-bold text-foreground">
-            Restaurant Record
+            Curated Restaurant Hit List
           </h1>
           <div className="flex gap-2">
-            <Button 
-              variant="brutalist" 
+            <Button
+              variant="brutalist"
               size="sm"
               className="gap-2 bg-olive-green hover:bg-olive-green/90 text-white"
               onClick={() => setIsMapView(!isMapView)}
             >
               <MapPin className="w-4 h-4" />
-              {isMapView ? 'List View' : 'Map View'}
+              {isMapView ? "List View" : "Map View"}
             </Button>
-            <Button 
-              variant="brutalist" 
+            <Button
+              variant="brutalist"
               size="sm"
               className="gap-2"
-              onClick={() => setCurrentView('admin')}
+              onClick={() => setCurrentView("admin")}
             >
               <Shield className="w-4 h-4" />
               Admin
@@ -146,7 +164,8 @@ const Index = () => {
                         Map Integration Ready
                       </h3>
                       <p className="text-sm text-muted-foreground max-w-md">
-                        Connect to Supabase to enable interactive map features with your saved places.
+                        Connect to Supabase to enable interactive map features
+                        with your saved places.
                       </p>
                     </div>
                     <Button variant="brutalist" className="gap-2">
@@ -166,7 +185,6 @@ const Index = () => {
           {/* Places List */}
           {!isMapView && (
             <div className="space-y-4">
-
               {isLoading ? (
                 <Card className="border-2 border-border">
                   <CardContent className="py-12 text-center">
@@ -181,9 +199,7 @@ const Index = () => {
                     <div className="text-lg font-geo font-medium text-red-600 mb-2">
                       Error loading places
                     </div>
-                    <p className="text-muted-foreground">
-                      {error.message}
-                    </p>
+                    <p className="text-muted-foreground">{error.message}</p>
                   </CardContent>
                 </Card>
               ) : places.length === 0 ? (
@@ -194,21 +210,22 @@ const Index = () => {
                       No places found
                     </h3>
                     <p className="text-muted-foreground">
-                      Try adjusting your filters or add some new places to your collection.
+                      Try adjusting your filters or add some new places to your
+                      collection.
                     </p>
                   </CardContent>
                 </Card>
               ) : (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   {places.map((place) => (
-                    <PlaceCard 
-                      key={place.id} 
+                    <PlaceCard
+                      key={place.id}
                       place={{
                         ...place,
                         rating: place.public_rating,
                         personalRating: place.personal_rating,
                         visitCount: place.visit_count,
-                        mustTryDishes: place.must_try_dishes
+                        mustTryDishes: place.must_try_dishes,
                       }}
                       onStatusChange={handleStatusChange}
                       onEdit={handleEdit}

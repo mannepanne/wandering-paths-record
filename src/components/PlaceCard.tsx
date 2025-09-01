@@ -95,19 +95,13 @@ export const PlaceCard = ({ place, onStatusChange, onEdit }: PlaceCardProps) => 
           </div>
         )}
 
-        {place.dietary_options && place.dietary_options.length > 0 && (
+        {place.dietary_options && (
           <div className="text-sm">
             <span className="font-medium text-foreground">Dietary: </span>
-            <span className="text-muted-foreground">{place.dietary_options.join(', ')}</span>
+            <span className="text-muted-foreground">{place.dietary_options}</span>
           </div>
         )}
 
-        {place.booking_required !== undefined && (
-          <div className="text-sm">
-            <span className="font-medium text-foreground">Booking: </span>
-            <span className="text-muted-foreground">{place.booking_required ? 'Required' : 'Walk-ins welcome'}</span>
-          </div>
-        )}
 
         {place.description && place.status === 'visited' && (
           <div className="text-sm">

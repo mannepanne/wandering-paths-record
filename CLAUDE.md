@@ -8,7 +8,7 @@ Claude collaboration and ways of working instructions: @.claude/CLAUDE.md
 
 ## Project Overview
 
-This is "Wandering Paths Record" - a place curation and discovery application built with the Vite + React + shadcn/ui + TypeScript stack. The app allows users to discover, track, and manage interesting places like restaurants, galleries, bookshops, and libraries.
+This is "Wandering Paths" - a restaurant curation and diary application built with the Vite + React + shadcn/ui + TypeScript stack. The app allows users to remember, track, and manage interesting restaurants.
 
 ## Development Commands
 
@@ -40,13 +40,13 @@ npm i
 - **Components**: Modular UI components with consistent patterns
 
 ### Key Components
-- **PlaceCard**: Displays individual place information with rating systems, status badges, and action buttons
-- **AdminPanel**: Protected area for adding new places via URL extraction
-- **FilterBar**: Allows filtering places by type and status  
+- **PlaceCard**: Displays individual restaurant information with rating systems, status badges, and action buttons
+- **AdminPanel**: Protected area for adding new restaurants via URL extraction
+- **FilterBar**: Allows filtering restaurants by type and status
 - **MapView**: Toggle between list and map views (map functionality not yet implemented)
 
 ### Data Model
-Places are represented with the following structure:
+Restaurants are represented with the following structure:
 ```typescript
 interface Place {
   id: string;
@@ -75,18 +75,42 @@ interface Place {
 - React Query (TanStack Query) is configured but not yet utilized
 - Mock data is used for demonstration purposes
 
+### Implemented Features
+- ✅ Supabase integration for data persistence (complete setup and CRUD service)
+- ✅ Magic link authentication with email-based authorization
+- ✅ Automated restaurant metadata extraction from URLs (intelligent content analysis)
+- ✅ Authentication context and protected routes
+- ✅ Complete backend service layer (placesService)
+
+### Features In Progress
+- 🚧 Connecting UI components to live Supabase data
+- 🚧 React Query integration for data management
+
 ### Planned Features (Not Yet Implemented)
-- Supabase integration for data persistence
-- Magic link authentication
-- Automated place metadata extraction from URLs
 - Real map integration for MapView
-- Backend API for place management
+- Restaurant editing and deletion UI
+- Location-based search and filtering
 
 ## Key Files to Understand
 
+**Core Application:**
 - `src/pages/Index.tsx` - Main application interface and layout
 - `src/components/PlaceCard.tsx` - Core place display component with rating and interaction logic
 - `src/components/AdminPanel.tsx` - Admin interface for adding places
+- `src/App.tsx` - Main app with routing and authentication provider
+
+**Authentication & Data:**
+- `src/contexts/AuthContext.tsx` - Authentication context with magic link integration
+- `src/components/LoginForm.tsx` - Magic link login form with email authorization
+- `src/services/places.ts` - Complete CRUD service for restaurant operations
+- `src/lib/supabase.ts` - Supabase client configuration
+
+**Metadata Extraction:**
+- `src/services/intelligentExtractor.ts` - Smart URL content analysis
+- `src/services/smartMetadata.ts` - Restaurant-specific metadata extraction
+- `src/types/place.ts` - TypeScript interfaces for restaurant data
+
+**Design System:**
 - `tailwind.config.ts` - Custom color palette and design tokens
 - `package.json` - Dependencies and scripts
 

@@ -215,14 +215,85 @@ This document tracks the implementation progress of the restaurant curation appl
 
 ## **🔄 REMAINING PHASES (Optional Enhancements)**
 
-### **Phase 6: Map Integration** - **OPTIONAL**
-**Status**: **Not Required for Core Functionality**
+### **Phase 6: Map Integration** - 🔄 **IN PROGRESS**
+**Status**: **Interactive Map Implementation with Full FilterBar Integration**
 
-The current system is fully functional without maps. Location data is stored and ready for map integration if desired in the future.
+Replace the current map placeholder with a fully functional Mapbox-powered interactive map that provides the same filtering capabilities as the list view.
 
-- [ ] **OPTIONAL**: Replace map placeholder with interactive map
-- [ ] **OPTIONAL**: Restaurant markers and clustering
-- [ ] **OPTIONAL**: Map-based filtering and search
+#### ✅ 6.1 Map Infrastructure Setup - **COMPLETE**
+**Mapbox GL JS Integration**
+- [x] Install Mapbox GL JS library and types
+- [x] Configure Mapbox API key in environment variables
+- [x] Create `InteractiveMap.tsx` component replacing map placeholder in Index.tsx
+- [x] Implement basic interactive map with London Bridge default center (51.5074, -0.0877)
+- [x] Add responsive design for mobile and desktop with loading states
+
+#### ✅ 6.2 Restaurant Markers and Visualization - **COMPLETE**
+**Advanced Clustering System with Restaurant Data**
+- [x] Create GeoJSON-based clustering using filtered `places` data from existing React Query
+- [x] Implement sophisticated marker clustering with zoom-level count badges
+- [x] Add custom marker colors based on restaurant status (visited=indigo, must-visit=amber)
+- [x] Ensure markers update in real-time with FilterBar changes via React useEffect
+- [x] Optimize marker performance with Mapbox native clustering for scalability
+
+#### ✅ 6.3 FilterBar Integration - **COMPLETE**
+**Complete Search and Filter Compatibility**
+- [x] Full integration with existing FilterBar component and all filter state
+- [x] Text search filtering automatically applies to map markers
+- [x] GPS "Near Me" functionality with automatic map centering on user location
+- [x] Cuisine and status filters automatically applied to map display
+- [x] Perfect filter state consistency between list and map views
+
+#### ✅ 6.4 Interactive Features - **COMPLETE**
+**Popup Details and Mobile Optimization**
+- [x] Implement detailed popup overlays for restaurant details on marker/cluster click
+- [x] Rich popup content with restaurant info (name, cuisine, status, address, rating, website)
+- [x] Mobile-optimized popup design with touch-friendly interfaces
+- [x] Smooth map centering with 1-second animations when "Near Me" is activated
+- [x] London Bridge fallback centering (51.5074, -0.0877) for users without GPS
+
+#### ✅ 6.5 Mobile Experience - **COMPLETE**
+**Touch-Optimized Map Controls**
+- [x] Standard Mapbox mobile controls (pinch zoom, drag pan) with navigation controls
+- [x] Touch-friendly popup overlays with proper sizing for mobile screens
+- [x] Cluster clicking and expansion optimized for touch interfaces
+- [x] FilterBar responsiveness works seamlessly with map view
+- [x] Optimized map loading with error handling and user-friendly messages
+
+#### ⚙️ 6.6 Setup Instructions - **IMPLEMENTATION READY**
+**Mapbox Configuration Required:**
+
+To enable the interactive map functionality, you'll need a free Mapbox account:
+
+1. **Sign up at [mapbox.com](https://mapbox.com)** (free tier includes 50,000 map loads/month)
+2. **Get your access token** from your Mapbox dashboard
+3. **Add to environment file**:
+   ```bash
+   # Add to .env file
+   VITE_MAPBOX_ACCESS_TOKEN=your_actual_mapbox_token_here
+   ```
+4. **Restart development server** - `npm run dev`
+
+**Without API key:** Map shows friendly error message with setup instructions
+**With API key:** Full interactive map with clustering, popups, and all filtering features
+
+#### 🎯 **Implementation Architecture**
+**Technical Integration Points:**
+- **Data Flow**: Use existing `places` from React Query → Render as Mapbox markers
+- **Filtering**: All existing `restaurantService.getFilteredRestaurants()` logic applies
+- **Coordinates**: Use existing `restaurants_with_locations` view coordinates  
+- **State Management**: Leverage existing filter state in Index.tsx
+- **Responsive Design**: Extend current FilterBar mobile-first approach
+
+#### 🌍 **Map Configuration Specifications**
+- **Map Library**: Mapbox GL JS with professional styling
+- **Default Center**: User GPS location → London Bridge fallback (51.5074, -0.0877)
+- **Clustering**: Country-level aggregation when zoomed out to world view
+- **Popup Style**: Overlay design matching brutalist earth-tone aesthetic
+- **Mobile Controls**: Standard touch gestures (pinch, drag, tap)
+- **Performance**: Optimized for 16+ restaurants with room for growth
+
+**Current Status**: ✅ **FULLY IMPLEMENTED** - Interactive Mapbox integration complete with advanced clustering, full FilterBar compatibility, mobile optimization, and comprehensive error handling. Map view provides same functionality as list view with enhanced geographical visualization.
 
 ### **Phase 7: Performance & Polish** - ✅ **LARGELY COMPLETE**
 **Status**: **SIGNIFICANT POLISH IMPLEMENTED**
@@ -303,7 +374,7 @@ The current system is fully functional without maps. Location data is stored and
 - ✅ **Phase 3** (CRUD): **COMPLETE** (all operations: create, read, update, delete)
 - ✅ **Phase 4** (Search/Filtering): **COMPLETE** (text search + GPS-based Near Me) 
 - ✅ **Phase 5** (Extraction): **MASSIVELY EXCEEDED**
-- ⏸️ **Phase 6** (Maps): **OPTIONAL** (not required for core functionality)
+- ✅ **Phase 6** (Maps): **COMPLETE** (interactive Mapbox integration with clustering and filtering)
 - ✅ **Phase 7** (Polish): **LARGELY COMPLETE**
 
 ### **System Capabilities:**
@@ -321,6 +392,8 @@ The current system is fully functional without maps. Location data is stored and
 - **NEW**: Complete search functionality with text-based search and GPS-based "Near Me" radius filtering
 - **NEW**: Intuitive toggle interface for switching between filtered and all-restaurants view
 - **NEW**: Clean database architecture with deprecated coordinate fields removed from restaurants table
+- **NEW**: Interactive Mapbox integration with advanced clustering and real-time filtering
+- **NEW**: Mobile-optimized map experience with touch controls and responsive popups
 
 ### **Current Development Status:**
 **✅ FULLY OPERATIONAL** - The system is ready for personal restaurant curation with all core features working. Optional enhancements (maps, advanced editing UI) can be added in future iterations but are not required for full functionality.

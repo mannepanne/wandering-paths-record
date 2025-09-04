@@ -33,6 +33,8 @@ Wandering Paths helps you organize and remember exceptional restaurants through 
 - **Smart Filtering**: Filter by cuisine type, visit status, and location
 - **Text Search**: Search restaurants by name, city, country, or neighborhood
 - **GPS "Near Me" Search**: Find restaurants within 20-minute walking distance with toggle functionality
+- **Interactive Map**: Mapbox-powered map with clustering, popups, and real-time filtering
+- **List/Map Toggle**: Seamless switching between list and map views with consistent filtering
 - **Beautiful Design**: Earth-toned brutalist design with strong visual hierarchy
 - **Status Badges**: Visual indicators for visit status, price range, and cuisine type
 - **Responsive Layout**: Works seamlessly on desktop and mobile devices
@@ -49,6 +51,7 @@ Wandering Paths helps you organize and remember exceptional restaurants through 
 **Backend & AI Integration:**
 - **Database**: Supabase with multi-location restaurant architecture
 - **AI Engine**: Anthropic Claude 3.5 Sonnet API for content analysis
+- **Maps**: Mapbox GL JS with clustering, popups, and mobile optimization
 - **Local API Server**: Express.js development server with CORS support
 - **Content Fetching**: Multi-proxy web scraping with automatic fallbacks
 - **Caching**: URL-based localStorage caching with 24-hour expiration
@@ -90,17 +93,19 @@ npm run preview
 
 ### Environment Setup
 
-For restaurant extraction to work, you'll need:
+For full functionality, you'll need:
 
-1. **Claude API Key**: Add `VITE_CLAUDE_API_KEY` to your `.env` file
+1. **Claude API Key**: Add `VITE_CLAUDE_API_KEY` to your `.env` file (for restaurant extraction)
 2. **Supabase Configuration**: Add Supabase URL and anon key to `.env`
-3. **Local API Server**: Run `node server.cjs` alongside the frontend development server
+3. **Mapbox Access Token**: Add `VITE_MAPBOX_ACCESS_TOKEN` to `.env` (for interactive maps)
+4. **Local API Server**: Run `node server.cjs` alongside the frontend development server
 
 ```bash
 # .env file
 VITE_CLAUDE_API_KEY=your_claude_api_key_here
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_MAPBOX_ACCESS_TOKEN=your_mapbox_access_token_here
 ```
 
 ### Project Structure
@@ -115,7 +120,8 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 │   │   ├── AdminPanel.tsx        # Admin interface with extraction & dynamic forms
 │   │   ├── PlaceCard.tsx         # Restaurant display with status management
 │   │   ├── FilterBar.tsx         # Multi-criteria filtering interface
-│   │   └── MapView.tsx           # Map view toggle (ready for integration)
+│   │   ├── InteractiveMap.tsx    # Mapbox-powered map with clustering and popups
+│   │   └── MapView.tsx           # Map view toggle (legacy component)
 │   ├── contexts/
 │   │   └── AuthContext.tsx       # Supabase authentication context
 │   ├── hooks/
@@ -169,6 +175,8 @@ The app uses an earth-toned "brutalist" design aesthetic:
 - Responsive restaurant cards with status badges and comprehensive filtering
 - Complete text search across restaurant names and locations
 - GPS-based "Near Me" search with 20-minute walking radius and toggle functionality
+- Interactive Mapbox-powered map with clustering, popups, and mobile optimization
+- Seamless list/map view switching with consistent filtering across both modes
 - Complete authentication system ready for protected routes
 
 **🔧 Development Infrastructure**
@@ -181,10 +189,10 @@ The app uses an earth-toned "brutalist" design aesthetic:
 ### 🎯 Ready for Enhancement
 
 **Optional Future Features (Not Required for Core Functionality):**
-- Map integration for visual restaurant location display
 - Restaurant editing interface (data is fully editable via admin panel)
 - Personal rating and notes interface for visited restaurants
 - Social sharing and export capabilities
+- Advanced map features (heat maps, route planning, custom map styles)
 - Mobile app development using same React components
 
 The application is **production-ready** for personal restaurant curation with intelligent URL-based data extraction and comprehensive restaurant management.

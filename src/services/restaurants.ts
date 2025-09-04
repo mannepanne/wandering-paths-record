@@ -90,10 +90,9 @@ export const restaurantService = {
   }): Promise<Restaurant[]> {
     console.log("🍽️ getFilteredRestaurants called with filters:", filters);
     
-    // For text search, we need to use the view to search address fields
-    // For simple filtering without text search, we can use the basic restaurants table
-    const needsAddressSearch = filters.searchText && filters.searchText.trim();
-    const tableName = (filters.location || needsAddressSearch) ? 'restaurants_with_locations' : 'restaurants';
+    // Always use the restaurants_with_locations view to get coordinate data for maps
+    // This ensures we have latitude/longitude available for map functionality
+    const tableName = 'restaurants_with_locations';
     console.log("📊 Using table/view:", tableName);
     
     let query = supabase
@@ -113,15 +112,8 @@ export const restaurantService = {
       const searchTerm = filters.searchText.trim();
       console.log("🔍 Applying text search for:", searchTerm);
       
-      // Search across restaurant name and address summary (always available)
-      // When using restaurants_with_locations view, we can also search location fields
-      if (tableName === 'restaurants_with_locations') {
-        // Search in multiple fields: restaurant name, address summary, and location data
-        query = query.or(`name.ilike.%${searchTerm}%,address.ilike.%${searchTerm}%`);
-      } else {
-        // Basic search in restaurant table only
-        query = query.or(`name.ilike.%${searchTerm}%,address.ilike.%${searchTerm}%`);
-      }
+      // Search across restaurant name and address summary using the view
+      query = query.or(`name.ilike.%${searchTerm}%,address.ilike.%${searchTerm}%`);
     }
 
     query = query.order('created_at', { ascending: false });
@@ -133,8 +125,19 @@ export const restaurantService = {
       throw error;
     }
 
-    console.log(`📋 Database query returned ${data?.length || 0} restaurants`);
-    let results = data || [];
+    console.log(`📋 Database query returned ${data?.length || 0} rows`);
+    
+    // Remove duplicates that can occur when restaurants have multiple addresses
+    // Keep the first occurrence of each unique restaurant ID
+    const uniqueRestaurants = new Map();
+    (data || []).forEach(restaurant => {
+      if (!uniqueRestaurants.has(restaurant.id)) {
+        uniqueRestaurants.set(restaurant.id, restaurant);
+      }
+    });
+    
+    let results = Array.from(uniqueRestaurants.values());
+    console.log(`📋 After deduplication: ${results.length} unique restaurants`);
 
     // Apply location-based filtering if specified (GPS-based "Near Me" search)
     if (filters.location && results.length > 0) {

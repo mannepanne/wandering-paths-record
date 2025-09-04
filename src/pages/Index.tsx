@@ -44,7 +44,7 @@ const Index = () => {
   } = useQuery({
     queryKey: ["places", selectedType, selectedStatus, searchText, searchLocationCoords?.lat, searchLocationCoords?.lng],
     queryFn: () =>
-      placesService.getFilteredPlaces({
+      restaurantService.getFilteredRestaurants({
         cuisine: selectedType,
         status: selectedStatus,
         searchText: searchText || undefined, // NEW: Text search parameter
@@ -68,7 +68,7 @@ const Index = () => {
     }: {
       id: string;
       status: "must-visit" | "visited";
-    }) => placesService.updatePlaceStatus(id, status),
+    }) => restaurantService.updateRestaurantStatus(id, status),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["places"] });
     },

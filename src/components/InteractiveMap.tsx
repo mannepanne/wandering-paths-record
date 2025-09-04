@@ -47,10 +47,11 @@ export const InteractiveMap = ({
 
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/light-v11', // Clean light style matching our design
+        style: 'mapbox://styles/mapbox/streets-v12', // More basic style with better CORS compatibility
         center: initialCenter,
         zoom: userLocation ? 14 : 10, // Closer zoom if user location available
-        attributionControl: false
+        attributionControl: false,
+        crossSourceCollisions: false // Reduce resource conflicts
       });
 
       // Add navigation controls
@@ -68,7 +69,13 @@ export const InteractiveMap = ({
 
       map.current.on('error', (e) => {
         console.error('❌ Mapbox error:', e);
-        setMapError('Failed to load map. Please check your internet connection.');
+        
+        // Handle specific CORS errors more gracefully
+        if (e.error && e.error.message && e.error.message.includes('CORS')) {
+          setMapError('Map loading issue detected. Please add localhost:8080 to your Mapbox token URL restrictions.');
+        } else {
+          setMapError('Failed to load map. Please check your internet connection and Mapbox token configuration.');
+        }
         setIsMapLoading(false);
       });
 
@@ -191,7 +198,7 @@ export const InteractiveMap = ({
       filter: ['has', 'point_count'],
       layout: {
         'text-field': '{point_count_abbreviated}',
-        'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+        'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'],
         'text-size': 12
       },
       paint: {

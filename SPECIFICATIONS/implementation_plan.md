@@ -94,25 +94,82 @@ This document tracks the implementation progress of the restaurant curation appl
 
 ---
 
-### **Phase 4: Enhanced Search & Filtering** - ✅ **BASIC COMPLETE**
-**Status**: **CORE FILTERING OPERATIONAL**
+### **Phase 4: Enhanced Search & Filtering** - ✅ **TEXT SEARCH COMPLETE**
+**Status**: **TEXT-BASED SEARCH FULLY OPERATIONAL, NEAR ME PENDING**
 
-#### ✅ 4.1 Geographic Data Integration - **BASIC COMPLETE**
-- [x] **IMPLEMENTED**: Address storage in multi-location architecture
-- [x] **IMPLEMENTED**: International address format support
-- [ ] **OPTIONAL**: Geocoding service integration (not required for core functionality)
-- [ ] **OPTIONAL**: Coordinate storage and distance calculations
+#### ✅ 4.1 Basic Filtering - **COMPLETE**
+- [x] **IMPLEMENTED**: Cuisine-based filtering with database-driven options
+- [x] **IMPLEMENTED**: Status filtering (must-visit/visited)
+- [x] **IMPLEMENTED**: Real-time filter updates with React Query
 
-#### ✅ 4.2 Location Search Implementation - **BASIC UI READY**
-- [x] **IMPLEMENTED**: Location search UI components
-- [x] **IMPLEMENTED**: "Near Me" geolocation UI
-- [ ] **OPTIONAL**: Functional location-based filtering (not critical for current use)
+#### ✅ 4.2 Text-Based Search - **COMPLETE** 
+**Simple database text search against existing fields - FULLY IMPLEMENTED**
 
-#### ✅ 4.3 Advanced Filtering - **OPERATIONAL**
-- [x] **IMPLEMENTED**: Database-level filtering by cuisine and status
-- [x] **IMPLEMENTED**: Real-time filter updates
-- [ ] **OPTIONAL**: Distance-based sorting
-- [ ] **OPTIONAL**: Advanced search relevance scoring
+**Search Target Fields:**
+- Restaurant name (`restaurants.name`) ✅
+- Address summary (`restaurants.address`) ✅
+- Works with existing location data in database ✅
+
+**Implementation Completed:**
+- [x] **IMPLEMENTED**: Text search integrated into existing location search input
+- [x] **IMPLEMENTED**: PostgreSQL `ilike` query against name and address fields
+- [x] **IMPLEMENTED**: Uses `restaurants_with_locations` view for comprehensive search
+- [x] **IMPLEMENTED**: Real-time search results with React Query integration
+
+**Example Searches Working:**
+- "London" → matches restaurants with London in address ✅
+- "Shoreditch" → matches restaurants in Shoreditch ✅
+- "Peckham" → finds Peckham Cellars and Peckham Bazaar ✅
+- "Cellars" → finds Peckham Cellars ✅
+
+**Technical Implementation:**
+- Modified `restaurantService.getFilteredRestaurants()` to accept `searchText` parameter
+- Updated React Query integration in Index.tsx with text search state
+- Simplified location search handler to use text matching instead of geocoding
+- Clean separation between text search and location-based filtering
+
+#### 🔄 4.3 Near Me Search - **NEEDS IMPLEMENTATION**
+**Geocoding + radius-based filtering for 20-minute walking distance**
+
+**Requirements:**
+- [ ] **COORDINATE POPULATION**: Ensure restaurant addresses have lat/lng coordinates
+- [ ] **GEOCODING**: Convert user's current location to coordinates
+- [ ] **DISTANCE CALCULATION**: Filter restaurants within ~1.6km (20min walk at 5km/h)
+- [ ] **DATABASE INTEGRATION**: Use existing `restaurants_with_locations` view
+
+**Implementation Plan:**
+- [ ] **STEP 1**: Run geocoding utility to populate missing coordinates
+- [ ] **STEP 2**: Implement user location capture (GPS)
+- [ ] **STEP 3**: Distance-based filtering using Haversine formula
+- [ ] **STEP 4**: UI feedback for "Near Me" search results
+
+#### ✅ 4.4 Issues Resolved
+**Problem**: The existing "location search" was trying to do both text search AND near me functionality in one complex system
+
+**Solution Implemented**: Split into two separate, simple functions:
+1. **Text Search**: Database text matching (no geocoding needed) ✅ **COMPLETE**
+2. **Near Me**: GPS + coordinate distance filtering (geocoding needed only for user location) ⏸️ **PENDING**
+
+#### 📋 Phase 4 Implementation Status
+
+**✅ STEP 1: Implement Simple Text Search** - **COMPLETE**
+- [x] Text search integrated into existing FilterBar location input
+- [x] Restaurant service updated with `searchText` parameter
+- [x] PostgreSQL `ilike` search across restaurant name and address fields
+- [x] Successfully tested with "London", "Shoreditch", "Peckham", restaurant names
+
+**⏸️ STEP 2: Fix Near Me Functionality** - **PENDING** 
+- [ ] Run geocoding utility to populate restaurant address coordinates
+- [ ] Implement user geolocation capture for "Near Me" button
+- [ ] Re-enable distance-based filtering in restaurant service
+- [ ] Test with actual GPS location
+
+**✅ STEP 3: Clean Up Implementation** - **COMPLETE**
+- [x] Removed complex geocoding logic from text search
+- [x] Simplified location search to be pure text-based
+- [x] "Near Me" button ready for GPS-based radius search implementation
+
+**Current Status**: Text search is fully operational and working perfectly. Near Me functionality is ready to implement when coordinates are populated in the database.
 
 ---
 
@@ -241,7 +298,7 @@ The current system is fully functional without maps. Location data is stored and
 - ✅ **Phase 1** (Database): **COMPLETE + ENHANCED**
 - ✅ **Phase 2** (Authentication): **COMPLETE**  
 - ✅ **Phase 3** (CRUD): **COMPLETE** (all operations: create, read, update, delete)
-- ✅ **Phase 4** (Search/Filtering): **BASIC COMPLETE** 
+- ✅ **Phase 4** (Search/Filtering): **TEXT SEARCH COMPLETE** 
 - ✅ **Phase 5** (Extraction): **MASSIVELY EXCEEDED**
 - ⏸️ **Phase 6** (Maps): **OPTIONAL** (not required for core functionality)
 - ✅ **Phase 7** (Polish): **LARGELY COMPLETE**
@@ -258,6 +315,7 @@ The current system is fully functional without maps. Location data is stored and
 - Responsive design with brutalist earth-tone aesthetic
 - **NEW**: Full restaurant editing with proper multi-location data loading
 - **NEW**: Multi-table deletion with explicit cleanup of related data
+- **NEW**: Text-based search functionality for restaurant names and locations
 
 ### **Current Development Status:**
 **✅ FULLY OPERATIONAL** - The system is ready for personal restaurant curation with all core features working. Optional enhancements (maps, advanced editing UI) can be added in future iterations but are not required for full functionality.

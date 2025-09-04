@@ -22,6 +22,7 @@ const Index = () => {
   const [selectedType, setSelectedType] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [searchLocation, setSearchLocation] = useState("");
+  const [searchText, setSearchText] = useState(""); // NEW: Text search state
   const [userLocation, setUserLocation] = useState<{
     lat: number;
     lng: number;
@@ -40,11 +41,12 @@ const Index = () => {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["places", selectedType, selectedStatus, searchLocationCoords],
+    queryKey: ["places", selectedType, selectedStatus, searchText, searchLocationCoords],
     queryFn: () =>
       placesService.getFilteredPlaces({
         cuisine: selectedType,
         status: selectedStatus,
+        searchText: searchText || undefined, // NEW: Text search parameter
         location: searchLocationCoords || undefined,
       }),
   });
@@ -72,28 +74,20 @@ const Index = () => {
   });
 
   const handleLocationSearch = async (location: string) => {
+    console.log("🔍 Starting text search for:", location);
     setSearchLocation(location);
     
     if (!location.trim()) {
-      // Clear location search
-      setSearchLocationCoords(null);
+      // Clear text search
+      console.log("🧹 Clearing text search");
+      setSearchText("");
       return;
     }
     
-    try {
-      const { locationService } = await import("@/services/locationService");
-      const coords = await locationService.geocodeLocation(location);
-      
-      if (coords) {
-        setSearchLocationCoords(coords);
-        console.log("Found coordinates for", location, ":", coords);
-      } else {
-        console.log("Could not find location:", location);
-        // You might want to show a user-friendly error message here
-      }
-    } catch (error) {
-      console.error("Error searching for location:", error);
-    }
+    // Simple text search - no geocoding needed
+    console.log("📝 Setting text search filter:", location);
+    setSearchText(location);
+    console.log("🎯 Text search applied, React Query should refetch now");
   };
 
   const handleNearMe = () => {

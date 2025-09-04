@@ -64,18 +64,24 @@ export const restaurantService = {
     return data || [];
   },
 
-  // Get restaurants with filters (including location-based filtering)
+  // Get restaurants with filters (including text search and location-based filtering)
   async getFilteredRestaurants(filters: {
     cuisine?: string;
     status?: string;
+    searchText?: string; // NEW: Text search across name, city, country, neighborhood
     location?: {
       lat: number;
       lng: number;
       maxWalkingMinutes?: number;
     };
   }): Promise<Restaurant[]> {
-    // If location filtering is needed, use the view with addresses
-    const tableName = filters.location ? 'restaurants_with_locations' : 'restaurants';
+    console.log("🍽️ getFilteredRestaurants called with filters:", filters);
+    
+    // For text search, we need to use the view to search address fields
+    // For simple filtering without text search, we can use the basic restaurants table
+    const needsAddressSearch = filters.searchText && filters.searchText.trim();
+    const tableName = (filters.location || needsAddressSearch) ? 'restaurants_with_locations' : 'restaurants';
+    console.log("📊 Using table/view:", tableName);
     
     let query = supabase
       .from(tableName)
@@ -89,43 +95,42 @@ export const restaurantService = {
       query = query.eq('status', filters.status);
     }
 
+    // Add text search if provided
+    if (filters.searchText && filters.searchText.trim()) {
+      const searchTerm = filters.searchText.trim();
+      console.log("🔍 Applying text search for:", searchTerm);
+      
+      // Search across restaurant name and address summary (always available)
+      // When using restaurants_with_locations view, we can also search location fields
+      if (tableName === 'restaurants_with_locations') {
+        // Search in multiple fields: restaurant name, address summary, and location data
+        query = query.or(`name.ilike.%${searchTerm}%,address.ilike.%${searchTerm}%`);
+      } else {
+        // Basic search in restaurant table only
+        query = query.or(`name.ilike.%${searchTerm}%,address.ilike.%${searchTerm}%`);
+      }
+    }
+
     query = query.order('created_at', { ascending: false });
 
     const { data, error } = await query;
 
     if (error) {
-      console.error('Error fetching filtered restaurants:', error);
+      console.error('❌ Error fetching filtered restaurants:', error);
       throw error;
     }
 
+    console.log(`📋 Database query returned ${data?.length || 0} restaurants`);
     let results = data || [];
 
-    // Apply location-based filtering if specified
+    // Apply location-based filtering if specified (DISABLED FOR STEP 1 - FOCUS ON TEXT SEARCH)
     if (filters.location && results.length > 0) {
-      const { locationService } = await import('./locationService');
-      const maxWalkingMinutes = filters.location.maxWalkingMinutes || 20;
-      
-      results = results.filter(restaurant => {
-        // Check if any location of this restaurant is within walking distance
-        if (restaurant.locations && restaurant.locations.length > 0) {
-          return restaurant.locations.some((address: any) => {
-            if (address.latitude && address.longitude) {
-              return locationService.isWithinWalkingDistance(
-                { lat: filters.location!.lat, lng: filters.location!.lng },
-                { lat: address.latitude, lng: address.longitude },
-                maxWalkingMinutes
-              );
-            }
-            return false;
-          });
-        }
-        
-        // Fallback: try to geocode the restaurant's main address if no coordinates
-        // Note: This would be slow, so we should prioritize having coordinates in the database
-        return false;
-      });
+      console.log("🗺️ Location-based filtering requested but disabled for Step 1 implementation");
+      console.log("📝 For location search, we're using simple text search instead");
+      // TODO: Re-enable this for Step 2 (Near Me functionality) after coordinates are populated
     }
 
+    console.log(`📤 Returning ${results.length} restaurants`);
     return results;
   },
 

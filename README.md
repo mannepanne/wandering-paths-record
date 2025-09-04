@@ -31,6 +31,8 @@ Wandering Paths helps you organize and remember exceptional restaurants through 
 
 **🎨 Curated Discovery Experience**
 - **Smart Filtering**: Filter by cuisine type, visit status, and location
+- **Text Search**: Search restaurants by name, city, country, or neighborhood
+- **GPS "Near Me" Search**: Find restaurants within 20-minute walking distance with toggle functionality
 - **Beautiful Design**: Earth-toned brutalist design with strong visual hierarchy
 - **Status Badges**: Visual indicators for visit status, price range, and cuisine type
 - **Responsive Layout**: Works seamlessly on desktop and mobile devices
@@ -155,15 +157,18 @@ The app uses an earth-toned "brutalist" design aesthetic:
 **💾 Complete Database Architecture**
 - Supabase integration with multi-table restaurant architecture
 - `restaurants` table for main restaurant data with human-readable address summaries
-- `restaurant_addresses` table for detailed individual location data
+- `restaurant_addresses` table for detailed individual location data with geocoded coordinates
+- `restaurants_with_locations` view for efficient joined queries with coordinate data
 - Complete TypeScript interfaces and CRUD service layer
-- View-based querying for efficient data retrieval with location joins
+- Clean architecture with coordinates properly managed in address table
 
 **🎨 Production-Ready Frontend**
 - React + TypeScript application with brutalist earth-tone design system
 - Dynamic admin panel with editable form population from extraction results
 - Real-time extraction progress tracking with detailed status updates
-- Responsive restaurant cards with status badges and filtering
+- Responsive restaurant cards with status badges and comprehensive filtering
+- Complete text search across restaurant names and locations
+- GPS-based "Near Me" search with 20-minute walking radius and toggle functionality
 - Complete authentication system ready for protected routes
 
 **🔧 Development Infrastructure**
@@ -177,8 +182,8 @@ The app uses an earth-toned "brutalist" design aesthetic:
 
 **Optional Future Features (Not Required for Core Functionality):**
 - Map integration for visual restaurant location display
-- Advanced filtering with location-based search
 - Restaurant editing interface (data is fully editable via admin panel)
+- Personal rating and notes interface for visited restaurants
 - Social sharing and export capabilities
 - Mobile app development using same React components
 

@@ -17,8 +17,6 @@ export interface Restaurant {
   id: string;
   name: string;
   address: string; // Human-readable summary
-  latitude?: number; // Deprecated - use addresses table
-  longitude?: number; // Deprecated - use addresses table
   website?: string;
   public_rating?: number;
   personal_rating?: number;
@@ -33,6 +31,10 @@ export interface Restaurant {
   created_at: string;
   updated_at: string;
   locations?: RestaurantAddress[]; // From the view query
+  // NOTE: Coordinates are now only available via the restaurant_addresses table/locations array
+  // When querying via restaurants_with_locations view, lat/lng are available directly on this object
+  latitude?: number; // From restaurants_with_locations view only
+  longitude?: number; // From restaurants_with_locations view only
 }
 
 // For backward compatibility during transition

@@ -94,8 +94,8 @@ This document tracks the implementation progress of the restaurant curation appl
 
 ---
 
-### **Phase 4: Enhanced Search & Filtering** - ✅ **TEXT SEARCH COMPLETE**
-**Status**: **TEXT-BASED SEARCH FULLY OPERATIONAL, NEAR ME PENDING**
+### **Phase 4: Enhanced Search & Filtering** - ✅ **COMPLETE**
+**Status**: **BOTH TEXT SEARCH AND NEAR ME FUNCTIONALITY FULLY OPERATIONAL**
 
 #### ✅ 4.1 Basic Filtering - **COMPLETE**
 - [x] **IMPLEMENTED**: Cuisine-based filtering with database-driven options
@@ -128,27 +128,28 @@ This document tracks the implementation progress of the restaurant curation appl
 - Simplified location search handler to use text matching instead of geocoding
 - Clean separation between text search and location-based filtering
 
-#### 🔄 4.3 Near Me Search - **NEEDS IMPLEMENTATION**
-**Geocoding + radius-based filtering for 20-minute walking distance**
+#### ✅ 4.3 Near Me Search - **COMPLETE**
+**GPS-based radius filtering for 20-minute walking distance**
 
 **Requirements:**
-- [ ] **COORDINATE POPULATION**: Ensure restaurant addresses have lat/lng coordinates
-- [ ] **GEOCODING**: Convert user's current location to coordinates
-- [ ] **DISTANCE CALCULATION**: Filter restaurants within ~1.6km (20min walk at 5km/h)
-- [ ] **DATABASE INTEGRATION**: Use existing `restaurants_with_locations` view
+- [x] **COORDINATE POPULATION**: Restaurant addresses populated with lat/lng coordinates via geocoding
+- [x] **GEOCODING**: User's current GPS location captured via browser geolocation API
+- [x] **DISTANCE CALCULATION**: Restaurants filtered within ~1.6km using Haversine formula
+- [x] **DATABASE INTEGRATION**: Uses `restaurants_with_locations` view with updated coordinate references
 
-**Implementation Plan:**
-- [ ] **STEP 1**: Run geocoding utility to populate missing coordinates
-- [ ] **STEP 2**: Implement user location capture (GPS)
-- [ ] **STEP 3**: Distance-based filtering using Haversine formula
-- [ ] **STEP 4**: UI feedback for "Near Me" search results
+**Implementation Completed:**
+- [x] **STEP 1**: Geocoding utility run to populate restaurant address coordinates
+- [x] **STEP 2**: User GPS location capture implemented with error handling
+- [x] **STEP 3**: Haversine distance calculation for 20-minute walking radius (5km/h speed)
+- [x] **STEP 4**: Results sorted by proximity (closest first) with console logging
+- [x] **STEP 5**: Toggle functionality - "Near Me" button becomes "Show All" when active
 
 #### ✅ 4.4 Issues Resolved
 **Problem**: The existing "location search" was trying to do both text search AND near me functionality in one complex system
 
 **Solution Implemented**: Split into two separate, simple functions:
 1. **Text Search**: Database text matching (no geocoding needed) ✅ **COMPLETE**
-2. **Near Me**: GPS + coordinate distance filtering (geocoding needed only for user location) ⏸️ **PENDING**
+2. **Near Me**: GPS + coordinate distance filtering (geocoding needed only for user location) ✅ **COMPLETE**
 
 #### 📋 Phase 4 Implementation Status
 
@@ -158,18 +159,20 @@ This document tracks the implementation progress of the restaurant curation appl
 - [x] PostgreSQL `ilike` search across restaurant name and address fields
 - [x] Successfully tested with "London", "Shoreditch", "Peckham", restaurant names
 
-**⏸️ STEP 2: Fix Near Me Functionality** - **PENDING** 
-- [ ] Run geocoding utility to populate restaurant address coordinates
-- [ ] Implement user geolocation capture for "Near Me" button
-- [ ] Re-enable distance-based filtering in restaurant service
-- [ ] Test with actual GPS location
+**✅ STEP 2: Implement Near Me Functionality** - **COMPLETE** 
+- [x] Run geocoding utility to populate restaurant address coordinates
+- [x] Implement user geolocation capture for "Near Me" button with error handling
+- [x] Implement distance-based filtering using Haversine formula in restaurant service
+- [x] Test GPS location capture and radius filtering (20-minute walking distance)
+- [x] Add toggle functionality - button shows "Show All" when Near Me is active (olive-green color)
+- [x] Implement instant reset to show all restaurants when toggling off
 
 **✅ STEP 3: Clean Up Implementation** - **COMPLETE**
 - [x] Removed complex geocoding logic from text search
 - [x] Simplified location search to be pure text-based
 - [x] "Near Me" button ready for GPS-based radius search implementation
 
-**Current Status**: Text search is fully operational and working perfectly. Near Me functionality is ready to implement when coordinates are populated in the database.
+**Current Status**: Both text search and Near Me GPS-based functionality are fully operational with intuitive toggle interface. The system now supports comprehensive location-based restaurant discovery with seamless switching between filtered and unfiltered views.
 
 ---
 
@@ -298,7 +301,7 @@ The current system is fully functional without maps. Location data is stored and
 - ✅ **Phase 1** (Database): **COMPLETE + ENHANCED**
 - ✅ **Phase 2** (Authentication): **COMPLETE**  
 - ✅ **Phase 3** (CRUD): **COMPLETE** (all operations: create, read, update, delete)
-- ✅ **Phase 4** (Search/Filtering): **TEXT SEARCH COMPLETE** 
+- ✅ **Phase 4** (Search/Filtering): **COMPLETE** (text search + GPS-based Near Me) 
 - ✅ **Phase 5** (Extraction): **MASSIVELY EXCEEDED**
 - ⏸️ **Phase 6** (Maps): **OPTIONAL** (not required for core functionality)
 - ✅ **Phase 7** (Polish): **LARGELY COMPLETE**
@@ -315,7 +318,9 @@ The current system is fully functional without maps. Location data is stored and
 - Responsive design with brutalist earth-tone aesthetic
 - **NEW**: Full restaurant editing with proper multi-location data loading
 - **NEW**: Multi-table deletion with explicit cleanup of related data
-- **NEW**: Text-based search functionality for restaurant names and locations
+- **NEW**: Complete search functionality with text-based search and GPS-based "Near Me" radius filtering
+- **NEW**: Intuitive toggle interface for switching between filtered and all-restaurants view
+- **NEW**: Clean database architecture with deprecated coordinate fields removed from restaurants table
 
 ### **Current Development Status:**
 **✅ FULLY OPERATIONAL** - The system is ready for personal restaurant curation with all core features working. Optional enhancements (maps, advanced editing UI) can be added in future iterations but are not required for full functionality.

@@ -15,6 +15,7 @@ interface FilterBarProps {
   onNearMe?: () => void;
   searchLocation?: string;
   availableCuisines?: string[];
+  isNearMeActive?: boolean;
 }
 
 
@@ -33,7 +34,8 @@ export const FilterBar = ({
   onLocationSearch,
   onNearMe,
   searchLocation,
-  availableCuisines = []
+  availableCuisines = [],
+  isNearMeActive = false
 }: FilterBarProps) => {
   const [locationInput, setLocationInput] = useState(searchLocation || "");
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
@@ -56,6 +58,13 @@ export const FilterBar = ({
   const handleNearMe = async () => {
     if (!onNearMe) return;
     
+    // If Near Me is already active, just toggle it off immediately
+    if (isNearMeActive) {
+      onNearMe();
+      return;
+    }
+    
+    // Otherwise, set loading state and get location
     setIsLoadingLocation(true);
     try {
       if (navigator.geolocation) {
@@ -126,10 +135,18 @@ export const FilterBar = ({
             size="sm"
             onClick={handleNearMe}
             disabled={isLoadingLocation}
-            className="gap-1 bg-burnt-orange hover:bg-burnt-orange/90 text-white"
+            className={`gap-1 text-white ${
+              isNearMeActive 
+                ? 'bg-olive-green hover:bg-olive-green/90' 
+                : 'bg-burnt-orange hover:bg-burnt-orange/90'
+            }`}
           >
             <Navigation className="w-3 h-3" />
-            {isLoadingLocation ? 'Locating...' : 'Near Me'}
+            {isLoadingLocation 
+              ? 'Locating...' 
+              : isNearMeActive 
+                ? 'Show All' 
+                : 'Near Me'}
           </Button>
         </div>
         

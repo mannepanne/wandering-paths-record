@@ -41,7 +41,7 @@ const Index = () => {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["places", selectedType, selectedStatus, searchText, searchLocationCoords],
+    queryKey: ["places", selectedType, selectedStatus, searchText, searchLocationCoords?.lat, searchLocationCoords?.lng],
     queryFn: () =>
       placesService.getFilteredPlaces({
         cuisine: selectedType,
@@ -78,9 +78,11 @@ const Index = () => {
     setSearchLocation(location);
     
     if (!location.trim()) {
-      // Clear text search
-      console.log("🧹 Clearing text search");
+      // Clear both text and location-based search
+      console.log("🧹 Clearing all search filters");
       setSearchText("");
+      setSearchLocationCoords(null);
+      setUserLocation(null);
       return;
     }
     
@@ -91,23 +93,40 @@ const Index = () => {
   };
 
   const handleNearMe = () => {
+    // If already showing near me results, reset to show all
+    if (searchLocationCoords) {
+      console.log("🧹 Resetting Near Me filter - showing all restaurants");
+      setSearchLocationCoords(null);
+      setUserLocation(null);
+      setSearchLocation("");
+      setSearchText("");
+      return;
+    }
+    
+    // Otherwise, start Near Me search
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
           const coords = { lat: latitude, lng: longitude };
           
+          console.log("🗺️ GPS location obtained:", coords);
+          
+          // Clear text search when doing GPS-based search
+          setSearchText("");
           setUserLocation(coords);
           setSearchLocationCoords(coords);
-          setSearchLocation("Current location");
+          setSearchLocation("Near me (20 min walk)");
           
-          console.log("User location:", coords);
+          console.log("🚶 Near Me search activated - finding restaurants within 20 minutes walking distance");
         },
         (error) => {
-          console.error("Error getting location:", error);
-          // You might want to show a user-friendly error message here
+          console.error("❌ Error getting GPS location:", error);
+          alert("Unable to get your location. Please ensure location access is enabled.");
         },
       );
+    } else {
+      alert("Geolocation is not supported by your browser.");
     }
   };
 
@@ -197,6 +216,7 @@ const Index = () => {
             onNearMe={handleNearMe}
             searchLocation={searchLocation}
             availableCuisines={availableCuisines}
+            isNearMeActive={!!searchLocationCoords}
           />
 
           {/* Map View */}

@@ -1,6 +1,19 @@
 import { supabase } from '@/lib/supabase';
 import { Restaurant, RestaurantAddress } from '@/types/place';
 
+// Haversine formula to calculate distance between two points on Earth
+function calculateHaversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371; // Earth's radius in kilometers
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLng = (lng2 - lng1) * (Math.PI / 180);
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * 
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c; // Distance in kilometers
+}
+
 export const restaurantService = {
   // Get all restaurants with their locations
   async getAllRestaurants(): Promise<Restaurant[]> {
@@ -123,11 +136,54 @@ export const restaurantService = {
     console.log(`📋 Database query returned ${data?.length || 0} restaurants`);
     let results = data || [];
 
-    // Apply location-based filtering if specified (DISABLED FOR STEP 1 - FOCUS ON TEXT SEARCH)
+    // Apply location-based filtering if specified (GPS-based "Near Me" search)
     if (filters.location && results.length > 0) {
-      console.log("🗺️ Location-based filtering requested but disabled for Step 1 implementation");
-      console.log("📝 For location search, we're using simple text search instead");
-      // TODO: Re-enable this for Step 2 (Near Me functionality) after coordinates are populated
+      console.log("🗺️ Applying GPS-based location filtering");
+      console.log("📍 User location:", filters.location);
+      
+      const maxWalkingMinutes = filters.location.maxWalkingMinutes || 20;
+      const maxDistanceKm = (maxWalkingMinutes / 60) * 5; // 5km/h walking speed
+      
+      console.log(`🚶 Filtering for restaurants within ${maxWalkingMinutes} minutes walking (${maxDistanceKm.toFixed(1)}km)`);
+      
+      results = results.filter(restaurant => {
+        // Check if restaurant has coordinates (from restaurant_addresses via view)
+        if (!restaurant.latitude || !restaurant.longitude) {
+          console.log(`⚠️ Restaurant "${restaurant.name}" has no coordinates, excluding from Near Me results`);
+          return false;
+        }
+        
+        const distance = calculateHaversineDistance(
+          filters.location!.lat,
+          filters.location!.lng,
+          restaurant.latitude,
+          restaurant.longitude
+        );
+        
+        const withinRange = distance <= maxDistanceKm;
+        console.log(`📏 "${restaurant.name}": ${distance.toFixed(2)}km away - ${withinRange ? 'INCLUDED' : 'EXCLUDED'}`);
+        
+        return withinRange;
+      });
+      
+      // Sort by distance (closest first)
+      results.sort((a, b) => {
+        const distanceA = calculateHaversineDistance(
+          filters.location!.lat,
+          filters.location!.lng,
+          a.latitude!,
+          a.longitude!
+        );
+        const distanceB = calculateHaversineDistance(
+          filters.location!.lat,
+          filters.location!.lng,
+          b.latitude!,
+          b.longitude!
+        );
+        return distanceA - distanceB;
+      });
+      
+      console.log(`🎯 Found ${results.length} restaurants within ${maxWalkingMinutes} minutes walking distance`);
     }
 
     console.log(`📤 Returning ${results.length} restaurants`);

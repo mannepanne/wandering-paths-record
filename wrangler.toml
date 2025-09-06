@@ -1,0 +1,15 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "wandering-paths-record"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+main = "./src/worker.js"
+
+# Environment variables (non-sensitive)
+[vars]
+SUPABASE_URL = "https://drtjfbvudzacixvqkzav.supabase.co"
+AUTHORIZED_ADMIN_EMAIL = "magnus.hultberg@gmail.com"
+
+# Routes configuration for custom domain (will be configured later)
+# [[routes]]
+# pattern = "your-domain.com/*"
+# zone_name = "your-domain.com"

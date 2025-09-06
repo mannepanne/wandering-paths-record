@@ -20,7 +20,7 @@ This document tracks the implementation progress of the restaurant curation appl
 - [x] **ENHANCED**: Local development environment with Express server
 
 #### ✅ 1.2 Multi-Location Database Architecture (EVOLVED)
-**Original Plan**: Single `places` table  
+**Original Plan**: Single `places` table
 **Implemented**: **Advanced multi-location architecture**
 
 - [x] **NEW**: `restaurants` table for main restaurant data with address summaries
@@ -45,7 +45,7 @@ This document tracks the implementation progress of the restaurant curation appl
 - [x] Redirect URLs configured for development and production
 - [x] Email provider integration
 
-#### ✅ 2.2 Frontend Auth Integration  
+#### ✅ 2.2 Frontend Auth Integration
 - [x] AuthContext.tsx with comprehensive auth state management
 - [x] LoginForm.tsx with email authorization
 - [x] Logout functionality and session management
@@ -102,7 +102,7 @@ This document tracks the implementation progress of the restaurant curation appl
 - [x] **IMPLEMENTED**: Status filtering (must-visit/visited)
 - [x] **IMPLEMENTED**: Real-time filter updates with React Query
 
-#### ✅ 4.2 Text-Based Search - **COMPLETE** 
+#### ✅ 4.2 Text-Based Search - **COMPLETE**
 **Simple database text search against existing fields - FULLY IMPLEMENTED**
 
 **Search Target Fields:**
@@ -159,7 +159,7 @@ This document tracks the implementation progress of the restaurant curation appl
 - [x] PostgreSQL `ilike` search across restaurant name and address fields
 - [x] Successfully tested with "London", "Shoreditch", "Peckham", restaurant names
 
-**✅ STEP 2: Implement Near Me Functionality** - **COMPLETE** 
+**✅ STEP 2: Implement Near Me Functionality** - **COMPLETE**
 - [x] Run geocoding utility to populate restaurant address coordinates
 - [x] Implement user geolocation capture for "Near Me" button with error handling
 - [x] Implement distance-based filtering using Haversine formula in restaurant service
@@ -180,7 +180,7 @@ This document tracks the implementation progress of the restaurant curation appl
 **Status**: **FAR BEYOND ORIGINAL SCOPE - PRODUCTION AI SYSTEM**
 
 #### ✅ 5.1 AI-Powered Content Analysis - **ADVANCED IMPLEMENTATION**
-**Original Plan**: Basic web scraping  
+**Original Plan**: Basic web scraping
 **Implemented**: **Sophisticated AI analysis system**
 
 - [x] **ADVANCED**: Claude 3.5 Sonnet API integration
@@ -207,7 +207,7 @@ This document tracks the implementation progress of the restaurant curation appl
 #### ✅ 5.4 Enhanced Data Extraction - **COMPREHENSIVE**
 - [x] **ADVANCED**: Cuisine standardization with expanded definitions
 - [x] **ADVANCED**: Price range detection and mapping
-- [x] **ADVANCED**: Must-try dishes extraction from content and menus  
+- [x] **ADVANCED**: Must-try dishes extraction from content and menus
 - [x] **ADVANCED**: Atmosphere and dietary options analysis
 - [x] **ADVANCED**: Opening hours and contact information extraction
 
@@ -281,7 +281,7 @@ To enable the interactive map functionality, you'll need a free Mapbox account:
 **Technical Integration Points:**
 - **Data Flow**: Use existing `places` from React Query → Render as Mapbox markers
 - **Filtering**: All existing `restaurantService.getFilteredRestaurants()` logic applies
-- **Coordinates**: Use existing `restaurants_with_locations` view coordinates  
+- **Coordinates**: Use existing `restaurants_with_locations` view coordinates
 - **State Management**: Leverage existing filter state in Index.tsx
 - **Responsive Design**: Extend current FilterBar mobile-first approach
 
@@ -310,7 +310,7 @@ To enable the interactive map functionality, you'll need a free Mapbox account:
 - [x] **IMPLEMENTED**: User-friendly error messages throughout
 - [x] **IMPLEMENTED**: Graceful handling of API failures and network issues
 
-#### ✅ 7.3 User Experience Polish - **ENHANCED**  
+#### ✅ 7.3 User Experience Polish - **ENHANCED**
 - [x] **IMPLEMENTED**: Updated branding to "Curated Restaurant Hitlist"
 - [x] **IMPLEMENTED**: Responsive design across devices
 - [x] **IMPLEMENTED**: Real-time progress indicators
@@ -351,7 +351,7 @@ To enable the interactive map functionality, you'll need a free Mapbox account:
 - Country-specific phone number formats
 
 ### **Advanced Caching System**
-**Not in Original Plan**: Intelligent caching infrastructure  
+**Not in Original Plan**: Intelligent caching infrastructure
 - URL-based extraction caching with 24-hour expiration
 - Cache statistics and management in admin panel
 - Manual cache clearing functionality
@@ -370,9 +370,9 @@ To enable the interactive map functionality, you'll need a free Mapbox account:
 
 ### **Original Phases Status:**
 - ✅ **Phase 1** (Database): **COMPLETE + ENHANCED**
-- ✅ **Phase 2** (Authentication): **COMPLETE**  
+- ✅ **Phase 2** (Authentication): **COMPLETE**
 - ✅ **Phase 3** (CRUD): **COMPLETE** (all operations: create, read, update, delete)
-- ✅ **Phase 4** (Search/Filtering): **COMPLETE** (text search + GPS-based Near Me) 
+- ✅ **Phase 4** (Search/Filtering): **COMPLETE** (text search + GPS-based Near Me)
 - ✅ **Phase 5** (Extraction): **MASSIVELY EXCEEDED**
 - ✅ **Phase 6** (Maps): **COMPLETE** (interactive Mapbox integration with clustering and filtering)
 - ✅ **Phase 7** (Polish): **LARGELY COMPLETE**
@@ -403,3 +403,185 @@ To enable the interactive map functionality, you'll need a free Mapbox account:
 - **Actual Achievement**: **System exceeds original scope** with production-ready AI integration, multi-location support, and international capabilities that weren't in the original plan.
 
 The application has evolved into a sophisticated, AI-powered restaurant curation platform that significantly exceeds the original MVP specification.
+
+---
+
+### **Phase 8: Cloudflare Workers Production Deployment** - 🔄 **IMPLEMENTATION READY**
+**Status**: **Production Deployment with Secure Environment Management**
+
+Replace local development with production-ready Cloudflare Workers deployment, including secure environment variable management and integrated API server functionality.
+
+#### 🎯 8.1 Pre-Deployment Assessment and Preparation - **PENDING**
+**Current Architecture Analysis**
+- [ ] **ASSESSMENT**: Audit current .env file for production readiness
+- [ ] **SECURITY**: Identify all sensitive variables requiring secure storage
+- [ ] **ARCHITECTURE**: Evaluate server.cjs integration requirements for Claude API
+- [ ] **DEPENDENCIES**: Review package.json for Workers compatibility
+
+**Variables Requiring Secure Storage:**
+```bash
+# Current .env contents requiring secure deployment:
+SECRET, SEE ACTUAL .env FILE!
+```
+
+#### 🔧 8.2 Cloudflare Workers Setup and Configuration - **PENDING**
+**Install Cloudflare Vite Plugin**
+- [ ] **INSTALL**: Add `@cloudflare/vite-plugin` to project dependencies
+- [ ] **CONFIGURE**: Create `wrangler.toml` configuration for React SPA deployment
+- [ ] **VITE**: Update `vite.config.ts` with Cloudflare Workers plugin integration
+- [ ] **BUILD**: Configure static assets handling for React routing
+
+**Workers Configuration Specifications:**
+```toml
+# wrangler.toml
+name = "wandering-paths-record"
+main = "src/worker.js"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[build]
+command = "npm run build"
+
+[build.upload]
+format = "modules"
+
+[[routes]]
+pattern = "your-domain.com/*"
+zone_name = "your-domain.com"
+
+[assets]
+directory = "./dist"
+```
+
+#### 🔐 8.3 Secure Environment Variables Migration - **PENDING**
+**Cloudflare Secrets Management**
+- [ ] **SETUP**: Configure Cloudflare secrets via Wrangler CLI for sensitive data
+- [ ] **MIGRATE**: Move Claude API key to Workers secrets (not environment variables)
+- [ ] **CONFIGURE**: Set up public environment variables for client-side values
+- [ ] **VALIDATE**: Test secret access in Workers runtime environment
+
+**Secrets Configuration Commands:**
+```bash
+# Sensitive secrets (not visible in dashboard after creation)
+wrangler secret put CLAUDE_API_KEY
+wrangler secret put SUPABASE_ANON_KEY
+wrangler secret put MAPBOX_ACCESS_TOKEN
+
+# Public environment variables (visible, for client-side use)
+wrangler env set SUPABASE_URL "https://drtjfbvudzacixvqkzav.supabase.co"
+wrangler env set AUTHORIZED_ADMIN_EMAIL "magnus.hultberg@gmail.com"
+```
+
+#### 🌐 8.4 API Server Migration to Workers Runtime - **PENDING**
+**Claude API Integration**
+- [ ] **MIGRATE**: Convert `server.cjs` Express server to Workers API routes
+- [ ] **IMPLEMENT**: Create `/api/extract-restaurant` endpoint within Workers runtime
+- [ ] **SECURITY**: Implement CORS handling for frontend-backend communication
+- [ ] **OPTIMIZE**: Use Workers environment for content fetching and Claude API calls
+
+**Workers API Route Structure:**
+```javascript
+// src/worker.js - API routes within Workers runtime
+export default {
+  async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+
+    // API routes
+    if (url.pathname.startsWith('/api/extract-restaurant')) {
+      return handleRestaurantExtraction(request, env);
+    }
+
+    // Static assets (React app)
+    return env.ASSETS.fetch(request);
+  }
+};
+
+async function handleRestaurantExtraction(request, env) {
+  // Claude API integration using env.CLAUDE_API_KEY
+  // Multi-proxy content fetching
+  // Error handling and response formatting
+}
+```
+
+#### 📱 8.5 Frontend Integration Updates - **PENDING**
+**API Endpoint Configuration**
+- [ ] **UPDATE**: Modify frontend API calls to use production Workers endpoints
+- [ ] **ENVIRONMENT**: Update environment variable handling for production deployment
+- [ ] **TESTING**: Validate restaurant extraction functionality in Workers environment
+- [ ] **OPTIMIZATION**: Ensure proper error handling for production API calls
+
+**Frontend Configuration Updates:**
+```typescript
+// Update API base URL for production
+const API_BASE_URL = import.meta.env.DEV
+  ? 'http://localhost:3001'  // Local development
+  : '';                      // Production (same origin)
+
+// Update environment variable access
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || env.SUPABASE_URL;
+```
+
+#### 🚀 8.6 Deployment Process and Validation - **PENDING**
+**Production Deployment**
+- [ ] **BUILD**: Execute production build with Workers-compatible output
+- [ ] **DEPLOY**: Deploy to Cloudflare Workers using `wrangler deploy`
+- [ ] **VALIDATE**: Test all application functionality in production environment
+- [ ] **MONITOR**: Verify secrets access, API functionality, and static asset serving
+
+**Deployment Commands:**
+```bash
+# Build for production
+npm run build
+
+# Deploy to Cloudflare Workers
+wrangler deploy
+
+# Monitor deployment
+wrangler tail --format json
+```
+
+#### 🔍 8.7 Security and Performance Validation - **PENDING**
+**Production Testing**
+- [ ] **SECURITY**: Verify all secrets are properly hidden and accessible only to Workers runtime
+- [ ] **FUNCTIONALITY**: Test restaurant extraction, search, map integration, and CRUD operations
+- [ ] **PERFORMANCE**: Validate loading times and responsiveness across global edge locations
+- [ ] **SSL**: Configure custom domain with Cloudflare SSL certificates
+
+**Security Checklist:**
+- [ ] Claude API key not visible in browser or dashboard
+- [ ] Supabase credentials properly configured for production
+- [ ] Admin email authorization working securely
+- [ ] Mapbox token restricted to production domain
+- [ ] No sensitive data in client-side JavaScript bundles
+
+#### 📊 8.8 Production Environment Configuration - **PENDING**
+**Domain and DNS Setup**
+- [ ] **DOMAIN**: Configure custom domain for production deployment
+- [ ] **DNS**: Set up Cloudflare DNS management for domain
+- [ ] **SSL**: Enable Cloudflare SSL/TLS encryption
+- [ ] **MONITORING**: Set up Workers analytics and logging
+
+**Post-Deployment Optimization:**
+- [ ] **CACHING**: Configure appropriate cache headers for static assets
+- [ ] **COMPRESSION**: Enable Brotli/Gzip compression for optimal performance
+- [ ] **MONITORING**: Set up error tracking and performance monitoring
+- [ ] **BACKUP**: Document rollback procedures and environment restoration
+
+#### 🎯 **Implementation Architecture for Phase 8**
+**Technical Migration Strategy:**
+- **Current**: Local development with Express.js server + React frontend
+- **Target**: Cloudflare Workers with integrated API routes + React SPA
+- **Benefits**: Global edge deployment, integrated secrets management, unified platform
+- **Security**: Move from file-based .env to Cloudflare secure secrets management
+- **Performance**: Global CDN for static assets with edge-computed API responses
+
+**Workers-Specific Advantages:**
+- **Full-Stack**: Single deployment for frontend + backend functionality
+- **Global**: Edge computing with sub-100ms response times worldwide
+- **Scalable**: Automatic scaling with zero cold starts for static assets
+- **Integrated**: Native integration with Cloudflare services and security features
+- **Cost-Effective**: Generous free tier with pay-as-you-scale pricing model
+
+**Current Status**: 🔄 **READY FOR IMPLEMENTATION** - All research completed, step-by-step plan established, ready to migrate from local development to production Cloudflare Workers deployment with secure environment management.
+
+---

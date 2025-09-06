@@ -14,7 +14,7 @@ interface APIResponse {
   headers?: Record<string, string>;
 }
 
-// Local development handler - calls our local API server
+// Universal restaurant extraction handler - works in both local development and production
 export async function extractRestaurantLocal(request: APIRequest): Promise<RestaurantExtractionResult> {
   const { url } = request;
   
@@ -37,8 +37,14 @@ export async function extractRestaurantLocal(request: APIRequest): Promise<Resta
   }
 
   try {
-    // Call our local API server instead of Claude directly
-    const response = await fetch('http://localhost:3001/api/extract-restaurant', {
+    // Determine API endpoint based on environment
+    const apiUrl = import.meta.env.DEV 
+      ? 'http://localhost:3001/api/extract-restaurant'  // Local development (Express server)
+      : '/api/extract-restaurant';                      // Production (Cloudflare Workers)
+
+    console.log('🔍 Calling extraction API:', apiUrl);
+
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -70,7 +76,7 @@ export async function extractRestaurantLocal(request: APIRequest): Promise<Resta
     console.error('Extraction failed:', error);
     return {
       success: false,
-      error: `Extraction service unavailable: ${error instanceof Error ? error.message : 'Unknown error'}. Make sure the local API server is running.`
+      error: `Extraction service unavailable: ${error instanceof Error ? error.message : 'Unknown error'}. ${import.meta.env.DEV ? 'Make sure the local API server is running.' : 'Please try again later.'}`
     };
   }
 }

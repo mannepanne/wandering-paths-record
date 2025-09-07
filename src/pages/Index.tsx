@@ -289,7 +289,7 @@ const Index = () => {
       <footer className="border-t-2 border-border bg-card mt-16">
         <div className="container mx-auto px-4 py-8 text-center">
           <p className="text-sm text-muted-foreground font-mono">
-            Places to visit • Sights to see
+            So many restaurants, so much delicious food, so little time...
           </p>
         </div>
       </footer>

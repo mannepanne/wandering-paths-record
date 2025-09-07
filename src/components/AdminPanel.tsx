@@ -95,7 +95,9 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
               phone: addr.phone || '',
               openingHours: typeof addr.opening_hours === 'object' && addr.opening_hours?.hours 
                 ? addr.opening_hours.hours 
-                : addr.opening_hours || ''
+                : addr.opening_hours || '',
+              latitude: addr.latitude,
+              longitude: addr.longitude
             }))
           : [{
               locationName: '',
@@ -103,7 +105,9 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
               city: '',
               country: '',
               phone: '',
-              openingHours: ''
+              openingHours: '',
+              latitude: undefined,
+              longitude: undefined
             }]
       });
       setNewPlaceUrl(editingRestaurant.website || '');
@@ -137,7 +141,9 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
         city: loc.city,
         country: loc.country,
         phone: loc.phone,
-        opening_hours: loc.openingHours ? { hours: loc.openingHours } : undefined
+        opening_hours: loc.openingHours ? { hours: loc.openingHours } : undefined,
+        latitude: loc.latitude,
+        longitude: loc.longitude
       }));
       
       return restaurantService.createRestaurant(newRestaurant, addresses);
@@ -182,7 +188,9 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
         city: loc.city,
         country: loc.country,
         phone: loc.phone,
-        opening_hours: loc.openingHours ? { hours: loc.openingHours } : undefined
+        opening_hours: loc.openingHours ? { hours: loc.openingHours } : undefined,
+        latitude: loc.latitude,
+        longitude: loc.longitude
       }));
       
       return restaurantService.updateRestaurantWithAddresses(updatedRestaurant, addresses);
@@ -289,7 +297,9 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
               city: '',
               country: '',
               phone: extractedData.phone || '',
-              openingHours: ''
+              openingHours: '',
+              latitude: undefined,
+              longitude: undefined
             }]
       };
       
@@ -395,7 +405,9 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
       city: '',
       country: '',
       phone: '',
-      openingHours: ''
+      openingHours: '',
+      latitude: undefined,
+      longitude: undefined
     };
     
     setFormData(prev => prev ? { 

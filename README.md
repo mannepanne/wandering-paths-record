@@ -16,6 +16,7 @@ Wandering Paths helps you organize and remember exceptional restaurants through 
 - **AI-Powered Analysis**: Claude 3.5 Sonnet analyzes websites for cuisine, atmosphere, pricing, and must-try dishes
 - **Smart Business Detection**: Automatically identifies restaurants vs. other business types
 - **International Support**: Works with UK, French, and US restaurant formats
+- **Integrated Geocoding**: Automatic coordinate extraction during restaurant creation - no manual geocoding needed
 
 **📋 Comprehensive Restaurant Data**
 - **Rich Details**: Cuisine types, chef names, price ranges, atmosphere descriptions, dietary options
@@ -28,11 +29,14 @@ Wandering Paths helps you organize and remember exceptional restaurants through 
 - **Dynamic Location Management**: Add, remove, and edit multiple restaurant locations
 - **Cache Management**: Smart caching prevents duplicate extractions with manual cache clearing
 - **Progress Tracking**: Real-time extraction progress with detailed status updates
+- **Coordinate Preservation**: Editing restaurants preserves existing geocoded coordinates
+- **Integrated Geocoding**: Automatic coordinate extraction with progress feedback during saves
 
 **🎨 Curated Discovery Experience**
 - **Smart Filtering**: Filter by cuisine type, visit status, and location
 - **Text Search**: Search restaurants by name, city, country, or neighborhood
 - **GPS "Near Me" Search**: Find restaurants within 20-minute walking distance with toggle functionality
+- **Mobile-Optimized GPS**: Enhanced geolocation for mobile Chrome Android and other mobile browsers
 - **Interactive Map**: Mapbox-powered map with clustering, popups, and real-time filtering
 - **List/Map Toggle**: Seamless switching between list and map views with consistent filtering
 - **Beautiful Design**: Earth-toned brutalist design with strong visual hierarchy
@@ -177,6 +181,7 @@ The restaurant curation system is fully deployed on Cloudflare Workers with glob
 - Smart business type detection (restaurants vs. wine bars, hotels, retail, etc.)
 - Robust error handling including rate limit management and user-friendly messages
 - URL-based caching system with 24-hour expiration and manual cache management
+- Integrated automatic geocoding during restaurant extraction - coordinates added seamlessly
 
 **💾 Complete Database Architecture**
 - Supabase integration with multi-table restaurant architecture
@@ -193,9 +198,11 @@ The restaurant curation system is fully deployed on Cloudflare Workers with glob
 - Responsive restaurant cards with status badges and comprehensive filtering
 - Complete text search across restaurant names and locations
 - GPS-based "Near Me" search with 20-minute walking radius and toggle functionality
+- Mobile-optimized geolocation with enhanced timeout handling and error messages
 - Interactive Mapbox-powered map with clustering, popups, and mobile optimization
 - Seamless list/map view switching with consistent filtering across both modes
 - Complete authentication system with secure credential management
+- Automatic coordinate preservation during restaurant editing
 
 **🌍 Professional Infrastructure**
 - Cloudflare Workers deployment with custom domain (restaurants.hultberg.org)

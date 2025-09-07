@@ -34,6 +34,13 @@ export const locationService = {
       
       const results: GeocodingResult[] = await response.json();
       
+      console.log(`🌍 GEOCODING API RESPONSE for "${query}":`, results.length, 'results');
+      if (results.length > 0) {
+        console.log(`🌍 First result:`, results[0]);
+        console.log(`🌍 Display name: "${results[0].display_name}"`);
+        console.log(`🌍 Coordinates: ${results[0].lat}, ${results[0].lon}`);
+      }
+      
       if (results.length === 0) {
         console.log('No geocoding results found for:', query);
         return null;

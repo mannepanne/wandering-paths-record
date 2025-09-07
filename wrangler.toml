@@ -9,7 +9,7 @@ main = "./src/worker.js"
 SUPABASE_URL = "https://drtjfbvudzacixvqkzav.supabase.co"
 AUTHORIZED_ADMIN_EMAIL = "magnus.hultberg@gmail.com"
 
-# Routes configuration for custom domain (will be configured later)
-# [[routes]]
-# pattern = "your-domain.com/*"
-# zone_name = "your-domain.com"
+# Custom domain configuration
+[[routes]]
+pattern = "restaurants.hultberg.org/*"
+zone_name = "hultberg.org"

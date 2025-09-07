@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Globe, Plus, Shield, Database, LogOut, User, Search, AlertTriangle, CheckCircle, Loader2, Trash2, BarChart3, MapPin, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -43,6 +44,7 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
     percentage: 0
   });
   const [geocodingProgress, setGeocodingProgress] = useState<GeocodingProgress | null>(null);
+  const [forceRegenerateAll, setForceRegenerateAll] = useState<boolean>(false);
   
   // Integrated geocoding progress for saves
   const [saveGeocodingProgress, setSaveGeocodingProgress] = useState<string | null>(null);
@@ -379,7 +381,7 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
 
       const finalProgress = await geocodingUtility.batchGeocodeAddresses((progress) => {
         setGeocodingProgress({ ...progress });
-      });
+      }, forceRegenerateAll);
 
       // Refresh stats after completion
       const updatedStats = await geocodingUtility.getGeocodingStats();
@@ -985,26 +987,41 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
             </div>
           )}
           
-          <div className="flex gap-3 pt-2">
-            <Button
-              variant="brutalist"
-              onClick={handleStartGeocoding}
-              disabled={!!geocodingProgress || geocodingStats.needsGeocoding === 0}
-              className="gap-2 bg-olive-green hover:bg-olive-green/90 text-white"
-            >
-              <MapPin className="w-4 h-4" />
-              {geocodingProgress ? 'Geocoding...' : 'Start Geocoding'}
-            </Button>
-            <Button
-              variant="ghost" 
-              size="sm"
-              onClick={handleRefreshGeocodingStats}
-              disabled={!!geocodingProgress}
-              className="gap-2"
-            >
-              <BarChart3 className="w-4 h-4" />
-              Refresh Stats
-            </Button>
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="force-regenerate" 
+                checked={forceRegenerateAll}
+                onCheckedChange={(checked) => setForceRegenerateAll(checked === true)}
+              />
+              <label 
+                htmlFor="force-regenerate" 
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Force regenerate ALL coordinates (not just missing ones)
+              </label>
+            </div>
+            <div className="flex gap-3">
+              <Button
+                variant="brutalist"
+                onClick={handleStartGeocoding}
+                disabled={!!geocodingProgress || (!forceRegenerateAll && geocodingStats.needsGeocoding === 0)}
+                className="gap-2 bg-olive-green hover:bg-olive-green/90 text-white"
+              >
+                <MapPin className="w-4 h-4" />
+                {geocodingProgress ? 'Geocoding...' : (forceRegenerateAll ? 'Regenerate All Coordinates' : 'Start Geocoding')}
+              </Button>
+              <Button
+                variant="ghost" 
+                size="sm"
+                onClick={handleRefreshGeocodingStats}
+                disabled={!!geocodingProgress}
+                className="gap-2"
+              >
+                <BarChart3 className="w-4 h-4" />
+                Refresh Stats
+              </Button>
+            </div>
           </div>
           
           {geocodingStats.needsGeocoding === 0 && geocodingStats.total > 0 && (

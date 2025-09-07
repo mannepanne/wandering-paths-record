@@ -129,6 +129,23 @@ export const InteractiveMap = ({
       return;
     }
 
+    // Debug: Check for duplicate coordinates
+    const coordMap = new Map();
+    validRestaurants.forEach(restaurant => {
+      const coordKey = `${restaurant.latitude},${restaurant.longitude}`;
+      if (!coordMap.has(coordKey)) {
+        coordMap.set(coordKey, []);
+      }
+      coordMap.get(coordKey).push(restaurant.name);
+    });
+    
+    // Log any duplicate coordinates
+    coordMap.forEach((names, coord) => {
+      if (names.length > 1) {
+        console.log(`🔍 Multiple restaurants at ${coord}:`, names);
+      }
+    });
+
     const geojsonData: GeoJSON.FeatureCollection = {
       type: 'FeatureCollection',
       features: validRestaurants.map(restaurant => ({
@@ -167,15 +184,7 @@ export const InteractiveMap = ({
       source: 'restaurants',
       filter: ['has', 'point_count'],
       paint: {
-        'circle-color': [
-          'step',
-          ['get', 'point_count'],
-          '#f59e0b', // Yellow for small clusters (1-5)
-          5,
-          '#ea580c', // Orange for medium clusters (5-10)
-          10,
-          '#dc2626'  // Red for large clusters (10+)
-        ],
+        'circle-color': '#dc2626', // Red for all clusters
         'circle-radius': [
           'step',
           ['get', 'point_count'],
@@ -350,6 +359,20 @@ export const InteractiveMap = ({
   return (
     <Card className="border-2 border-border">
       <CardContent className="p-0">
+        {/* Map Legend */}
+        <div className="p-4 bg-muted/30 border-b">
+          <div className="flex flex-wrap gap-6 text-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded-full bg-[#6366f1] border-2 border-white"></div>
+              <span>Visited</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded-full bg-[#f59e0b] border-2 border-white"></div>
+              <span>Must Visit</span>
+            </div>
+          </div>
+        </div>
+        
         <div className="relative">
           <div
             ref={mapContainer}

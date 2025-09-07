@@ -15,15 +15,21 @@ export interface GeocodingProgress {
 
 export const geocodingUtility = {
   // Get all restaurant addresses that need geocoding (missing coordinates)
-  async getAddressesNeedingGeocoding(): Promise<RestaurantAddress[]> {
-    const { data, error } = await supabase
+  async getAddressesNeedingGeocoding(forceAll: boolean = false): Promise<RestaurantAddress[]> {
+    const query = supabase
       .from('restaurant_addresses')
       .select('*')
-      .or('latitude.is.null,longitude.is.null')
       .order('created_at', { ascending: true });
 
+    // If forceAll is true, get ALL addresses, otherwise only get those missing coordinates
+    if (!forceAll) {
+      query.or('latitude.is.null,longitude.is.null');
+    }
+
+    const { data, error } = await query;
+
     if (error) {
-      console.error('Error fetching addresses needing geocoding:', error);
+      console.error('Error fetching addresses for geocoding:', error);
       throw error;
     }
 
@@ -33,13 +39,57 @@ export const geocodingUtility = {
   // Geocode a single address and update the database
   async geocodeAddress(address: RestaurantAddress): Promise<boolean> {
     try {
+      console.log(`🔍 GEOCODING DEBUG - Restaurant ID: ${address.restaurant_id}, Address ID: ${address.id}`);
+      console.log(`🔍 Full Address: "${address.full_address}"`);
+      console.log(`🔍 City: "${address.city}"`);
+      console.log(`🔍 Country: "${address.country}"`);
+      
       // Try to geocode the full address
       let coords = await locationService.geocodeLocation(address.full_address);
       
-      // If that fails, try just the city/postcode if available
-      if (!coords && (address.city || address.full_address)) {
-        const fallbackQuery = address.city || address.full_address.split(',').pop()?.trim() || '';
-        coords = await locationService.geocodeLocation(fallbackQuery);
+      // If that fails, try progressive fallback strategies
+      if (!coords) {
+        console.log('🔍 Full address failed, trying fallback strategies...');
+        
+        // Strategy 1: Try extracting UK postcode + city
+        const postcodeMatch = address.full_address.match(/\b[A-Z]{1,2}\d{1,2}[A-Z]?\s?\d[A-Z]{2}\b/i);
+        if (postcodeMatch && address.city) {
+          const postcodeQuery = `${postcodeMatch[0]}, ${address.city}`;
+          console.log(`🔍 Trying postcode + city: "${postcodeQuery}"`);
+          coords = await locationService.geocodeLocation(postcodeQuery);
+        }
+        
+        // Strategy 2: Try just the postcode
+        if (!coords && postcodeMatch) {
+          console.log(`🔍 Trying just postcode: "${postcodeMatch[0]}"`);
+          coords = await locationService.geocodeLocation(postcodeMatch[0]);
+        }
+        
+        // Strategy 3: Try street address without building name (remove first part before comma)
+        if (!coords) {
+          const addressParts = address.full_address.split(',').map(p => p.trim());
+          if (addressParts.length > 1) {
+            const streetQuery = addressParts.slice(1).join(', '); // Skip the first part (building name)
+            console.log(`🔍 Trying street address without building: "${streetQuery}"`);
+            coords = await locationService.geocodeLocation(streetQuery);
+          }
+        }
+        
+        // Strategy 4: Try just the street and city
+        if (!coords) {
+          const addressParts = address.full_address.split(',').map(p => p.trim());
+          if (addressParts.length >= 2 && address.city) {
+            const streetAndCity = `${addressParts[1]}, ${address.city}`;
+            console.log(`🔍 Trying street + city: "${streetAndCity}"`);
+            coords = await locationService.geocodeLocation(streetAndCity);
+          }
+        }
+        
+        // Strategy 5: Last resort - just the city (original fallback)
+        if (!coords && address.city) {
+          console.log(`🔍 Last resort - trying just city: "${address.city}"`);
+          coords = await locationService.geocodeLocation(address.city);
+        }
       }
 
       if (coords) {
@@ -72,9 +122,10 @@ export const geocodingUtility = {
 
   // Batch geocode all addresses that need coordinates
   async batchGeocodeAddresses(
-    onProgress?: (progress: GeocodingProgress) => void
+    onProgress?: (progress: GeocodingProgress) => void,
+    forceAll: boolean = false
   ): Promise<GeocodingProgress> {
-    const addressesToGeocode = await this.getAddressesNeedingGeocoding();
+    const addressesToGeocode = await this.getAddressesNeedingGeocoding(forceAll);
     
     const progress: GeocodingProgress = {
       total: addressesToGeocode.length,
@@ -91,7 +142,7 @@ export const geocodingUtility = {
       return progress;
     }
 
-    console.log(`Starting batch geocoding for ${addressesToGeocode.length} addresses...`);
+    console.log(`Starting ${forceAll ? 'FULL REGENERATION' : 'batch geocoding'} for ${addressesToGeocode.length} addresses...`);
 
     // Process addresses one by one with a small delay to be respectful to the geocoding service
     for (const address of addressesToGeocode) {

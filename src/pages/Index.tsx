@@ -33,6 +33,7 @@ const Index = () => {
     lng: number;
   } | null>(null);
   const [editingRestaurant, setEditingRestaurant] = useState<Place | null>(null);
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -105,30 +106,120 @@ const Index = () => {
     }
     
     // Otherwise, start Near Me search
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          const coords = { lat: latitude, lng: longitude };
-          
-          console.log("🗺️ GPS location obtained:", coords);
-          
-          // Clear text search when doing GPS-based search
-          setSearchText("");
-          setUserLocation(coords);
-          setSearchLocationCoords(coords);
-          setSearchLocation("Near me (20 min walk)");
-          
-          console.log("🚶 Near Me search activated - finding restaurants within 20 minutes walking distance");
-        },
-        (error) => {
-          console.error("❌ Error getting GPS location:", error);
-          alert("Unable to get your location. Please ensure location access is enabled.");
-        },
-      );
-    } else {
+    if (!navigator.geolocation) {
       alert("Geolocation is not supported by your browser.");
+      return;
     }
+
+    // Show loading state
+    setIsGettingLocation(true);
+    setSearchLocation("Finding your location...");
+    console.log("📍 Starting geolocation request...");
+
+    // Enhanced options for mobile compatibility
+    const options = {
+      enableHighAccuracy: false, // Use network location for faster results on mobile
+      timeout: 15000, // 15 seconds timeout (mobile can be slow)
+      maximumAge: 300000 // Accept cached location up to 5 minutes old
+    };
+
+    // Wrap geolocation in a promise with manual timeout for mobile Chrome issues
+    const getLocationWithTimeout = (): Promise<GeolocationPosition> => {
+      return new Promise((resolve, reject) => {
+        let timeoutId: NodeJS.Timeout;
+        let hasResolved = false;
+
+        // Manual timeout handler for mobile Chrome issues
+        timeoutId = setTimeout(() => {
+          if (!hasResolved) {
+            hasResolved = true;
+            console.error("⏰ Manual timeout: Geolocation request took too long on mobile");
+            reject(new Error("Location request timed out. This is common on mobile networks."));
+          }
+        }, 20000); // 20 seconds manual timeout
+
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            if (!hasResolved) {
+              hasResolved = true;
+              clearTimeout(timeoutId);
+              resolve(position);
+            }
+          },
+          (error) => {
+            if (!hasResolved) {
+              hasResolved = true;
+              clearTimeout(timeoutId);
+              reject(error);
+            }
+          },
+          options
+        );
+      });
+    };
+
+    getLocationWithTimeout().then(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        const coords = { lat: latitude, lng: longitude };
+        
+        console.log("🗺️ GPS location obtained:", coords);
+        console.log("📊 Location accuracy:", position.coords.accuracy, "meters");
+        
+        // Clear text search when doing GPS-based search
+        setSearchText("");
+        setUserLocation(coords);
+        setSearchLocationCoords(coords);
+        setSearchLocation("Near me (20 min walk)");
+        setIsGettingLocation(false);
+        
+        console.log("🚶 Near Me search activated - finding restaurants within 20 minutes walking distance");
+      }
+    ).catch(
+      (error) => {
+        console.error("❌ Error getting GPS location:", error);
+        
+        // Reset loading state
+        setSearchLocation("");
+        setIsGettingLocation(false);
+        
+        // Provide detailed error messages based on error type
+        let errorMessage = "Unable to get your location. ";
+        
+        // Handle both GeolocationPositionError and regular Error objects
+        if (error instanceof GeolocationPositionError) {
+          console.error("❌ Geolocation error code:", error.code);
+          console.error("❌ Geolocation error message:", error.message);
+          
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage += "Location access was denied. Please enable location access in your browser settings and try again.";
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage += "Location information is unavailable. Please check your internet connection and try again.";
+              break;
+            case error.TIMEOUT:
+              errorMessage += "Location request timed out. This can happen on mobile networks. Please try again or check your connection.";
+              break;
+            default:
+              errorMessage += "Please ensure location access is enabled and try again.";
+              break;
+          }
+        } else {
+          // Handle manual timeout or other errors
+          console.error("❌ Error message:", error.message);
+          errorMessage += error.message;
+        }
+        
+        // Add mobile-specific guidance
+        const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (isMobile) {
+          errorMessage += "\n\nOn mobile: Make sure you're using HTTPS and have given permission when prompted.";
+        }
+        
+        alert(errorMessage);
+      }
+    );
   };
 
   const handleStatusChange = (id: string, status: "must-visit" | "visited") => {
@@ -218,6 +309,7 @@ const Index = () => {
             searchLocation={searchLocation}
             availableCuisines={availableCuisines}
             isNearMeActive={!!searchLocationCoords}
+            isLoadingLocation={isGettingLocation}
           />
 
           {/* Map View */}

@@ -16,6 +16,7 @@ interface FilterBarProps {
   searchLocation?: string;
   availableCuisines?: string[];
   isNearMeActive?: boolean;
+  isLoadingLocation?: boolean;
 }
 
 
@@ -35,10 +36,13 @@ export const FilterBar = ({
   onNearMe,
   searchLocation,
   availableCuisines = [],
-  isNearMeActive = false
+  isNearMeActive = false,
+  isLoadingLocation: externalIsLoadingLocation = false
 }: FilterBarProps) => {
   const [locationInput, setLocationInput] = useState(searchLocation || "");
-  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  
+  // Use external loading state when provided, fallback to internal state
+  const isLoadingLocation = externalIsLoadingLocation;
 
   // Create dynamic cuisine options based on available cuisines from database
   const cuisineTypes = [
@@ -55,37 +59,11 @@ export const FilterBar = ({
     }
   };
 
-  const handleNearMe = async () => {
+  const handleNearMe = () => {
     if (!onNearMe) return;
     
-    // If Near Me is already active, just toggle it off immediately
-    if (isNearMeActive) {
-      onNearMe();
-      return;
-    }
-    
-    // Otherwise, set loading state and get location
-    setIsLoadingLocation(true);
-    try {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          () => {
-            onNearMe();
-            setIsLoadingLocation(false);
-          },
-          (error) => {
-            console.error('Location access denied:', error);
-            setIsLoadingLocation(false);
-          }
-        );
-      } else {
-        console.error('Geolocation not supported');
-        setIsLoadingLocation(false);
-      }
-    } catch (error) {
-      console.error('Error getting location:', error);
-      setIsLoadingLocation(false);
-    }
+    // Just call the parent handler - all geolocation logic is handled in Index.tsx
+    onNearMe();
   };
 
   const clearLocationSearch = () => {

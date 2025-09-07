@@ -12,7 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { LoginForm } from "@/components/LoginForm";
 import { PlacePreview } from "@/components/PlacePreview";
 import { useRestaurantExtraction } from "@/hooks/useRestaurantExtraction";
-import { ExtractedRestaurantData, ExtractionCache } from "@/services/claudeExtractor";
+import { ExtractedRestaurantData, ExtractedLocation, ExtractionCache } from "@/services/claudeExtractor";
 import { restaurantService } from "@/services/restaurants";
 import { geocodingUtility, GeocodingProgress } from "@/services/geocodingUtility";
 import { Restaurant } from "@/types/place";
@@ -43,6 +43,9 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
     percentage: 0
   });
   const [geocodingProgress, setGeocodingProgress] = useState<GeocodingProgress | null>(null);
+  
+  // Integrated geocoding progress for saves
+  const [saveGeocodingProgress, setSaveGeocodingProgress] = useState<string | null>(null);
   
   // Update cache stats when extraction completes
   useEffect(() => {
@@ -117,7 +120,7 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
     }
   }, [editingRestaurant, restaurantAddresses]);
   
-  // Mutation for saving new restaurant
+  // Mutation for saving new restaurant with geocoding
   const createRestaurantMutation = useMutation({
     mutationFn: (restaurantData: Partial<ExtractedRestaurantData>) => {
       const newRestaurant = {
@@ -146,20 +149,28 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
         longitude: loc.longitude
       }));
       
-      return restaurantService.createRestaurant(newRestaurant, addresses);
+      return restaurantService.createRestaurantWithGeocoding(
+        newRestaurant, 
+        addresses,
+        (progress) => setSaveGeocodingProgress(progress)
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['places'] });
       setFormData(null);
       setNewPlaceUrl("");
       extraction.reset();
+      setSaveGeocodingProgress(null);
+      // Refresh geocoding stats to reflect the new coordinates
+      handleRefreshGeocodingStats();
     },
     onError: (error) => {
       console.error('Error creating restaurant:', error);
+      setSaveGeocodingProgress(null);
     }
   });
 
-  // Mutation for updating existing restaurant
+  // Mutation for updating existing restaurant with geocoding
   const updateRestaurantMutation = useMutation({
     mutationFn: (restaurantData: Partial<ExtractedRestaurantData>) => {
       if (!editingRestaurant) throw new Error("No restaurant to update");
@@ -193,17 +204,25 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
         longitude: loc.longitude
       }));
       
-      return restaurantService.updateRestaurantWithAddresses(updatedRestaurant, addresses);
+      return restaurantService.updateRestaurantWithAddressesAndGeocoding(
+        updatedRestaurant, 
+        addresses,
+        (progress) => setSaveGeocodingProgress(progress)
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['places'] });
       setFormData(null);
       setNewPlaceUrl("");
       extraction.reset();
+      setSaveGeocodingProgress(null);
+      // Refresh geocoding stats to reflect the updated coordinates
+      handleRefreshGeocodingStats();
       if (onBack) onBack();
     },
     onError: (error) => {
       console.error('Error updating restaurant:', error);
+      setSaveGeocodingProgress(null);
     }
   });
 
@@ -389,7 +408,7 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
     }
   };
 
-  const handleLocationChange = (index: number, field: string, value: string) => {
+  const handleLocationChange = (index: number, field: keyof ExtractedLocation, value: string) => {
     if (!formData?.locations) return;
     
     const updatedLocations = [...formData.locations];
@@ -772,6 +791,16 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
                   <p className="text-xs text-muted-foreground mt-1">Separate multiple dishes with commas</p>
                 </div>
               </div>
+              
+              {/* Integrated Geocoding Progress */}
+              {saveGeocodingProgress && (
+                <div className="flex items-center gap-3 p-3 bg-olive-green/10 rounded-md">
+                  <div className="animate-spin w-4 h-4 border-2 border-olive-green border-t-transparent rounded-full" />
+                  <span className="text-sm text-olive-green font-medium">
+                    {saveGeocodingProgress}
+                  </span>
+                </div>
+              )}
               
               <div className="flex gap-3 pt-4">
                 <Button

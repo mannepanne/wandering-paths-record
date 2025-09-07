@@ -263,6 +263,85 @@ export const restaurantService = {
     return data;
   },
 
+  // Create a new restaurant with addresses and automatic geocoding
+  async createRestaurantWithGeocoding(
+    restaurant: Omit<Restaurant, 'id' | 'created_at' | 'updated_at' | 'locations'>,
+    addresses?: Omit<RestaurantAddress, 'id' | 'restaurant_id' | 'created_at' | 'updated_at'>[],
+    onProgress?: (progress: string) => void
+  ): Promise<Restaurant> {
+    onProgress?.('Saving restaurant data...');
+    
+    // First, create the restaurant
+    const createdRestaurant = await this.createRestaurant(restaurant, addresses);
+    
+    // If addresses were provided, geocode them
+    if (addresses && addresses.length > 0) {
+      onProgress?.('Adding location coordinates...');
+      
+      // Get the created addresses from the database
+      const { data: createdAddresses, error } = await supabase
+        .from('restaurant_addresses')
+        .select('*')
+        .eq('restaurant_id', createdRestaurant.id);
+        
+      if (error) {
+        console.error('Error fetching created addresses for geocoding:', error);
+        // Don't throw - restaurant creation was successful
+        return createdRestaurant;
+      }
+      
+      // Geocode each address that doesn't already have coordinates
+      for (const address of createdAddresses || []) {
+        if (!address.latitude || !address.longitude) {
+          try {
+            onProgress?.(`Geocoding ${address.location_name || 'location'}...`);
+            
+            // Import locationService dynamically to avoid circular imports
+            const { locationService } = await import('./locationService');
+            
+            // Try to geocode the full address
+            let coords = await locationService.geocodeLocation(address.full_address);
+            
+            // If that fails, try just the city if available
+            if (!coords && address.city) {
+              coords = await locationService.geocodeLocation(address.city);
+            }
+            
+            if (coords) {
+              // Update the address with coordinates
+              const { error: updateError } = await supabase
+                .from('restaurant_addresses')
+                .update({
+                  latitude: coords.lat,
+                  longitude: coords.lng,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', address.id);
+                
+              if (updateError) {
+                console.error('Error updating address coordinates:', updateError);
+              } else {
+                console.log(`Successfully geocoded: ${address.full_address} -> ${coords.lat}, ${coords.lng}`);
+              }
+            } else {
+              console.warn(`Could not geocode address: ${address.full_address}`);
+            }
+            
+            // Small delay to be respectful to the geocoding service
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+          } catch (geocodeError) {
+            console.error('Error during geocoding:', geocodeError);
+            // Continue with other addresses even if one fails
+          }
+        }
+      }
+    }
+    
+    onProgress?.('Restaurant saved with coordinates!');
+    return createdRestaurant;
+  },
+
   // Update a restaurant
   async updateRestaurant(id: string, updates: Partial<Restaurant>): Promise<Restaurant> {
     const { data, error } = await supabase
@@ -438,6 +517,85 @@ export const restaurantService = {
 
     // Return the updated restaurant with addresses
     return this.getRestaurantById(restaurant.id);
+  },
+
+  // Update a restaurant with addresses and automatic geocoding
+  async updateRestaurantWithAddressesAndGeocoding(
+    restaurant: Restaurant, 
+    addresses?: Omit<RestaurantAddress, 'id' | 'restaurant_id' | 'created_at' | 'updated_at'>[],
+    onProgress?: (progress: string) => void
+  ): Promise<Restaurant> {
+    onProgress?.('Updating restaurant data...');
+    
+    // First, update using the existing function
+    const updatedRestaurant = await this.updateRestaurantWithAddresses(restaurant, addresses);
+    
+    // If addresses were provided, geocode any that don't have coordinates
+    if (addresses && addresses.length > 0) {
+      onProgress?.('Adding location coordinates...');
+      
+      // Get the newly created addresses from the database
+      const { data: newAddresses, error } = await supabase
+        .from('restaurant_addresses')
+        .select('*')
+        .eq('restaurant_id', restaurant.id);
+        
+      if (error) {
+        console.error('Error fetching addresses for geocoding:', error);
+        // Don't throw - restaurant update was successful
+        return updatedRestaurant;
+      }
+      
+      // Geocode each address that doesn't already have coordinates
+      for (const address of newAddresses || []) {
+        if (!address.latitude || !address.longitude) {
+          try {
+            onProgress?.(`Geocoding ${address.location_name || 'location'}...`);
+            
+            // Import locationService dynamically to avoid circular imports
+            const { locationService } = await import('./locationService');
+            
+            // Try to geocode the full address
+            let coords = await locationService.geocodeLocation(address.full_address);
+            
+            // If that fails, try just the city if available
+            if (!coords && address.city) {
+              coords = await locationService.geocodeLocation(address.city);
+            }
+            
+            if (coords) {
+              // Update the address with coordinates
+              const { error: updateError } = await supabase
+                .from('restaurant_addresses')
+                .update({
+                  latitude: coords.lat,
+                  longitude: coords.lng,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', address.id);
+                
+              if (updateError) {
+                console.error('Error updating address coordinates:', updateError);
+              } else {
+                console.log(`Successfully geocoded: ${address.full_address} -> ${coords.lat}, ${coords.lng}`);
+              }
+            } else {
+              console.warn(`Could not geocode address: ${address.full_address}`);
+            }
+            
+            // Small delay to be respectful to the geocoding service
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+          } catch (geocodeError) {
+            console.error('Error during geocoding:', geocodeError);
+            // Continue with other addresses even if one fails
+          }
+        }
+      }
+    }
+    
+    onProgress?.('Restaurant updated with coordinates!');
+    return updatedRestaurant;
   }
 };
 

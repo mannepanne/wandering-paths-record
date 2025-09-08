@@ -16,8 +16,10 @@ import { InteractiveMap } from "@/components/InteractiveMap";
 import { MapPin, Plus, Shield, Compass, Settings } from "lucide-react";
 import { placesService, restaurantService } from "@/services/restaurants";
 import { Place } from "@/types/place";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
+  const { user } = useAuth();
   const [currentView, setCurrentView] = useState<"public" | "admin">("public");
   const [isMapView, setIsMapView] = useState(false);
   const [selectedType, setSelectedType] = useState("all");
@@ -366,8 +368,8 @@ const Index = () => {
                         visitCount: place.visit_count,
                         mustTryDishes: place.must_try_dishes,
                       }}
-                      onStatusChange={handleStatusChange}
-                      onEdit={handleEdit}
+                      onStatusChange={user ? handleStatusChange : undefined}
+                      onEdit={user ? handleEdit : undefined}
                     />
                   ))}
                 </div>

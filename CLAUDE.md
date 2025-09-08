@@ -30,7 +30,20 @@ npm run preview
 
 # Install dependencies
 npm i
+
+# Deploy to CloudFlare Workers (NOT Pages)
+npx wrangler deploy
 ```
+
+## Deployment
+
+This project uses **CloudFlare Workers** (NOT CloudFlare Pages). 
+
+- **Workers URL**: `wandering-paths-record.herrings.workers.dev`
+- **Custom Domain**: `restaurants.hultberg.org`
+- **Deploy Command**: `npx wrangler deploy`
+
+The project is configured as a Workers project with static assets, not a Pages project.
 
 ## Architecture Overview
 

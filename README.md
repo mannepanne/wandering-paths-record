@@ -6,7 +6,7 @@
 
 ## Why This Project Exists
 
-When traveling or exploring new cities, it's easy to lose track of amazing restaurants you've discovered or heard about. This app solves that problem by creating your personal curated collection of exceptional dining experiences.
+When visiting new or even familiar cities, it's easy to lose track of amazing restaurants you've discovered or heard about. This app solves that problem by creating your personal curated collection of exceptional dining experiences, making it easy to look them up when planning an outing.
 
 **Perfect for:**
 - **Food Enthusiasts** who want to remember great restaurants they've visited
@@ -17,7 +17,7 @@ When traveling or exploring new cities, it's easy to lose track of amazing resta
 ## Key Features
 
 **🎯 Smart Restaurant Discovery**
-- **AI-Powered Extraction**: Paste any restaurant URL and get comprehensive details automatically extracted
+- **AI-Powered Extraction**: Simply add a restaurant URL and get comprehensive details automatically extracted
 - **Multi-Location Search**: Find restaurants by location names (e.g., search "Canary Wharf" to find Dishoom)
 - **GPS "Near Me"**: Discover restaurants within walking distance wherever you are
 - **Interactive Maps**: Explore restaurants geographically with clustering and filtering
@@ -29,17 +29,17 @@ When traveling or exploring new cities, it's easy to lose track of amazing resta
 - **Personal Notes**: Add ratings, descriptions, and must-try dishes
 
 **🌍 Travel-Friendly**
-- **International Support**: Works with restaurants worldwide (UK, French, US formats)
-- **Mobile Optimized**: Perfect for on-the-go restaurant discovery and planning
+- **International Support**: Works with restaurants worldwide
+- **Mobile Optimized**: Perfect for remembering restaurants while on-the-go and planning visits
 - **Offline Ready**: Core functionality works without constant internet connection
 
 ## Tech Stack
 
-**Frontend:** React 18 + TypeScript + Vite + shadcn/ui + Tailwind CSS  
-**Backend:** Supabase (database) + Cloudflare Workers (API)  
-**AI:** Anthropic Claude 3.5 Sonnet for content extraction  
-**Maps:** Mapbox GL JS with clustering and mobile optimization  
-**Hosting:** Cloudflare Workers with global edge distribution  
+**Frontend:** React 18 + TypeScript + Vite + shadcn/ui + Tailwind CSS
+**Backend:** Supabase (database) + Cloudflare Workers (API)
+**AI:** Anthropic Claude 3.5 Sonnet for content extraction
+**Maps:** Mapbox GL JS with clustering and mobile optimization
+**Hosting:** Cloudflare Workers with global edge distribution
 
 ## Quick Start
 
@@ -83,7 +83,7 @@ VITE_MAPBOX_ACCESS_TOKEN=your_mapbox_access_token_here
 - **Intelligent Search**: Find restaurants by brand name, cuisine, location names, or addresses
 - **Production-Ready**: Live on Cloudflare Workers with professional hosting infrastructure
 
-## Contributing
+## Scope
 
 This is a personal curation tool, but the codebase demonstrates modern React patterns with TypeScript, AI integration, and production deployment practices.
 

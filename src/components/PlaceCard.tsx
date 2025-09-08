@@ -102,6 +102,23 @@ export const PlaceCard = ({ place, onStatusChange, onEdit }: PlaceCardProps) => 
           </div>
         )}
 
+        {place.locations && place.locations.length > 1 && (
+          <div className="text-sm">
+            <span className="font-medium text-foreground">Multiple locations ({place.locations.length}): </span>
+            <span className="text-muted-foreground">
+              {(() => {
+                const locationNames = place.locations.map(loc => loc.location_name);
+                if (locationNames.length <= 5) {
+                  return locationNames.join(', ');
+                } else {
+                  const displayed = locationNames.slice(0, 5);
+                  const remaining = locationNames.length - 5;
+                  return `${displayed.join(', ')} + ${remaining} more`;
+                }
+              })()}
+            </span>
+          </div>
+        )}
 
         {place.description && (
           <div className="text-sm">

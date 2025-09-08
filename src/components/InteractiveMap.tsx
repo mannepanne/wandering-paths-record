@@ -118,6 +118,7 @@ export const InteractiveMap = ({
       map.current.removeLayer('restaurant-clusters');
       map.current.removeLayer('cluster-count');
       map.current.removeLayer('restaurant-points');
+      map.current.removeLayer('restaurant-labels');
       map.current.removeSource('restaurants');
     }
 
@@ -263,6 +264,38 @@ export const InteractiveMap = ({
         'circle-radius': 8,
         'circle-stroke-width': 2,
         'circle-stroke-color': '#fff'
+      }
+    });
+
+    // Add restaurant name labels (visible at close zoom levels)
+    map.current.addLayer({
+      id: 'restaurant-labels',
+      type: 'symbol',
+      source: 'restaurants',
+      filter: ['!', ['has', 'point_count']],
+      layout: {
+        'text-field': ['get', 'name'],
+        'text-font': ['Open Sans Semibold', 'Arial Unicode MS Bold'],
+        'text-size': {
+          base: 1,
+          stops: [
+            [12, 0],    // Hidden below zoom 12
+            [13, 11],   // Small at zoom 13
+            [15, 13],   // Medium at zoom 15
+            [18, 16]    // Large at zoom 18+
+          ]
+        },
+        'text-offset': [0, 1.8], // Position below marker
+        'text-anchor': 'top',
+        'text-max-width': 10,
+        'text-allow-overlap': false,
+        'text-ignore-placement': false
+      },
+      paint: {
+        'text-color': '#1c1917', // Charcoal from design system
+        'text-halo-color': '#ffffff',
+        'text-halo-width': 1.5,
+        'text-halo-blur': 1
       }
     });
 

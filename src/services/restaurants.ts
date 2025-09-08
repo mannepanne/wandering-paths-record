@@ -111,14 +111,7 @@ export const restaurantService = {
       query = query.eq('status', filters.status);
     }
 
-    // Add text search if provided
-    if (filters.searchText && filters.searchText.trim()) {
-      const searchTerm = filters.searchText.trim();
-      console.log("🔍 Applying text search for:", searchTerm);
-      
-      // Search across restaurant name and address summary using the view
-      query = query.or(`name.ilike.%${searchTerm}%,address.ilike.%${searchTerm}%`);
-    }
+    // NOTE: Text search will be applied after fetching data since we need to search across joined location data
 
     query = query.order('created_at', { ascending: false });
 
@@ -132,6 +125,44 @@ export const restaurantService = {
     console.log(`📋 Database query returned ${data?.length || 0} restaurants`);
     
     let results = data || [];
+    
+    // Apply text search across restaurant and location data
+    if (filters.searchText && filters.searchText.trim()) {
+      const searchTerm = filters.searchText.trim().toLowerCase();
+      console.log("🔍 Applying text search for:", searchTerm);
+      
+      results = results.filter(restaurant => {
+        // Search in restaurant-level fields
+        const restaurantMatch = 
+          restaurant.name.toLowerCase().includes(searchTerm) ||
+          restaurant.address?.toLowerCase().includes(searchTerm) ||
+          restaurant.cuisine?.toLowerCase().includes(searchTerm);
+        
+        // Search in location-level fields
+        const locationMatch = restaurant.locations?.some(location => 
+          location.location_name?.toLowerCase().includes(searchTerm) ||
+          location.full_address?.toLowerCase().includes(searchTerm)
+        );
+        
+        const isMatch = restaurantMatch || locationMatch;
+        
+        if (isMatch) {
+          console.log(`✅ "${restaurant.name}" matches search "${searchTerm}"`);
+          if (locationMatch && !restaurantMatch) {
+            // Find which location(s) matched
+            const matchingLocations = restaurant.locations?.filter(location => 
+              location.location_name?.toLowerCase().includes(searchTerm) ||
+              location.full_address?.toLowerCase().includes(searchTerm)
+            ).map(loc => loc.location_name);
+            console.log(`  📍 Matched via location(s): ${matchingLocations?.join(', ')}`);
+          }
+        }
+        
+        return isMatch;
+      });
+      
+      console.log(`🔍 Text search filtered results to ${results.length} restaurants`);
+    }
     
     // Log debug info about locations
     results.forEach(restaurant => {

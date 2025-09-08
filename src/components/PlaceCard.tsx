@@ -59,9 +59,6 @@ export const PlaceCard = ({ place, onStatusChange, onEdit }: PlaceCardProps) => 
                     {place.price_range}
                   </Badge>
                 )}
-                <Badge variant={place.status === 'visited' ? 'default' : 'secondary'} className="font-mono text-xs">
-                  {place.status}
-                </Badge>
               </div>
             </div>
             <div className="flex flex-col items-end gap-1">
@@ -89,110 +86,93 @@ export const PlaceCard = ({ place, onStatusChange, onEdit }: PlaceCardProps) => 
             <p className="text-sm text-muted-foreground leading-relaxed">{place.address}</p>
           </div>
 
-          {place.atmosphere && (
-            <div className="text-sm">
-              <span className="font-medium text-foreground">Atmosphere: </span>
-              <span className="text-muted-foreground">{place.atmosphere}</span>
-            </div>
-          )}
-
-          {place.must_try_dishes && place.must_try_dishes.length > 0 && (
-            <div className="text-sm">
-              <span className="font-medium text-foreground">Must try: </span>
-              <span className="text-muted-foreground">{place.must_try_dishes.join(', ')}</span>
-            </div>
-          )}
-
-          {place.dietary_options && (
-            <div className="text-sm">
-              <span className="font-medium text-foreground">Dietary: </span>
-              <span className="text-muted-foreground">{place.dietary_options}</span>
-            </div>
-          )}
-
-          {place.locations && place.locations.length > 1 && (
-            <div className="text-sm">
-              <span className="font-medium text-foreground">Multiple locations ({place.locations.length}): </span>
-              <span className="text-muted-foreground">
-                {(() => {
-                  const locationNames = place.locations.map(loc => loc.location_name);
-                  if (locationNames.length <= 5) {
-                    return locationNames.join(', ');
-                  } else {
-                    const displayed = locationNames.slice(0, 5);
-                    const remaining = locationNames.length - 5;
-                    return `${displayed.join(', ')} + ${remaining} more`;
-                  }
-                })()}
-              </span>
-            </div>
-          )}
-
-          {place.description && (
-            <div className="text-sm">
-              <span className="font-medium text-foreground">Description: </span>
-              <p className="text-muted-foreground mt-1 leading-relaxed">{place.description}</p>
-            </div>
-          )}
-
+          {/* Visit count */}
           {place.visit_count && place.visit_count > 1 && (
             <div className="flex items-center gap-1 text-sm text-muted-foreground">
               <Clock className="w-4 h-4" />
               <span>Visited {place.visit_count} times</span>
             </div>
           )}
+
+          {/* Truncated description */}
+          {place.description && (
+            <div className="text-sm">
+              <span className="font-medium text-foreground">Description: </span>
+              <p className="text-muted-foreground leading-relaxed line-clamp-2">
+                {(() => {
+                  const maxLength = 120; // Approximate character limit for 2 lines
+                  if (place.description.length <= maxLength) {
+                    return place.description;
+                  }
+                  
+                  // Find the last complete word within the limit
+                  const truncated = place.description.substring(0, maxLength);
+                  const lastSpaceIndex = truncated.lastIndexOf(' ');
+                  
+                  if (lastSpaceIndex === -1) {
+                    // No space found, just truncate at maxLength
+                    return truncated + '...';
+                  }
+                  
+                  return truncated.substring(0, lastSpaceIndex) + '...';
+                })()}
+              </p>
+            </div>
+          )}
         </CardContent>
       </div>
       
       {/* Non-clickable button row */}
-      <CardContent className="pt-0">
-        <div className="flex items-center justify-between pt-2 border-t border-border">
-          <div className="flex gap-2">
-            {place.website && (
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.open(place.website, '_blank');
-                }}
-                className="text-xs"
-              >
-                <Globe className="w-3 h-3" />
-                Website
-              </Button>
-            )}
+      {(place.website || onStatusChange || onEdit) && (
+        <CardContent className="pt-0">
+          <div className="flex items-center justify-between pt-2 border-t border-border">
+            <div className="flex gap-2">
+              {place.website && (
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.open(place.website, '_blank');
+                  }}
+                  className="text-xs"
+                >
+                  <Globe className="w-3 h-3" />
+                  Website
+                </Button>
+              )}
+            </div>
+            <div className="flex gap-2">
+              {onStatusChange && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onStatusChange(place.id, place.status === 'visited' ? 'must-visit' : 'visited');
+                  }}
+                  className="text-xs"
+                >
+                  Mark as {place.status === 'visited' ? 'Must Visit' : 'Visited'}
+                </Button>
+              )}
+              {onEdit && (
+                <Button
+                  variant="brutalist"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(place.id);
+                  }}
+                  className="text-xs"
+                >
+                  Edit
+                </Button>
+              )}
+            </div>
           </div>
-          <div className="flex gap-2">
-            {onStatusChange && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onStatusChange(place.id, place.status === 'visited' ? 'must-visit' : 'visited');
-                }}
-                className="text-xs"
-              >
-                Mark as {place.status === 'visited' ? 'Must Visit' : 'Visited'}
-              </Button>
-            )}
-            {onEdit && (
-              <Button
-                variant="brutalist"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit(place.id);
-                }}
-                className="text-xs"
-              >
-                Edit
-              </Button>
-            )}
-          </div>
-        </div>
-      </CardContent>
+        </CardContent>
+      )}
     </Card>
   );
 };

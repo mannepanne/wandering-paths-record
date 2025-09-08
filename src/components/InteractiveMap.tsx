@@ -49,7 +49,7 @@ export const InteractiveMap = ({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/streets-v12', // More basic style with better CORS compatibility
         center: initialCenter,
-        zoom: userLocation ? 14 : 10, // Closer zoom if user location available
+        zoom: userLocation ? 14 : 11, // London-focused zoom level when no user location
         attributionControl: false,
         crossSourceCollisions: false // Reduce resource conflicts
       });

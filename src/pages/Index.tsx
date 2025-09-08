@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,7 +13,7 @@ import { FilterBar } from "@/components/FilterBar";
 import { MapView } from "@/components/MapView";
 import { AdminPanel } from "@/components/AdminPanel";
 import { InteractiveMap } from "@/components/InteractiveMap";
-import { MapPin, Plus, Shield, Compass, Settings } from "lucide-react";
+import { MapPin, Plus, Shield, Compass, Settings, ChevronLeft, ChevronRight } from "lucide-react";
 import { placesService, restaurantService } from "@/services/restaurants";
 import { Place } from "@/types/place";
 import { useAuth } from "@/contexts/AuthContext";
@@ -36,12 +36,14 @@ const Index = () => {
   } | null>(null);
   const [editingRestaurant, setEditingRestaurant] = useState<Place | null>(null);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 6;
 
   const queryClient = useQueryClient();
 
   // Fetch places from Supabase
   const {
-    data: places = [],
+    data: allPlaces = [],
     isLoading,
     error,
   } = useQuery({
@@ -54,6 +56,33 @@ const Index = () => {
         location: searchLocationCoords || undefined,
       }),
   });
+
+  // Sort places alphabetically and implement pagination
+  const { paginatedPlaces, totalPages, totalItems } = useMemo(() => {
+    // Sort places alphabetically by name
+    const sortedPlaces = [...allPlaces].sort((a, b) => 
+      a.name.toLowerCase().localeCompare(b.name.toLowerCase())
+    );
+    
+    const totalItems = sortedPlaces.length;
+    const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+    
+    // Calculate start and end indices for current page
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    const paginatedPlaces = sortedPlaces.slice(startIndex, endIndex);
+    
+    return {
+      paginatedPlaces,
+      totalPages,
+      totalItems
+    };
+  }, [allPlaces, currentPage]);
+
+  // Reset to page 1 when filters change
+  const resetPagination = () => {
+    setCurrentPage(1);
+  };
 
   // Fetch available cuisines for the filter dropdown
   const {
@@ -80,6 +109,7 @@ const Index = () => {
   const handleLocationSearch = async (location: string) => {
     console.log("🔍 Starting text search for:", location);
     setSearchLocation(location);
+    resetPagination(); // Reset to page 1 when searching
     
     if (!location.trim()) {
       // Clear both text and location-based search
@@ -97,6 +127,8 @@ const Index = () => {
   };
 
   const handleNearMe = () => {
+    resetPagination(); // Reset to page 1 when using Near Me
+    
     // If already showing near me results, reset to show all
     if (searchLocationCoords) {
       console.log("🧹 Resetting Near Me filter - showing all restaurants");
@@ -229,7 +261,7 @@ const Index = () => {
   };
 
   const handleEdit = (id: string) => {
-    const restaurant = places.find(place => place.id === id);
+    const restaurant = allPlaces.find(place => place.id === id);
     if (restaurant) {
       setEditingRestaurant(restaurant);
       setCurrentView("admin");
@@ -303,9 +335,15 @@ const Index = () => {
           <FilterBar
             selectedCuisine={selectedType}
             selectedStatus={selectedStatus}
-            onCuisineChange={setSelectedType}
-            onStatusChange={setSelectedStatus}
-            restaurantCount={places.length}
+            onCuisineChange={(cuisine) => {
+              setSelectedType(cuisine);
+              resetPagination(); // Reset to page 1 when changing cuisine filter
+            }}
+            onStatusChange={(status) => {
+              setSelectedStatus(status);
+              resetPagination(); // Reset to page 1 when changing status filter
+            }}
+            restaurantCount={totalItems}
             onLocationSearch={handleLocationSearch}
             onNearMe={handleNearMe}
             searchLocation={searchLocation}
@@ -317,7 +355,7 @@ const Index = () => {
           {/* Map View */}
           {isMapView && (
             <InteractiveMap 
-              restaurants={places}
+              restaurants={allPlaces} // Use all places for map view
               userLocation={userLocation}
               isNearMeActive={!!searchLocationCoords}
             />
@@ -343,7 +381,7 @@ const Index = () => {
                     <p className="text-muted-foreground">{error.message}</p>
                   </CardContent>
                 </Card>
-              ) : places.length === 0 ? (
+              ) : totalItems === 0 ? (
                 <Card className="border-2 border-border">
                   <CardContent className="py-12 text-center">
                     <MapPin className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -357,22 +395,60 @@ const Index = () => {
                   </CardContent>
                 </Card>
               ) : (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {places.map((place) => (
-                    <PlaceCard
-                      key={place.id}
-                      place={{
-                        ...place,
-                        rating: place.public_rating,
-                        personalRating: place.personal_rating,
-                        visitCount: place.visit_count,
-                        mustTryDishes: place.must_try_dishes,
-                      }}
-                      onStatusChange={user ? handleStatusChange : undefined}
-                      onEdit={user ? handleEdit : undefined}
-                    />
-                  ))}
-                </div>
+                <>
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {paginatedPlaces.map((place) => (
+                      <PlaceCard
+                        key={place.id}
+                        place={{
+                          ...place,
+                          rating: place.public_rating,
+                          personalRating: place.personal_rating,
+                          visitCount: place.visit_count,
+                          mustTryDishes: place.must_try_dishes,
+                        }}
+                        onStatusChange={user ? handleStatusChange : undefined}
+                        onEdit={user ? handleEdit : undefined}
+                      />
+                    ))}
+                  </div>
+                  
+                  {/* Pagination Controls */}
+                  {totalPages > 1 && (
+                    <div className="flex justify-center items-center gap-4 mt-8">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        className="gap-2"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                        Previous
+                      </Button>
+                      
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground font-mono">
+                          Page {currentPage} of {totalPages}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          ({totalItems} total restaurants)
+                        </span>
+                      </div>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                        className="gap-2"
+                      >
+                        Next
+                        <ChevronRight className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}

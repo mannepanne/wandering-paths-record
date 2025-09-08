@@ -162,3 +162,23 @@ All colors MUST be HSL.
     background: var(--gradient-hero);
   }
 }
+
+/* Mapbox popup close button enhancement */
+.mapboxgl-popup-close-button {
+  font-size: 24px !important;
+  width: 36px !important;
+  height: 36px !important;
+  line-height: 32px !important;
+  text-align: center !important;
+  color: #666 !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-radius: 4px !important;
+  border: 1px solid #ddd !important;
+  font-weight: bold !important;
+}
+
+.mapboxgl-popup-close-button:hover {
+  background: rgba(255, 255, 255, 1) !important;
+  color: #333 !important;
+  border-color: #999 !important;
+}

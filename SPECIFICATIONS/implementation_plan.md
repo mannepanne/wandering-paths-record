@@ -353,8 +353,32 @@ To enable the interactive map functionality, you'll need a free Mapbox account:
 - [x] **IMPLEMENTED**: Responsive design across devices
 - [x] **IMPLEMENTED**: Real-time progress indicators
 - [x] **IMPLEMENTED**: Dynamic form management and validation
+- [x] **IMPLEMENTED**: List View pagination system with alphabetical sorting
+- [x] **IMPLEMENTED**: Enhanced Mapbox popup close button visibility
+- [x] **IMPLEMENTED**: London-focused default map zoom level
 - [ ] **OPTIONAL**: Smooth animations and transitions
 - [ ] **OPTIONAL**: Keyboard shortcuts
+
+#### ✅ 7.4 List View Pagination System - **COMPLETE**
+**Efficient restaurant browsing with organized display**
+- [x] **ALPHABETICAL SORTING**: All restaurants sorted by name using proper string comparison
+- [x] **PAGINATION LOGIC**: 6 restaurants per page (2 rows of 3 columns) for optimal mobile and desktop viewing
+- [x] **NAVIGATION CONTROLS**: Previous/Next buttons with disabled states and page counters
+- [x] **FILTER INTEGRATION**: Automatic reset to page 1 when any filter changes (cuisine, status, search, Near Me)
+- [x] **PAGE INFORMATION**: Clear display of current page, total pages, and total restaurant count
+- [x] **MAP VIEW COMPATIBILITY**: Map view continues to show all restaurants (not paginated)
+
+**Technical Implementation:**
+- `useMemo` for efficient sorted and paginated data calculation
+- Seamless integration with existing filter system and React Query
+- Pagination controls only visible when multiple pages exist
+- Maintains all existing functionality while improving large list usability
+
+#### ✅ 7.5 Map User Experience Enhancements - **COMPLETE**
+**Improved mobile map interaction and default views**
+- [x] **POPUP CLOSE BUTTON**: Enhanced Mapbox popup close button styling (36px x 36px, better contrast, touch-friendly)
+- [x] **LONDON-FOCUSED ZOOM**: Default zoom level 11 for better London regional view on load
+- [x] **MOBILE OPTIMIZATION**: Larger, more visible close buttons for better mobile usability
 
 ---
 
@@ -440,6 +464,9 @@ To enable the interactive map functionality, you'll need a free Mapbox account:
 - **NEW**: Map legend with restaurant count that updates based on filters
 - **NEW**: Admin button visibility control for clean public interface
 - **NEW**: CloudFlare Workers logging enabled for production monitoring
+- **NEW**: List View pagination system with alphabetical sorting (6 restaurants per page)
+- **NEW**: Enhanced Mapbox popup close button for better mobile usability
+- **NEW**: London-focused default map zoom level for better regional view
 
 ### **Current Development Status:**
 **🌐 LIVE IN PRODUCTION** - The restaurant curation system is deployed and accessible worldwide at **https://restaurants.hultberg.org** with professional hosting infrastructure, secure credential management, and complete functionality including AI-powered extraction, integrated automatic geocoding, mobile-optimized location services, interactive maps, and comprehensive search features.

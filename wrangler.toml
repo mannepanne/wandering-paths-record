@@ -13,3 +13,7 @@ AUTHORIZED_ADMIN_EMAIL = "magnus.hultberg@gmail.com"
 [[routes]]
 pattern = "restaurants.hultberg.org/*"
 zone_name = "hultberg.org"
+
+# Enable logging
+[observability]
+enabled = true

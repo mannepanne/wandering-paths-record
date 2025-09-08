@@ -34,11 +34,15 @@ Wandering Paths helps you organize and remember exceptional restaurants through 
 
 **🎨 Curated Discovery Experience**
 - **Smart Filtering**: Filter by cuisine type, visit status, and location
-- **Text Search**: Search restaurants by name, city, country, or neighborhood
+- **Multi-Location Search**: Search across restaurant brands and individual locations (e.g., "Canary Wharf" finds Dishoom)
+- **Enhanced Text Search**: Search restaurants by name, cuisine, location names, or addresses
 - **GPS "Near Me" Search**: Find restaurants within 20-minute walking distance with toggle functionality
 - **Mobile-Optimized GPS**: Enhanced geolocation for mobile Chrome Android and other mobile browsers
 - **Interactive Map**: Mapbox-powered map with clustering, popups, and real-time filtering
+- **Restaurant Count Display**: Map legend shows count of restaurants matching current filters
+- **Multi-Location Cards**: List view displays all locations for restaurant chains (e.g., "5 locations: Shoreditch, Canary Wharf...")
 - **List/Map Toggle**: Seamless switching between list and map views with consistent filtering
+- **Clean Public Interface**: Admin controls hidden from unauthenticated visitors
 - **Beautiful Design**: Earth-toned brutalist design with strong visual hierarchy
 - **Status Badges**: Visual indicators for visit status, price range, and cuisine type
 - **Responsive Layout**: Works seamlessly on desktop and mobile devices
@@ -196,11 +200,15 @@ The restaurant curation system is fully deployed on Cloudflare Workers with glob
 - Dynamic admin panel with editable form population from extraction results
 - Real-time extraction progress tracking with detailed status updates
 - Responsive restaurant cards with status badges and comprehensive filtering
-- Complete text search across restaurant names and locations
+- Multi-location search across restaurant brands and individual locations
+- Enhanced text search finding restaurants by location names (e.g., "Canary Wharf" finds Dishoom)
 - GPS-based "Near Me" search with 20-minute walking radius and toggle functionality
 - Mobile-optimized geolocation with enhanced timeout handling and error messages
 - Interactive Mapbox-powered map with clustering, popups, and mobile optimization
+- Restaurant count display in map legend updating with filters
+- Multi-location display in restaurant cards showing all locations for chains
 - Seamless list/map view switching with consistent filtering across both modes
+- Clean public interface with admin controls hidden from unauthenticated users
 - Complete authentication system with secure credential management
 - Automatic coordinate preservation during restaurant editing
 

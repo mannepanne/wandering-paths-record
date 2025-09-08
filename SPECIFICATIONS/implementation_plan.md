@@ -84,6 +84,7 @@ This document tracks the implementation progress of the restaurant curation appl
 - [x] **IMPLEMENTED**: Form pre-population with actual database data (not summary)
 - [x] **IMPLEMENTED**: Update mutations with comprehensive multi-location support
 - [ ] **PENDING**: Personal rating and notes interface for visited restaurants
+- [x] **IMPLEMENTED**: Admin button visibility control - edit/status buttons only visible to authenticated users
 
 #### ✅ 3.4 Delete Restaurant Functionality - **COMPLETE**
 - [x] **IMPLEMENTED**: Delete confirmation dialog with restaurant name
@@ -102,31 +103,36 @@ This document tracks the implementation progress of the restaurant curation appl
 - [x] **IMPLEMENTED**: Status filtering (must-visit/visited)
 - [x] **IMPLEMENTED**: Real-time filter updates with React Query
 
-#### ✅ 4.2 Text-Based Search - **COMPLETE**
-**Simple database text search against existing fields - FULLY IMPLEMENTED**
+#### ✅ 4.2 Multi-Location Text Search - **COMPLETE + ENHANCED**
+**Advanced text search across restaurant brands and individual location data - FULLY IMPLEMENTED**
 
 **Search Target Fields:**
 - Restaurant name (`restaurants.name`) ✅
-- Address summary (`restaurants.address`) ✅
-- Works with existing location data in database ✅
+- Restaurant address summary (`restaurants.address`) ✅
+- Restaurant cuisine (`restaurants.cuisine`) ✅
+- Location names (`restaurant_addresses.location_name`) ✅ **NEW**
+- Location addresses (`restaurant_addresses.full_address`) ✅ **NEW**
 
-**Implementation Completed:**
-- [x] **IMPLEMENTED**: Text search integrated into existing location search input
-- [x] **IMPLEMENTED**: PostgreSQL `ilike` query against name and address fields
-- [x] **IMPLEMENTED**: Uses `restaurants_with_locations` view for comprehensive search
+**Enhanced Implementation:**
+- [x] **IMPLEMENTED**: Multi-location search across all restaurant locations
+- [x] **IMPLEMENTED**: Client-side filtering to search joined location data
+- [x] **IMPLEMENTED**: Restaurant brand approach - one card per brand regardless of locations
+- [x] **IMPLEMENTED**: Smart location matching (e.g., "Canary Wharf" finds Dishoom)
 - [x] **IMPLEMENTED**: Real-time search results with React Query integration
 
-**Example Searches Working:**
-- "London" → matches restaurants with London in address ✅
-- "Shoreditch" → matches restaurants in Shoreditch ✅
-- "Peckham" → finds Peckham Cellars and Peckham Bazaar ✅
-- "Cellars" → finds Peckham Cellars ✅
+**Advanced Search Examples Working:**
+- "London" → matches restaurants with London in any address ✅
+- "Canary Wharf" → finds Dishoom (matched via location name) ✅ **NEW**
+- "Shoreditch" → finds Dishoom (matched via location name) ✅ **NEW**  
+- "Glasgow" → finds Dishoom (matched via location name) ✅ **NEW**
+- "Indian" → finds restaurants with Indian cuisine ✅
+- "Peckham" → finds restaurants in Peckham area ✅
 
 **Technical Implementation:**
-- Modified `restaurantService.getFilteredRestaurants()` to accept `searchText` parameter
-- Updated React Query integration in Index.tsx with text search state
-- Simplified location search handler to use text matching instead of geocoding
-- Clean separation between text search and location-based filtering
+- Enhanced `restaurantService.getFilteredRestaurants()` with client-side location search
+- Search across both restaurant-level and location-level data
+- Maintains restaurant brand display (one card per brand)
+- Detailed logging for search match debugging and transparency
 
 #### ✅ 4.3 Near Me Search - **COMPLETE**
 **GPS-based radius filtering for 20-minute walking distance**
@@ -429,6 +435,11 @@ To enable the interactive map functionality, you'll need a free Mapbox account:
 - **NEW**: Clean database architecture with deprecated coordinate fields removed from restaurants table
 - **NEW**: Interactive Mapbox integration with advanced clustering and real-time filtering
 - **NEW**: Mobile-optimized map experience with touch controls and responsive popups
+- **NEW**: Multi-location display in List View cards showing all restaurant locations
+- **NEW**: Enhanced multi-location search finding restaurants by any location name or address
+- **NEW**: Map legend with restaurant count that updates based on filters
+- **NEW**: Admin button visibility control for clean public interface
+- **NEW**: CloudFlare Workers logging enabled for production monitoring
 
 ### **Current Development Status:**
 **🌐 LIVE IN PRODUCTION** - The restaurant curation system is deployed and accessible worldwide at **https://restaurants.hultberg.org** with professional hosting infrastructure, secure credential management, and complete functionality including AI-powered extraction, integrated automatic geocoding, mobile-optimized location services, interactive maps, and comprehensive search features.

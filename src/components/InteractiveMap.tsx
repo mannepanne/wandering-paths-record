@@ -279,10 +279,11 @@ export const InteractiveMap = ({
         'text-size': {
           base: 1,
           stops: [
-            [12, 0],    // Hidden below zoom 12
-            [13, 11],   // Small at zoom 13
-            [15, 13],   // Medium at zoom 15
-            [18, 16]    // Large at zoom 18+
+            [13, 0],    // Hidden below zoom 14 (when clusters are still active)
+            [14, 11],   // Small at zoom 14 (when individual markers appear)
+            [15, 12],   // Medium at zoom 15
+            [17, 14],   // Large at zoom 17+
+            [20, 16]    // Extra large at max zoom
           ]
         },
         'text-offset': [0, 1.8], // Position below marker

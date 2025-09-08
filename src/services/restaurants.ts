@@ -279,6 +279,25 @@ export const restaurantService = {
     return data;
   },
 
+  // Get single restaurant by ID with all locations
+  async getRestaurantByIdWithLocations(id: string): Promise<Restaurant> {
+    const { data, error } = await supabase
+      .from('restaurants')
+      .select(`
+        *,
+        locations:restaurant_addresses(*)
+      `)
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error('Error fetching restaurant with locations by ID:', error);
+      throw error;
+    }
+
+    return data;
+  },
+
   // Get distinct cuisines that exist in the database
   async getDistinctCuisines(): Promise<string[]> {
     const { data, error } = await supabase

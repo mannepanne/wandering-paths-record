@@ -2,6 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MapPin, Star, Globe, Clock } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Restaurant } from "@/types/place";
 
 interface PlaceCardProps {
@@ -11,6 +12,11 @@ interface PlaceCardProps {
 }
 
 export const PlaceCard = ({ place, onStatusChange, onEdit }: PlaceCardProps) => {
+  const navigate = useNavigate();
+
+  const handleCardClick = () => {
+    navigate(`/restaurant/${place.id}`);
+  };
   const getPriceColor = (priceRange?: string) => {
     switch (priceRange) {
       case '$': return 'bg-olive-green text-white';
@@ -34,113 +40,122 @@ export const PlaceCard = ({ place, onStatusChange, onEdit }: PlaceCardProps) => 
 
   return (
     <Card className="group hover:card-shadow transition-all duration-200 border-2 border-border bg-card">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="space-y-2">
-            <CardTitle className="text-lg font-geo font-semibold text-foreground">
-              {place.name}
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              {place.cuisine && (
-                <Badge className="bg-burnt-orange text-white font-mono text-xs">
-                  {place.cuisine}
+      {/* Clickable content area */}
+      <div onClick={handleCardClick} className="cursor-pointer">
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between">
+            <div className="space-y-2">
+              <CardTitle className="text-lg font-geo font-semibold text-foreground">
+                {place.name}
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                {place.cuisine && (
+                  <Badge className="bg-burnt-orange text-white font-mono text-xs">
+                    {place.cuisine}
+                  </Badge>
+                )}
+                {place.price_range && (
+                  <Badge className={`${getPriceColor(place.price_range)} font-mono text-xs`}>
+                    {place.price_range}
+                  </Badge>
+                )}
+                <Badge variant={place.status === 'visited' ? 'default' : 'secondary'} className="font-mono text-xs">
+                  {place.status}
                 </Badge>
+              </div>
+            </div>
+            <div className="flex flex-col items-end gap-1">
+              {place.public_rating && (
+                <div className="flex items-center gap-1">
+                  {renderStars(Math.round(place.public_rating))}
+                  <span className="text-xs font-mono text-muted-foreground ml-1">
+                    {place.public_rating}/5
+                  </span>
+                </div>
               )}
-              {place.price_range && (
-                <Badge className={`${getPriceColor(place.price_range)} font-mono text-xs`}>
-                  {place.price_range}
-                </Badge>
+              {place.personal_rating && place.status === 'visited' && (
+                <div className="flex items-center gap-1">
+                  <span className="text-xs font-mono text-muted-foreground">Me:</span>
+                  {renderStars(place.personal_rating)}
+                </div>
               )}
-              <Badge variant={place.status === 'visited' ? 'default' : 'secondary'} className="font-mono text-xs">
-                {place.status}
-              </Badge>
             </div>
           </div>
-          <div className="flex flex-col items-end gap-1">
-            {place.public_rating && (
-              <div className="flex items-center gap-1">
-                {renderStars(Math.round(place.public_rating))}
-                <span className="text-xs font-mono text-muted-foreground ml-1">
-                  {place.public_rating}/5
-                </span>
-              </div>
-            )}
-            {place.personal_rating && place.status === 'visited' && (
-              <div className="flex items-center gap-1">
-                <span className="text-xs font-mono text-muted-foreground">Me:</span>
-                {renderStars(place.personal_rating)}
-              </div>
-            )}
+        </CardHeader>
+        
+        <CardContent className="space-y-3">
+          <div className="flex items-start gap-2">
+            <MapPin className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+            <p className="text-sm text-muted-foreground leading-relaxed">{place.address}</p>
           </div>
-        </div>
-      </CardHeader>
+
+          {place.atmosphere && (
+            <div className="text-sm">
+              <span className="font-medium text-foreground">Atmosphere: </span>
+              <span className="text-muted-foreground">{place.atmosphere}</span>
+            </div>
+          )}
+
+          {place.must_try_dishes && place.must_try_dishes.length > 0 && (
+            <div className="text-sm">
+              <span className="font-medium text-foreground">Must try: </span>
+              <span className="text-muted-foreground">{place.must_try_dishes.join(', ')}</span>
+            </div>
+          )}
+
+          {place.dietary_options && (
+            <div className="text-sm">
+              <span className="font-medium text-foreground">Dietary: </span>
+              <span className="text-muted-foreground">{place.dietary_options}</span>
+            </div>
+          )}
+
+          {place.locations && place.locations.length > 1 && (
+            <div className="text-sm">
+              <span className="font-medium text-foreground">Multiple locations ({place.locations.length}): </span>
+              <span className="text-muted-foreground">
+                {(() => {
+                  const locationNames = place.locations.map(loc => loc.location_name);
+                  if (locationNames.length <= 5) {
+                    return locationNames.join(', ');
+                  } else {
+                    const displayed = locationNames.slice(0, 5);
+                    const remaining = locationNames.length - 5;
+                    return `${displayed.join(', ')} + ${remaining} more`;
+                  }
+                })()}
+              </span>
+            </div>
+          )}
+
+          {place.description && (
+            <div className="text-sm">
+              <span className="font-medium text-foreground">Description: </span>
+              <p className="text-muted-foreground mt-1 leading-relaxed">{place.description}</p>
+            </div>
+          )}
+
+          {place.visit_count && place.visit_count > 1 && (
+            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+              <Clock className="w-4 h-4" />
+              <span>Visited {place.visit_count} times</span>
+            </div>
+          )}
+        </CardContent>
+      </div>
       
-      <CardContent className="space-y-3">
-        <div className="flex items-start gap-2">
-          <MapPin className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-          <p className="text-sm text-muted-foreground leading-relaxed">{place.address}</p>
-        </div>
-
-        {place.atmosphere && (
-          <div className="text-sm">
-            <span className="font-medium text-foreground">Atmosphere: </span>
-            <span className="text-muted-foreground">{place.atmosphere}</span>
-          </div>
-        )}
-
-        {place.must_try_dishes && place.must_try_dishes.length > 0 && (
-          <div className="text-sm">
-            <span className="font-medium text-foreground">Must try: </span>
-            <span className="text-muted-foreground">{place.must_try_dishes.join(', ')}</span>
-          </div>
-        )}
-
-        {place.dietary_options && (
-          <div className="text-sm">
-            <span className="font-medium text-foreground">Dietary: </span>
-            <span className="text-muted-foreground">{place.dietary_options}</span>
-          </div>
-        )}
-
-        {place.locations && place.locations.length > 1 && (
-          <div className="text-sm">
-            <span className="font-medium text-foreground">Multiple locations ({place.locations.length}): </span>
-            <span className="text-muted-foreground">
-              {(() => {
-                const locationNames = place.locations.map(loc => loc.location_name);
-                if (locationNames.length <= 5) {
-                  return locationNames.join(', ');
-                } else {
-                  const displayed = locationNames.slice(0, 5);
-                  const remaining = locationNames.length - 5;
-                  return `${displayed.join(', ')} + ${remaining} more`;
-                }
-              })()}
-            </span>
-          </div>
-        )}
-
-        {place.description && (
-          <div className="text-sm">
-            <span className="font-medium text-foreground">Description: </span>
-            <p className="text-muted-foreground mt-1 leading-relaxed">{place.description}</p>
-          </div>
-        )}
-
-        {place.visit_count && place.visit_count > 1 && (
-          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-            <Clock className="w-4 h-4" />
-            <span>Visited {place.visit_count} times</span>
-          </div>
-        )}
-
-        <div className="flex items-center justify-between pt-2">
+      {/* Non-clickable button row */}
+      <CardContent className="pt-0">
+        <div className="flex items-center justify-between pt-2 border-t border-border">
           <div className="flex gap-2">
             {place.website && (
               <Button 
                 variant="ghost" 
                 size="sm"
-                onClick={() => window.open(place.website, '_blank')}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.open(place.website, '_blank');
+                }}
                 className="text-xs"
               >
                 <Globe className="w-3 h-3" />
@@ -153,7 +168,10 @@ export const PlaceCard = ({ place, onStatusChange, onEdit }: PlaceCardProps) => 
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onStatusChange(place.id, place.status === 'visited' ? 'must-visit' : 'visited')}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onStatusChange(place.id, place.status === 'visited' ? 'must-visit' : 'visited');
+                }}
                 className="text-xs"
               >
                 Mark as {place.status === 'visited' ? 'Must Visit' : 'Visited'}
@@ -163,7 +181,10 @@ export const PlaceCard = ({ place, onStatusChange, onEdit }: PlaceCardProps) => 
               <Button
                 variant="brutalist"
                 size="sm"
-                onClick={() => onEdit(place.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(place.id);
+                }}
                 className="text-xs"
               >
                 Edit

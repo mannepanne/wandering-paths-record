@@ -343,7 +343,10 @@ export const InteractiveMap = ({
             ${properties.price_range ? `<p><strong>Price:</strong> ${properties.price_range}</p>` : ''}
             ${properties.public_rating ? `<p><strong>Rating:</strong> ${properties.public_rating}/5</p>` : ''}
           </div>
-          ${properties.website ? `<a href="${properties.website}" target="_blank" rel="noopener noreferrer" class="inline-block mt-2 text-blue-600 hover:text-blue-800 text-sm">Visit Website →</a>` : ''}
+          <div class="mt-2 space-y-1">
+            <a href="/restaurant/${properties.restaurant_id}" class="inline-block text-blue-600 hover:text-blue-800 text-sm">More Details →</a>
+            ${properties.website ? `<br><a href="${properties.website}" target="_blank" rel="noopener noreferrer" class="inline-block text-blue-600 hover:text-blue-800 text-sm">Visit Website →</a>` : ''}
+          </div>
         </div>
       `;
 

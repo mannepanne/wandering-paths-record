@@ -721,6 +721,30 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
                                 size="sm"
                               />
                             </div>
+                            <div>
+                              <label className="text-xs font-medium text-muted-foreground">Latitude</label>
+                              <Input
+                                type="number"
+                                step="any"
+                                value={location.latitude || ''}
+                                onChange={(e) => handleLocationChange(index, 'latitude', e.target.value ? parseFloat(e.target.value) : null)}
+                                placeholder="e.g., 51.5074"
+                                className="mt-1"
+                                size="sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs font-medium text-muted-foreground">Longitude</label>
+                              <Input
+                                type="number"
+                                step="any"
+                                value={location.longitude || ''}
+                                onChange={(e) => handleLocationChange(index, 'longitude', e.target.value ? parseFloat(e.target.value) : null)}
+                                placeholder="e.g., -0.1278"
+                                className="mt-1"
+                                size="sm"
+                              />
+                            </div>
                           </div>
                         </div>
                       ))}

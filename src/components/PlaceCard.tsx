@@ -103,9 +103,9 @@ export const PlaceCard = ({ place, onStatusChange, onEdit }: PlaceCardProps) => 
         )}
 
 
-        {place.description && place.status === 'visited' && (
+        {place.description && (
           <div className="text-sm">
-            <span className="font-medium text-foreground">My experience: </span>
+            <span className="font-medium text-foreground">Description: </span>
             <p className="text-muted-foreground mt-1 leading-relaxed">{place.description}</p>
           </div>
         )}

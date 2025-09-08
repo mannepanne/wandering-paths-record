@@ -29,11 +29,11 @@ export interface Restaurant {
   dietary_options?: string;
   created_at: string;
   updated_at: string;
-  locations?: RestaurantAddress[]; // From the view query
-  // NOTE: Coordinates are now only available via the restaurant_addresses table/locations array
-  // When querying via restaurants_with_locations view, lat/lng are available directly on this object
-  latitude?: number; // From restaurants_with_locations view only
-  longitude?: number; // From restaurants_with_locations view only
+  locations?: RestaurantAddress[]; // From joined restaurant_addresses query
+  // NOTE: Coordinates are available via the restaurant_addresses table/locations array
+  // restaurants_with_locations view now shows individual locations, not restaurant aggregations
+  latitude?: number; // Legacy field, use locations array for proper multi-location support
+  longitude?: number; // Legacy field, use locations array for proper multi-location support
 }
 
 // For backward compatibility during transition

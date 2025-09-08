@@ -18,8 +18,11 @@ export const restaurantService = {
   // Get all restaurants with their locations
   async getAllRestaurants(): Promise<Restaurant[]> {
     const { data, error } = await supabase
-      .from('restaurants_with_locations')
-      .select('*')
+      .from('restaurants')
+      .select(`
+        *,
+        locations:restaurant_addresses(*)
+      `)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -90,14 +93,15 @@ export const restaurantService = {
   }): Promise<Restaurant[]> {
     console.log("🍽️ getFilteredRestaurants called with filters:", filters);
     
-    // Always use the restaurants_with_locations view to get coordinate data for maps
-    // This ensures we have latitude/longitude available for map functionality
-    const tableName = 'restaurants_with_locations';
-    console.log("📊 Using table/view:", tableName);
+    // Fetch restaurants with ALL their locations using proper joins
+    console.log("📊 Fetching restaurants with all locations");
     
     let query = supabase
-      .from(tableName)
-      .select('*');
+      .from('restaurants')
+      .select(`
+        *,
+        locations:restaurant_addresses(*)
+      `);
 
     if (filters.cuisine && filters.cuisine !== 'all') {
       query = query.eq('cuisine', filters.cuisine);
@@ -125,19 +129,14 @@ export const restaurantService = {
       throw error;
     }
 
-    console.log(`📋 Database query returned ${data?.length || 0} rows`);
+    console.log(`📋 Database query returned ${data?.length || 0} restaurants`);
     
-    // Remove duplicates that can occur when restaurants have multiple addresses
-    // Keep the first occurrence of each unique restaurant ID
-    const uniqueRestaurants = new Map();
-    (data || []).forEach(restaurant => {
-      if (!uniqueRestaurants.has(restaurant.id)) {
-        uniqueRestaurants.set(restaurant.id, restaurant);
-      }
+    let results = data || [];
+    
+    // Log debug info about locations
+    results.forEach(restaurant => {
+      console.log(`🏪 Restaurant "${restaurant.name}": ${restaurant.locations?.length || 0} locations`);
     });
-    
-    let results = Array.from(uniqueRestaurants.values());
-    console.log(`📋 After deduplication: ${results.length} unique restaurants`);
 
     // Apply location-based filtering if specified (GPS-based "Near Me" search)
     if (filters.location && results.length > 0) {

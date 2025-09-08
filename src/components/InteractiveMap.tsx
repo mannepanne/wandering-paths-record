@@ -121,48 +121,85 @@ export const InteractiveMap = ({
       map.current.removeSource('restaurants');
     }
 
-    // Prepare GeoJSON data for clustering
-    const validRestaurants = restaurants.filter(r => r.latitude && r.longitude);
+    // Prepare GeoJSON data for clustering - create markers for ALL individual restaurant locations
+    const allLocationMarkers: Array<{
+      restaurant: Restaurant;
+      location: RestaurantAddress;
+    }> = [];
+
+    // Flatten all restaurant locations into individual markers
+    restaurants.forEach(restaurant => {
+      if (restaurant.locations && restaurant.locations.length > 0) {
+        // Multi-location restaurant: create marker for each location
+        restaurant.locations.forEach(location => {
+          if (location.latitude && location.longitude) {
+            allLocationMarkers.push({ restaurant, location });
+          } else {
+            console.log(`⚠️ Skipping location "${location.location_name}" of "${restaurant.name}" - missing coordinates (${location.latitude}, ${location.longitude})`);
+          }
+        });
+      } else if (restaurant.latitude && restaurant.longitude) {
+        // Single-location restaurant: use restaurant-level coordinates
+        const syntheticLocation: RestaurantAddress = {
+          id: `${restaurant.id}-primary`,
+          restaurant_id: restaurant.id,
+          location_name: 'Main Location',
+          full_address: restaurant.address,
+          latitude: restaurant.latitude,
+          longitude: restaurant.longitude,
+          created_at: restaurant.created_at,
+          updated_at: restaurant.updated_at
+        };
+        allLocationMarkers.push({ restaurant, location: syntheticLocation });
+      } else {
+        console.log(`⚠️ Skipping restaurant "${restaurant.name}" - missing coordinates (${restaurant.latitude}, ${restaurant.longitude})`);
+      }
+    });
     
-    if (validRestaurants.length === 0) {
-      console.log('📍 No restaurants with coordinates found');
+    if (allLocationMarkers.length === 0) {
+      console.log('📍 No restaurant locations with coordinates found');
       return;
     }
 
+    console.log(`📍 Displaying ${allLocationMarkers.length} individual restaurant locations on map`);
+
     // Debug: Check for duplicate coordinates
     const coordMap = new Map();
-    validRestaurants.forEach(restaurant => {
-      const coordKey = `${restaurant.latitude},${restaurant.longitude}`;
+    allLocationMarkers.forEach(({ restaurant, location }) => {
+      const coordKey = `${location.latitude},${location.longitude}`;
       if (!coordMap.has(coordKey)) {
         coordMap.set(coordKey, []);
       }
-      coordMap.get(coordKey).push(restaurant.name);
+      coordMap.get(coordKey).push(`${restaurant.name} (${location.location_name})`);
     });
     
     // Log any duplicate coordinates
     coordMap.forEach((names, coord) => {
       if (names.length > 1) {
-        console.log(`🔍 Multiple restaurants at ${coord}:`, names);
+        console.log(`🔍 Multiple locations at ${coord}:`, names);
       }
     });
 
     const geojsonData: GeoJSON.FeatureCollection = {
       type: 'FeatureCollection',
-      features: validRestaurants.map(restaurant => ({
+      features: allLocationMarkers.map(({ restaurant, location }) => ({
         type: 'Feature',
         geometry: {
           type: 'Point',
-          coordinates: [restaurant.longitude!, restaurant.latitude!]
+          coordinates: [location.longitude!, location.latitude!]
         },
         properties: {
-          id: restaurant.id,
+          id: location.id,
+          restaurant_id: restaurant.id,
           name: restaurant.name,
+          location_name: location.location_name,
           cuisine: restaurant.cuisine,
           status: restaurant.status,
-          address: restaurant.address,
+          address: location.full_address,
           price_range: restaurant.price_range,
           public_rating: restaurant.public_rating,
           website: restaurant.website,
+          phone: location.phone,
           markerColor: getMarkerColor(restaurant)
         }
       }))
@@ -259,14 +296,16 @@ export const InteractiveMap = ({
       const properties = feature.properties!;
       const coordinates = (feature.geometry as GeoJSON.Point).coordinates as [number, number];
 
-      // Create popup content
+      // Create popup content with location-specific information
       const popupContent = `
         <div class="p-3 min-w-64">
-          <h3 class="font-semibold text-lg mb-2">${properties.name}</h3>
+          <h3 class="font-semibold text-lg mb-1">${properties.name}</h3>
+          ${properties.location_name && properties.location_name !== 'Main Location' ? `<p class="text-sm font-medium text-blue-600 mb-2">${properties.location_name}</p>` : ''}
           <div class="space-y-1 text-sm">
             <p><strong>Cuisine:</strong> ${properties.cuisine || 'Not specified'}</p>
             <p><strong>Status:</strong> <span class="inline-block px-2 py-1 rounded text-xs font-medium ${getStatusBadgeClass(properties.status)}">${properties.status === 'must-visit' ? 'Must Visit' : 'Visited'}</span></p>
             <p><strong>Address:</strong> ${properties.address}</p>
+            ${properties.phone ? `<p><strong>Phone:</strong> ${properties.phone}</p>` : ''}
             ${properties.price_range ? `<p><strong>Price:</strong> ${properties.price_range}</p>` : ''}
             ${properties.public_rating ? `<p><strong>Rating:</strong> ${properties.public_rating}/5</p>` : ''}
           </div>
@@ -299,8 +338,8 @@ export const InteractiveMap = ({
     });
 
     // Adjust map bounds to show all markers if there are any and not in Near Me mode
-    if (validRestaurants.length > 0 && !isNearMeActive) {
-      const coordinates = validRestaurants.map(r => [r.longitude!, r.latitude!] as [number, number]);
+    if (allLocationMarkers.length > 0 && !isNearMeActive) {
+      const coordinates = allLocationMarkers.map(({ location }) => [location.longitude!, location.latitude!] as [number, number]);
       
       if (coordinates.length > 0) {
         const bounds = coordinates.reduce((bounds, coord) => {
@@ -361,14 +400,36 @@ export const InteractiveMap = ({
       <CardContent className="p-0">
         {/* Map Legend */}
         <div className="p-4 bg-muted/30 border-b">
-          <div className="flex flex-wrap gap-6 text-sm">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-[#6366f1] border-2 border-white"></div>
-              <span>Visited</span>
+          <div className="flex flex-wrap justify-between items-center gap-4">
+            <div className="flex flex-wrap gap-6 text-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-full bg-[#6366f1] border-2 border-white"></div>
+                <span>Visited</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-full bg-[#f59e0b] border-2 border-white"></div>
+                <span>Must Visit</span>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-[#f59e0b] border-2 border-white"></div>
-              <span>Must Visit</span>
+            <div className="text-sm text-muted-foreground font-mono">
+              Showing: {(() => {
+                // Calculate total number of locations being displayed
+                let totalLocations = 0;
+                restaurants.forEach(restaurant => {
+                  if (restaurant.locations && restaurant.locations.length > 0) {
+                    // Count locations with valid coordinates
+                    restaurant.locations.forEach(location => {
+                      if (location.latitude && location.longitude) {
+                        totalLocations++;
+                      }
+                    });
+                  } else if (restaurant.latitude && restaurant.longitude) {
+                    // Single-location restaurant with restaurant-level coordinates
+                    totalLocations++;
+                  }
+                });
+                return totalLocations;
+              })()} places
             </div>
           </div>
         </div>

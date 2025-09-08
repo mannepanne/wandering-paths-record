@@ -180,40 +180,80 @@ export const restaurantService = {
       console.log(`🚶 Filtering for restaurants within ${maxWalkingMinutes} minutes walking (${maxDistanceKm.toFixed(1)}km)`);
       
       results = results.filter(restaurant => {
-        // Check if restaurant has coordinates (from restaurant_addresses via view)
-        if (!restaurant.latitude || !restaurant.longitude) {
-          console.log(`⚠️ Restaurant "${restaurant.name}" has no coordinates, excluding from Near Me results`);
+        // Check if restaurant has any locations with coordinates
+        if (!restaurant.locations || restaurant.locations.length === 0) {
+          console.log(`⚠️ Restaurant "${restaurant.name}" has no locations, excluding from Near Me results`);
           return false;
         }
         
-        const distance = calculateHaversineDistance(
-          filters.location!.lat,
-          filters.location!.lng,
-          restaurant.latitude,
-          restaurant.longitude
-        );
+        // Check each location to see if any are within range
+        let closestDistance = Infinity;
+        let hasValidLocation = false;
         
-        const withinRange = distance <= maxDistanceKm;
-        console.log(`📏 "${restaurant.name}": ${distance.toFixed(2)}km away - ${withinRange ? 'INCLUDED' : 'EXCLUDED'}`);
+        for (const location of restaurant.locations) {
+          if (location.latitude && location.longitude) {
+            hasValidLocation = true;
+            const distance = calculateHaversineDistance(
+              filters.location!.lat,
+              filters.location!.lng,
+              location.latitude,
+              location.longitude
+            );
+            
+            if (distance < closestDistance) {
+              closestDistance = distance;
+            }
+            
+            console.log(`📏 "${restaurant.name}" (${location.location_name}): ${distance.toFixed(2)}km away`);
+          }
+        }
+        
+        if (!hasValidLocation) {
+          console.log(`⚠️ Restaurant "${restaurant.name}" has locations but no coordinates, excluding from Near Me results`);
+          return false;
+        }
+        
+        const withinRange = closestDistance <= maxDistanceKm;
+        console.log(`🎯 "${restaurant.name}": closest location ${closestDistance.toFixed(2)}km away - ${withinRange ? 'INCLUDED' : 'EXCLUDED'}`);
         
         return withinRange;
       });
       
       // Sort by distance (closest first)
       results.sort((a, b) => {
-        const distanceA = calculateHaversineDistance(
-          filters.location!.lat,
-          filters.location!.lng,
-          a.latitude!,
-          a.longitude!
-        );
-        const distanceB = calculateHaversineDistance(
-          filters.location!.lat,
-          filters.location!.lng,
-          b.latitude!,
-          b.longitude!
-        );
-        return distanceA - distanceB;
+        // Find closest location for restaurant A
+        let closestDistanceA = Infinity;
+        a.locations?.forEach(location => {
+          if (location.latitude && location.longitude) {
+            const distance = calculateHaversineDistance(
+              filters.location!.lat,
+              filters.location!.lng,
+              location.latitude,
+              location.longitude
+            );
+            if (distance < closestDistanceA) {
+              closestDistanceA = distance;
+            }
+          }
+        });
+        
+        // Find closest location for restaurant B
+        let closestDistanceB = Infinity;
+        b.locations?.forEach(location => {
+          if (location.latitude && location.longitude) {
+            const distance = calculateHaversineDistance(
+              filters.location!.lat,
+              filters.location!.lng,
+              location.latitude,
+              location.longitude
+            );
+            if (distance < closestDistanceB) {
+              closestDistanceB = distance;
+            }
+          }
+        });
+        
+        return closestDistanceA - closestDistanceB;
       });
       
       console.log(`🎯 Found ${results.length} restaurants within ${maxWalkingMinutes} minutes walking distance`);

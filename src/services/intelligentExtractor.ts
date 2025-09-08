@@ -433,7 +433,7 @@ export class IntelligentExtractor {
     
     // Restaurant operations (medium weight)
     const operations = [
-      /\b(open|opening hours|closed|takeaway|delivery)\b/gi,
+      /\b(open|closed|takeaway|delivery)\b/gi,
       /\b(order|book now|reserve|table for)\b/gi
     ];
     

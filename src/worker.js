@@ -164,8 +164,6 @@ function extractMeaningfulContent(html) {
     // Look for phone numbers
     const phonePattern = /(?:tel|phone|call|contact)[^:]*:?\s*([0-9\s\-\+\(\)]{10,20})/gi;
     
-    // Look for opening hours patterns
-    const hoursPattern = /(?:opening|open|hours|times)[^:]*:?\s*([^<>\n]{10,150}(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|wed|thu|fri|sat|sun)[^<>\n]*)/gi;
     
     // Combine meaningful content
     let meaningfulContent = [];
@@ -219,14 +217,6 @@ function extractMeaningfulContent(html) {
       }
     }
     
-    // Extract opening hours
-    let hoursMatch;
-    while ((hoursMatch = hoursPattern.exec(html)) !== null) {
-      const hoursText = hoursMatch[1].replace(/<[^>]*>/g, '').trim();
-      if (hoursText.length > 5) {
-        meaningfulContent.push(`HOURS: ${hoursText}`);
-      }
-    }
     
     // Look for location-specific content patterns (international cities)
     const locationKeywords = [
@@ -407,7 +397,6 @@ EXTRACT THE FOLLOWING and return as JSON:
       "city": "City name (e.g., 'London', 'Edinburgh')",
       "country": "Country name (e.g., 'United Kingdom', 'UK')",
       "phone": "Location-specific phone if different from main",
-      "openingHours": "Location hours if found"
     }
   ]
 }
@@ -420,10 +409,9 @@ GUIDELINES:
 - Return null for fields you cannot determine
 - LOCATIONS: Always include at least one location. If multiple locations found, include all with specific addresses
 - ADDRESS SUMMARY: For single location, use neighborhood/area. For multiple, summarize all cities/areas
-- IMPORTANT: Look specifically for ADDRESS:, PHONE:, HOURS:, and LOCATION_DETAIL: patterns in the content
+- IMPORTANT: Look specifically for ADDRESS:, PHONE:, and LOCATION_DETAIL: patterns in the content
 - EXTRACT ADDRESSES: Use any street addresses, postcodes, or location details found in ADDRESS: or LOCATION_DETAIL: sections
 - PHONE NUMBERS: Use specific phone numbers found in PHONE: sections for each location if available
-- OPENING HOURS: Use opening hours found in HOURS: sections for location-specific times
 
 LOCATION EXTRACTION GUIDELINES:
 - For single location restaurants, include one location object with all address details
@@ -495,7 +483,6 @@ LOCATION EXTRACTION GUIDELINES:
           locationName: 'Multiple locations',
           fullAddress: 'See the website',
           phone: null,
-          openingHours: null
         }];
       }
     }

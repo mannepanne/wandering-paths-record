@@ -98,9 +98,6 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
               city: addr.city || '',
               country: addr.country || '',
               phone: addr.phone || '',
-              openingHours: typeof addr.opening_hours === 'object' && addr.opening_hours?.hours 
-                ? addr.opening_hours.hours 
-                : addr.opening_hours || '',
               latitude: addr.latitude,
               longitude: addr.longitude
             }))
@@ -146,7 +143,6 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
         city: loc.city,
         country: loc.country,
         phone: loc.phone,
-        opening_hours: loc.openingHours ? { hours: loc.openingHours } : undefined,
         latitude: loc.latitude,
         longitude: loc.longitude
       }));
@@ -201,7 +197,6 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
         city: loc.city,
         country: loc.country,
         phone: loc.phone,
-        opening_hours: loc.openingHours ? { hours: loc.openingHours } : undefined,
         latitude: loc.latitude,
         longitude: loc.longitude
       }));
@@ -707,16 +702,6 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
                                 value={location.fullAddress || ''}
                                 onChange={(e) => handleLocationChange(index, 'fullAddress', e.target.value)}
                                 placeholder="Complete address with postcode"
-                                className="mt-1"
-                                size="sm"
-                              />
-                            </div>
-                            <div className="md:col-span-2">
-                              <label className="text-xs font-medium text-muted-foreground">Opening Hours</label>
-                              <Input
-                                value={location.openingHours || ''}
-                                onChange={(e) => handleLocationChange(index, 'openingHours', e.target.value)}
-                                placeholder="e.g., Mon-Fri 8:00-23:00, Sat-Sun 9:00-23:00"
                                 className="mt-1"
                                 size="sm"
                               />

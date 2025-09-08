@@ -22,7 +22,6 @@ export interface ExtractedLocation {
   city?: string; // "London", "Edinburgh"
   country?: string; // "United Kingdom", "UK"
   phone?: string;
-  openingHours?: string;
 }
 
 export interface ExtractedRestaurantData {
@@ -269,7 +268,6 @@ EXTRACT THE FOLLOWING and return as JSON:
       "city": "City name (e.g., 'London', 'Edinburgh')",
       "country": "Country name (e.g., 'United Kingdom', 'UK')",
       "phone": "Location-specific phone if different from main",
-      "openingHours": "Opening hours if found (e.g., 'Mon-Fri 8:00-23:00, Sat-Sun 9:00-23:00')"
     }
   ]
 }

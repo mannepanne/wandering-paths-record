@@ -8,7 +8,6 @@ export interface RestaurantAddress {
   latitude?: number;
   longitude?: number;
   phone?: string;
-  opening_hours?: any; // JSON data for hours
   created_at: string;
   updated_at: string;
 }

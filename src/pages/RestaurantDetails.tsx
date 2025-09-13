@@ -41,14 +41,29 @@ const RestaurantDetails = () => {
     ));
   };
 
-  // Generate location summary (same logic as PlaceCard)
-  const getLocationSummary = (restaurant: Restaurant) => {
+  // Generate header location display - shows location_name and city, avoiding duplication
+  const getHeaderLocationDisplay = (restaurant: Restaurant) => {
     if (!restaurant.locations || restaurant.locations.length === 0) {
       return restaurant.address;
     }
 
     if (restaurant.locations.length === 1) {
-      return restaurant.locations[0].full_address || restaurant.address;
+      const location = restaurant.locations[0];
+      const locationName = location.location_name?.trim() || '';
+      const city = location.city?.trim() || '';
+
+      // If location_name and city are the same, only show city
+      if (locationName && city && locationName.toLowerCase() === city.toLowerCase()) {
+        return city;
+      }
+
+      // If both exist and are different, show both
+      if (locationName && city) {
+        return `${locationName}, ${city}`;
+      }
+
+      // If only one exists, show it
+      return locationName || city || restaurant.address;
     }
 
     // Multiple locations - create summary like "Multiple locations in London, Manchester, Liverpool & Edinburgh"
@@ -66,6 +81,29 @@ const RestaurantDetails = () => {
       const displayed = cities.slice(0, 2);
       const remaining = cities.length - 2;
       return `Multiple locations in ${displayed.join(', ')} & ${remaining} other cities`;
+    }
+  };
+
+  // Generate Google Maps URL for a specific location
+  const getGoogleMapsUrl = (restaurant: Restaurant, location?: RestaurantAddress, isHeaderLink: boolean = false) => {
+    const restaurantName = restaurant.name || '';
+
+    // For header link on multi-location restaurants, search just the brand name + "restaurant"
+    if (isHeaderLink && restaurant.locations && restaurant.locations.length > 1) {
+      const query = `${restaurantName} restaurant`.trim();
+      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+    }
+
+    if (location) {
+      // Specific location - use full address, restaurant name, and country
+      const fullAddress = location.full_address || '';
+      const country = location.country || '';
+      const query = `${restaurantName} ${fullAddress} ${country}`.trim();
+      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+    } else {
+      // Fallback to restaurant address if no specific location
+      const query = `${restaurantName} ${restaurant.address}`.trim();
+      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
     }
   };
 
@@ -175,9 +213,16 @@ const RestaurantDetails = () => {
                     </Badge>
                   </div>
                   <div className="flex items-center gap-6">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
                       <MapPin className="w-4 h-4" />
-                      <span>{getLocationSummary(restaurant)}</span>
+                      <a
+                        href={getGoogleMapsUrl(restaurant, restaurant.locations?.[0], true)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:text-foreground hover:underline transition-colors"
+                      >
+                        {getHeaderLocationDisplay(restaurant)}
+                      </a>
                     </div>
                     {restaurant.website && (
                       <Button 
@@ -213,63 +258,149 @@ const RestaurantDetails = () => {
           </CardHeader>
           
           <CardContent className="space-y-8">
-            {/* Three Column Content Layout */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {/* Column 1: Dietary + Must Try */}
-              <div className="space-y-6">
-                {restaurant.dietary_options && (
-                  <div>
-                    <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Dietary</h3>
-                    <p className="text-muted-foreground leading-relaxed">{restaurant.dietary_options}</p>
-                  </div>
-                )}
-                
-                {restaurant.must_try_dishes && restaurant.must_try_dishes.length > 0 && (
-                  <div>
-                    <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Must Try</h3>
-                    <div className="space-y-1">
-                      {restaurant.must_try_dishes.map((dish, index) => (
-                        <p key={index} className="text-muted-foreground">• {dish}</p>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Column 2: Atmosphere */}
-              <div>
-                {restaurant.atmosphere && (
-                  <div>
-                    <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Atmosphere</h3>
-                    <p className="text-muted-foreground leading-relaxed">{restaurant.atmosphere}</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Column 3: Description */}
-              <div>
+            {/* Dynamic Layout Based on Location Count */}
+            {restaurant.locations && restaurant.locations.length === 1 ? (
+              /* Single Location Layout: Description full-width top, then 3 columns with Location + Dietary/Must Try + Atmosphere */
+              <div className="space-y-8">
+                {/* Description - Full Width Top */}
                 {restaurant.description && (
                   <div>
                     <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Description</h3>
                     <p className="text-muted-foreground leading-relaxed">{restaurant.description}</p>
                   </div>
                 )}
-                
-                {restaurant.visit_count && restaurant.visit_count > 1 && (
-                  <div className="flex items-center gap-2 text-muted-foreground pt-4">
-                    <Clock className="w-4 h-4" />
-                    <span>Visited {restaurant.visit_count} times</span>
-                  </div>
-                )}
-              </div>
-            </div>
 
-            {/* Locations List */}
-            {restaurant.locations && restaurant.locations.length > 0 && (
+                {/* Three Column Layout: Location + Dietary/Must Try + Atmosphere */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  {/* Column 1: Location Address */}
+                  <div>
+                    <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Location</h3>
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-foreground">{restaurant.locations[0].location_name}</h4>
+                      <div className="space-y-1 text-sm">
+                        <div className="flex items-start gap-2">
+                          <MapPin className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                          <a
+                            href={getGoogleMapsUrl(restaurant, restaurant.locations[0])}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-muted-foreground hover:text-foreground hover:underline transition-colors"
+                          >
+                            {restaurant.locations[0].full_address}
+                          </a>
+                        </div>
+                        {restaurant.locations[0].phone && (
+                          <div className="flex items-center gap-2">
+                            <Phone className="w-4 h-4 text-muted-foreground" />
+                            <p className="text-muted-foreground">{restaurant.locations[0].phone}</p>
+                          </div>
+                        )}
+                        {restaurant.locations[0].city && restaurant.locations[0].country && (
+                          <p className="text-xs text-muted-foreground">
+                            {restaurant.locations[0].city}, {restaurant.locations[0].country}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Column 2: Dietary + Must Try */}
+                  <div className="space-y-6">
+                    {restaurant.dietary_options && (
+                      <div>
+                        <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Dietary</h3>
+                        <p className="text-muted-foreground leading-relaxed">{restaurant.dietary_options}</p>
+                      </div>
+                    )}
+
+                    {restaurant.must_try_dishes && restaurant.must_try_dishes.length > 0 && (
+                      <div>
+                        <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Must Try</h3>
+                        <div className="space-y-1">
+                          {restaurant.must_try_dishes.map((dish, index) => (
+                            <p key={index} className="text-muted-foreground">• {dish}</p>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Column 3: Atmosphere */}
+                  <div>
+                    {restaurant.atmosphere && (
+                      <div>
+                        <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Atmosphere</h3>
+                        <p className="text-muted-foreground leading-relaxed">{restaurant.atmosphere}</p>
+                      </div>
+                    )}
+
+                    {restaurant.visit_count && restaurant.visit_count > 1 && (
+                      <div className="flex items-center gap-2 text-muted-foreground pt-4">
+                        <Clock className="w-4 h-4" />
+                        <span>Visited {restaurant.visit_count} times</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* Multi-Location Layout: Three columns with Description + Atmosphere + Dietary/Must Try */
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {/* Column 1: Description */}
+                <div>
+                  {restaurant.description && (
+                    <div>
+                      <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Description</h3>
+                      <p className="text-muted-foreground leading-relaxed">{restaurant.description}</p>
+                    </div>
+                  )}
+
+                  {restaurant.visit_count && restaurant.visit_count > 1 && (
+                    <div className="flex items-center gap-2 text-muted-foreground pt-4">
+                      <Clock className="w-4 h-4" />
+                      <span>Visited {restaurant.visit_count} times</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Column 2: Atmosphere */}
+                <div>
+                  {restaurant.atmosphere && (
+                    <div>
+                      <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Atmosphere</h3>
+                      <p className="text-muted-foreground leading-relaxed">{restaurant.atmosphere}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Column 3: Dietary + Must Try */}
+                <div className="space-y-6">
+                  {restaurant.dietary_options && (
+                    <div>
+                      <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Dietary</h3>
+                      <p className="text-muted-foreground leading-relaxed">{restaurant.dietary_options}</p>
+                    </div>
+                  )}
+
+                  {restaurant.must_try_dishes && restaurant.must_try_dishes.length > 0 && (
+                    <div>
+                      <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Must Try</h3>
+                      <div className="space-y-1">
+                        {restaurant.must_try_dishes.map((dish, index) => (
+                          <p key={index} className="text-muted-foreground">• {dish}</p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Locations List - Only show for multi-location restaurants */}
+            {restaurant.locations && restaurant.locations.length > 1 && (
               <div>
                 <h3 className="font-semibold text-foreground font-geo text-xl mb-4">
-                  {restaurant.locations.length === 1 ? 'Location' : 'Locations'} 
-                  {restaurant.locations.length > 1 && ` (${restaurant.locations.length})`}
+                  Locations ({restaurant.locations.length})
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {restaurant.locations.map((location: RestaurantAddress) => (
@@ -279,7 +410,14 @@ const RestaurantDetails = () => {
                         <div className="space-y-1 text-sm">
                           <div className="flex items-start gap-2">
                             <MapPin className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                            <p className="text-muted-foreground">{location.full_address}</p>
+                            <a
+                              href={getGoogleMapsUrl(restaurant, location)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-muted-foreground hover:text-foreground hover:underline transition-colors"
+                            >
+                              {location.full_address}
+                            </a>
                           </div>
                           {location.phone && (
                             <div className="flex items-center gap-2">

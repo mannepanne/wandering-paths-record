@@ -62,14 +62,6 @@ export const PlaceCard = ({ place, onStatusChange, onEdit }: PlaceCardProps) => 
               </div>
             </div>
             <div className="flex flex-col items-end gap-1">
-              {place.public_rating && (
-                <div className="flex items-center gap-1">
-                  {renderStars(Math.round(place.public_rating))}
-                  <span className="text-xs font-mono text-muted-foreground ml-1">
-                    {place.public_rating}/5
-                  </span>
-                </div>
-              )}
               {place.personal_rating && place.status === 'visited' && (
                 <div className="flex items-center gap-1">
                   <span className="text-xs font-mono text-muted-foreground">Me:</span>
@@ -126,10 +118,10 @@ export const PlaceCard = ({ place, onStatusChange, onEdit }: PlaceCardProps) => 
       {(place.website || onStatusChange || onEdit) && (
         <CardContent className="pt-0">
           <div className="flex items-center justify-between pt-2 border-t border-border">
-            <div className="flex gap-2">
-              {place.website && (
-                <Button 
-                  variant="ghost" 
+            <div className="flex items-center justify-between flex-1">
+              {place.website ? (
+                <Button
+                  variant="ghost"
                   size="sm"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -140,9 +132,19 @@ export const PlaceCard = ({ place, onStatusChange, onEdit }: PlaceCardProps) => 
                   <Globe className="w-3 h-3" />
                   Website
                 </Button>
+              ) : (
+                <div />
+              )}
+              {place.public_rating && (
+                <div className="flex items-center gap-1">
+                  <Star className="w-3 h-3 fill-burnt-orange text-burnt-orange" />
+                  <span className="text-xs font-mono text-muted-foreground">
+                    {place.public_rating}/5
+                  </span>
+                </div>
               )}
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 ml-2">
               {onStatusChange && (
                 <Button
                   variant="outline"

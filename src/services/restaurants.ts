@@ -709,9 +709,30 @@ export const restaurantService = {
         .single();
 
       if (current?.must_try_dishes) {
-        // Merge arrays and remove duplicates
-        const combinedDishes = [...(current.must_try_dishes || []), ...reviewData.must_try_dishes];
-        updatedDishes = [...new Set(combinedDishes)];
+        // Merge arrays and remove duplicates (case-insensitive)
+        const existingDishes = current.must_try_dishes || [];
+        const newDishes = reviewData.must_try_dishes;
+
+        // Don't add more dishes if we already have 5 or more
+        if (existingDishes.length >= 5) {
+          console.log(`⚠️ Restaurant already has ${existingDishes.length} must-try dishes, skipping new additions`);
+          updatedDishes = existingDishes;
+        } else {
+          // Filter out new dishes that already exist (case-insensitive comparison)
+          const uniqueNewDishes = newDishes.filter(newDish =>
+            !existingDishes.some(existingDish =>
+              existingDish.toLowerCase().trim() === newDish.toLowerCase().trim()
+            )
+          );
+
+          // Combine existing dishes with new unique ones, but cap at 5 total
+          const combinedDishes = [...existingDishes, ...uniqueNewDishes];
+          updatedDishes = combinedDishes.slice(0, 5);
+
+          if (combinedDishes.length > 5) {
+            console.log(`📝 Capped must-try dishes at 5 (had ${combinedDishes.length} total)`);
+          }
+        }
       }
     }
 

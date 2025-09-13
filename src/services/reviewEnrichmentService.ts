@@ -171,7 +171,14 @@ export class ReviewEnrichmentService {
         total
       });
 
-      const result = await this.enrichRestaurant(restaurant, progressCallback);
+      const result = await this.enrichRestaurant(restaurant, (individualProgress) => {
+        // Preserve the main counter while showing individual progress details
+        progressCallback?.({
+          ...individualProgress,
+          current: i + 1,
+          total
+        });
+      });
       results.push(result);
 
       // Add delay between requests to respect API rate limits
@@ -273,6 +280,7 @@ export class ReviewEnrichmentService {
     restaurantName: string
   ): Promise<ReviewSummary> {
     // Sort reviews by time (newest first) and take up to 15
+    // Note: Google Places API typically returns max 5 reviews, but we're ready for more if available
     const recentReviews = reviews
       .sort((a, b) => b.time - a.time)
       .slice(0, 15);

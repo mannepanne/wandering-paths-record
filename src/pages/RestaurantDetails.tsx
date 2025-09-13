@@ -12,6 +12,7 @@ import { Restaurant, RestaurantAddress } from "@/types/place";
 const RestaurantDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [showAllDishes, setShowAllDishes] = useState(false);
 
   // Fetch restaurant with all location details
   const { data: restaurant, isLoading, error } = useQuery({
@@ -112,6 +113,43 @@ const RestaurantDetails = () => {
     if (!restaurant) return [];
     return [restaurant];
   }, [restaurant]);
+
+  // Component for rendering expandable must try dishes
+  const MustTryDishes = ({ dishes }: { dishes: string[] }) => {
+    const maxVisible = 1;
+    const hasMore = dishes.length > maxVisible;
+    const visibleDishes = showAllDishes ? dishes : dishes.slice(0, maxVisible);
+    const hiddenCount = dishes.length - maxVisible;
+
+    // Function to capitalize first letter of each word
+    const capitalizeWords = (str: string) => {
+      return str.replace(/\b\w/g, (char) => char.toUpperCase());
+    };
+
+    return (
+      <div className="space-y-1">
+        {visibleDishes.map((dish, index) => (
+          <p key={index} className="text-muted-foreground">• {capitalizeWords(dish)}</p>
+        ))}
+        {hasMore && !showAllDishes && (
+          <button
+            onClick={() => setShowAllDishes(true)}
+            className="text-burnt-orange hover:text-burnt-orange/80 text-sm transition-colors"
+          >
+            ...and {hiddenCount} more, tap to expand
+          </button>
+        )}
+        {showAllDishes && hasMore && (
+          <button
+            onClick={() => setShowAllDishes(false)}
+            className="text-burnt-orange hover:text-burnt-orange/80 text-sm transition-colors"
+          >
+            Show less
+          </button>
+        )}
+      </div>
+    );
+  };
 
   if (isLoading) {
     return (
@@ -238,22 +276,6 @@ const RestaurantDetails = () => {
                   </div>
                 </div>
               </div>
-              <div className="flex flex-col items-end gap-2 ml-6">
-                {restaurant.public_rating && (
-                  <div className="flex items-center gap-1">
-                    {renderStars(Math.round(restaurant.public_rating))}
-                    <span className="text-sm font-mono text-muted-foreground ml-1">
-                      {restaurant.public_rating}/5
-                    </span>
-                  </div>
-                )}
-                {restaurant.personal_rating && restaurant.status === 'visited' && (
-                  <div className="flex items-center gap-1">
-                    <span className="text-sm font-mono text-muted-foreground">Me:</span>
-                    {renderStars(restaurant.personal_rating)}
-                  </div>
-                )}
-              </div>
             </div>
           </CardHeader>
           
@@ -267,6 +289,36 @@ const RestaurantDetails = () => {
                   <div>
                     <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Description</h3>
                     <p className="text-muted-foreground leading-relaxed">{restaurant.description}</p>
+                  </div>
+                )}
+
+                {/* Smart Review Summary - Full Width */}
+                {restaurant.public_review_summary && (
+                  <div>
+                    <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Smart Review Summary</h3>
+                    <p className="text-muted-foreground leading-relaxed mb-4">{restaurant.public_review_summary}</p>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      {restaurant.public_rating && (
+                        <div className="flex items-center gap-1">
+                          <Star className="w-4 h-4 fill-burnt-orange text-burnt-orange" />
+                          <span className="font-mono">
+                            {restaurant.public_rating}/5
+                            {restaurant.public_rating_count && (
+                              <span className="ml-1">based on {restaurant.public_rating_count} ratings</span>
+                            )}
+                          </span>
+                        </div>
+                      )}
+                      {restaurant.public_review_latest_created_at && (
+                        <div>
+                          Latest review posted on: {new Date(restaurant.public_review_latest_created_at).toLocaleDateString('en-GB', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric'
+                          })}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -316,11 +368,7 @@ const RestaurantDetails = () => {
                     {restaurant.must_try_dishes && restaurant.must_try_dishes.length > 0 && (
                       <div>
                         <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Must Try</h3>
-                        <div className="space-y-1">
-                          {restaurant.must_try_dishes.map((dish, index) => (
-                            <p key={index} className="text-muted-foreground">• {dish}</p>
-                          ))}
-                        </div>
+                        <MustTryDishes dishes={restaurant.must_try_dishes} />
                       </div>
                     )}
                   </div>
@@ -344,8 +392,40 @@ const RestaurantDetails = () => {
                 </div>
               </div>
             ) : (
-              /* Multi-Location Layout: Three columns with Description + Atmosphere + Dietary/Must Try */
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              /* Multi-Location Layout: Smart Review Summary full-width, then three columns with Description + Atmosphere + Dietary/Must Try */
+              <div className="space-y-8">
+                {/* Smart Review Summary - Full Width */}
+                {restaurant.public_review_summary && (
+                  <div>
+                    <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Smart Review Summary</h3>
+                    <p className="text-muted-foreground leading-relaxed mb-4">{restaurant.public_review_summary}</p>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      {restaurant.public_rating && (
+                        <div className="flex items-center gap-1">
+                          <Star className="w-4 h-4 fill-burnt-orange text-burnt-orange" />
+                          <span className="font-mono">
+                            {restaurant.public_rating}/5
+                            {restaurant.public_rating_count && (
+                              <span className="ml-1">based on {restaurant.public_rating_count} ratings</span>
+                            )}
+                          </span>
+                        </div>
+                      )}
+                      {restaurant.public_review_latest_created_at && (
+                        <div>
+                          Latest review posted on: {new Date(restaurant.public_review_latest_created_at).toLocaleDateString('en-GB', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric'
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Three Column Layout */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 {/* Column 1: Description */}
                 <div>
                   {restaurant.description && (
@@ -385,13 +465,10 @@ const RestaurantDetails = () => {
                   {restaurant.must_try_dishes && restaurant.must_try_dishes.length > 0 && (
                     <div>
                       <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Must Try</h3>
-                      <div className="space-y-1">
-                        {restaurant.must_try_dishes.map((dish, index) => (
-                          <p key={index} className="text-muted-foreground">• {dish}</p>
-                        ))}
-                      </div>
+                      <MustTryDishes dishes={restaurant.must_try_dishes} />
                     </div>
                   )}
+                </div>
                 </div>
               </div>
             )}

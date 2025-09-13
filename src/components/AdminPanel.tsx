@@ -550,12 +550,6 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
 
       console.log(`📈 Final results: ${successCount} successful, ${failureCount} failed/skipped`);
 
-      if (successCount === 0 && failureCount > 0) {
-        alert(`Review enrichment completed but no data was saved. Check console for details. ${failureCount} restaurants had issues.`);
-      } else if (successCount > 0) {
-        alert(`Review enrichment completed! Successfully enriched ${successCount} restaurants.`);
-      }
-
       setEnrichmentResults(results);
       setReviewProgress(null);
 

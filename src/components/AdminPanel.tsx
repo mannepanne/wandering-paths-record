@@ -476,13 +476,6 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
 
   // Review enrichment handlers
   const handleStartReviewEnrichment = async () => {
-    const claudeApiKey = import.meta.env.VITE_CLAUDE_API_KEY;
-
-    if (!claudeApiKey) {
-      alert('Missing Claude API key. Please configure VITE_CLAUDE_API_KEY in your environment.');
-      return;
-    }
-
     try {
       setReviewProgress({ step: 'Initializing review enrichment...', current: 0, total: 0 });
       setEnrichmentResults([]);
@@ -500,8 +493,8 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
 
       console.log(`🚀 Starting review enrichment for ${restaurantsToEnrich.length} restaurants`);
 
-      // Initialize review enrichment service (Google Maps API key handled server-side)
-      const reviewService = new ReviewEnrichmentService(claudeApiKey, '');
+      // Initialize review enrichment service (both API keys handled server-side)
+      const reviewService = new ReviewEnrichmentService('', '');
 
       // Process restaurants in batches
       const results = await reviewService.enrichMultipleRestaurants(

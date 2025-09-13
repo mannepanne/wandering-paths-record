@@ -320,12 +320,11 @@ GUIDELINES:
   }
 
   private async callClaudeApi(prompt: string): Promise<string> {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    // Use our API proxy instead of direct Claude API calls
+    const response = await fetch('/api/claude', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': this.claudeApiKey,
-        'anthropic-version': '2023-06-01'
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         model: 'claude-3-5-sonnet-20241022',
@@ -345,6 +344,11 @@ GUIDELINES:
     }
 
     const result = await response.json();
+
+    if (result.error) {
+      throw new Error(`Claude API error: ${result.error}`);
+    }
+
     return result.content[0].text;
   }
 

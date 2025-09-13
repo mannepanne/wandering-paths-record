@@ -507,6 +507,49 @@ LOCATION EXTRACTION GUIDELINES:
   }
 }
 
+// Claude API proxy handler for review summarization
+async function handleClaudeRequest(request, env) {
+  try {
+    const requestBody = await request.json();
+
+    if (!env.CLAUDE_API_KEY) {
+      return new Response(JSON.stringify({ error: 'Claude API key not configured' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    console.log('🤖 Proxying Claude API request for review summarization');
+
+    const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': env.CLAUDE_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    const data = await claudeResponse.json();
+
+    return new Response(JSON.stringify(data), {
+      status: claudeResponse.status,
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+  } catch (error) {
+    console.error('Claude API proxy error:', error);
+    return new Response(JSON.stringify({
+      error: 'Claude API request failed',
+      details: error.message
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+
 // Google Maps API proxy handler
 async function handleGoogleMapsRequest(request, env) {
   try {
@@ -591,6 +634,26 @@ export default {
     // API routes
     if (url.pathname === '/api/extract-restaurant' && request.method === 'POST') {
       const response = await handleRestaurantExtraction(request, env);
+
+      // Add CORS headers to API responses
+      const corsHeaders = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      };
+
+      // Clone response to add headers
+      const newResponse = new Response(response.body, {
+        status: response.status,
+        headers: { ...Object.fromEntries(response.headers), ...corsHeaders }
+      });
+
+      return newResponse;
+    }
+
+    // Claude API proxy route for review summarization
+    if (url.pathname === '/api/claude' && request.method === 'POST') {
+      const response = await handleClaudeRequest(request, env);
 
       // Add CORS headers to API responses
       const corsHeaders = {

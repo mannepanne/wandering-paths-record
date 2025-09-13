@@ -507,6 +507,70 @@ LOCATION EXTRACTION GUIDELINES:
   }
 }
 
+// Google Maps API proxy handler
+async function handleGoogleMapsRequest(request, env) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const endpoint = searchParams.get('endpoint');
+    const query = searchParams.get('query');
+    const placeId = searchParams.get('place_id');
+
+    if (!env.GOOGLE_MAPS_API_KEY) {
+      return new Response(JSON.stringify({ error: 'Google Maps API key not configured' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    let googleMapsUrl;
+
+    if (endpoint === 'textsearch') {
+      if (!query) {
+        return new Response(JSON.stringify({ error: 'Query parameter required for text search' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      googleMapsUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&key=${env.GOOGLE_MAPS_API_KEY}&fields=place_id,name,rating,user_ratings_total,formatted_address,geometry`;
+    } else if (endpoint === 'details') {
+      if (!placeId) {
+        return new Response(JSON.stringify({ error: 'place_id parameter required for details' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      googleMapsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(placeId)}&key=${env.GOOGLE_MAPS_API_KEY}&fields=place_id,name,rating,user_ratings_total,reviews,formatted_address,geometry`;
+    } else {
+      return new Response(JSON.stringify({ error: 'Invalid endpoint. Use textsearch or details' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    console.log(`🗺️ Proxying Google Maps API request: ${endpoint}`);
+
+    const response = await fetch(googleMapsUrl);
+    const data = await response.json();
+
+    return new Response(JSON.stringify(data), {
+      status: response.status,
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+  } catch (error) {
+    console.error('Google Maps API proxy error:', error);
+    return new Response(JSON.stringify({
+      error: 'Google Maps API request failed',
+      details: error.message
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+
 // Main Workers handler
 export default {
   async fetch(request, env, ctx) {
@@ -527,20 +591,40 @@ export default {
     // API routes
     if (url.pathname === '/api/extract-restaurant' && request.method === 'POST') {
       const response = await handleRestaurantExtraction(request, env);
-      
+
       // Add CORS headers to API responses
       const corsHeaders = {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       };
-      
+
       // Clone response to add headers
       const newResponse = new Response(response.body, {
         status: response.status,
         headers: { ...Object.fromEntries(response.headers), ...corsHeaders }
       });
-      
+
+      return newResponse;
+    }
+
+    // Google Maps API proxy route
+    if (url.pathname === '/api/google-maps' && request.method === 'GET') {
+      const response = await handleGoogleMapsRequest(request, env);
+
+      // Add CORS headers to API responses
+      const corsHeaders = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      };
+
+      // Clone response to add headers
+      const newResponse = new Response(response.body, {
+        status: response.status,
+        headers: { ...Object.fromEntries(response.headers), ...corsHeaders }
+      });
+
       return newResponse;
     }
     

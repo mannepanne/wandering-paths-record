@@ -181,8 +181,8 @@ export class ReviewEnrichmentService {
       // Build search query - use restaurant name and primary location
       const searchQuery = this.buildSearchQuery(restaurant);
 
-      // Use Google Places Text Search API
-      const searchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(searchQuery)}&key=${this.googleMapsApiKey}&fields=place_id,name,rating,user_ratings_total,formatted_address,geometry`;
+      // Use our API proxy instead of direct Google Maps API
+      const searchUrl = `/api/google-maps?endpoint=textsearch&query=${encodeURIComponent(searchQuery)}`;
 
       console.log(`🔍 Searching Google Places for: "${searchQuery}"`);
 
@@ -193,6 +193,10 @@ export class ReviewEnrichmentService {
 
       const searchData = await searchResponse.json();
 
+      if (searchData.error) {
+        throw new Error(`Google Places API error: ${searchData.error}`);
+      }
+
       if (!searchData.results || searchData.results.length === 0) {
         console.log(`❌ No Google Places results found for: ${searchQuery}`);
         return null;
@@ -202,8 +206,8 @@ export class ReviewEnrichmentService {
       const place = searchData.results[0];
       console.log(`✅ Found place: ${place.name} (${place.place_id})`);
 
-      // Get detailed place information including reviews
-      const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&key=${this.googleMapsApiKey}&fields=place_id,name,rating,user_ratings_total,reviews,formatted_address,geometry`;
+      // Get detailed place information including reviews using our API proxy
+      const detailsUrl = `/api/google-maps?endpoint=details&place_id=${encodeURIComponent(place.place_id)}`;
 
       const detailsResponse = await fetch(detailsUrl);
       if (!detailsResponse.ok) {
@@ -211,6 +215,10 @@ export class ReviewEnrichmentService {
       }
 
       const detailsData = await detailsResponse.json();
+
+      if (detailsData.error) {
+        throw new Error(`Google Places API error: ${detailsData.error}`);
+      }
 
       if (!detailsData.result) {
         return null;

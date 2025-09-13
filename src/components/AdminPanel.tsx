@@ -16,6 +16,7 @@ import { useRestaurantExtraction } from "@/hooks/useRestaurantExtraction";
 import { ExtractedRestaurantData, ExtractedLocation, ExtractionCache } from "@/services/claudeExtractor";
 import { restaurantService } from "@/services/restaurants";
 import { geocodingUtility, GeocodingProgress } from "@/services/geocodingUtility";
+import { ReviewEnrichmentService, ReviewEnrichmentProgress, EnrichmentResult } from "@/services/reviewEnrichmentService";
 import { Restaurant } from "@/types/place";
 
 interface AdminPanelProps {
@@ -48,6 +49,17 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
   
   // Integrated geocoding progress for saves
   const [saveGeocodingProgress, setSaveGeocodingProgress] = useState<string | null>(null);
+
+  // Review enrichment management
+  const [reviewStats, setReviewStats] = useState({
+    total: 0,
+    enriched: 0,
+    needsUpdate: 0,
+    lastUpdated: null as string | null
+  });
+  const [reviewProgress, setReviewProgress] = useState<ReviewEnrichmentProgress | null>(null);
+  const [forceRegenerateReviews, setForceRegenerateReviews] = useState<boolean>(false);
+  const [enrichmentResults, setEnrichmentResults] = useState<EnrichmentResult[]>([]);
   
   // Update cache stats when extraction completes
   useEffect(() => {
@@ -66,8 +78,22 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
         console.error('Error loading geocoding stats:', error);
       }
     };
-    
+
     loadGeocodingStats();
+  }, []);
+
+  // Load review enrichment stats on component mount
+  useEffect(() => {
+    const loadReviewStats = async () => {
+      try {
+        const stats = await restaurantService.getReviewEnrichmentStats();
+        setReviewStats(stats);
+      } catch (error) {
+        console.error('Error loading review stats:', error);
+      }
+    };
+
+    loadReviewStats();
   }, []);
 
   // Query to fetch restaurant addresses when editing
@@ -447,7 +473,82 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
       console.error('Error signing out:', error);
     }
   };
-  
+
+  // Review enrichment handlers
+  const handleStartReviewEnrichment = async () => {
+    const claudeApiKey = import.meta.env.VITE_CLAUDE_API_KEY;
+
+    if (!claudeApiKey) {
+      alert('Missing Claude API key. Please configure VITE_CLAUDE_API_KEY in your environment.');
+      return;
+    }
+
+    try {
+      setReviewProgress({ step: 'Initializing review enrichment...', current: 0, total: 0 });
+      setEnrichmentResults([]);
+
+      // Get restaurants that need review enrichment
+      const restaurantsToEnrich = forceRegenerateReviews
+        ? await restaurantService.getAllRestaurants()
+        : await restaurantService.getRestaurantsNeedingReviews();
+
+      if (restaurantsToEnrich.length === 0) {
+        setReviewProgress(null);
+        alert('No restaurants need review enrichment at this time.');
+        return;
+      }
+
+      console.log(`🚀 Starting review enrichment for ${restaurantsToEnrich.length} restaurants`);
+
+      // Initialize review enrichment service (Google Maps API key handled server-side)
+      const reviewService = new ReviewEnrichmentService(claudeApiKey, '');
+
+      // Process restaurants in batches
+      const results = await reviewService.enrichMultipleRestaurants(
+        restaurantsToEnrich,
+        (progress) => setReviewProgress(progress)
+      );
+
+      // Save successful enrichments to database
+      for (const result of results) {
+        if (result.success && result.data) {
+          await restaurantService.updateRestaurantReviewData(result.restaurantId, {
+            public_rating_count: result.data.ratingCount,
+            public_review_summary: result.data.reviewSummary,
+            public_review_summary_updated_at: new Date().toISOString(),
+            public_review_latest_created_at: result.data.latestReviewDate,
+            must_try_dishes: result.data.extractedDishes
+          });
+        }
+      }
+
+      setEnrichmentResults(results);
+      setReviewProgress(null);
+
+      // Refresh stats
+      await handleRefreshReviewStats();
+
+      // Invalidate restaurant queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ["places"] });
+
+      console.log('✅ Review enrichment completed!');
+
+    } catch (error) {
+      console.error('Review enrichment failed:', error);
+      setReviewProgress(null);
+      alert(`Review enrichment failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const handleRefreshReviewStats = async () => {
+    try {
+      const stats = await restaurantService.getReviewEnrichmentStats();
+      setReviewStats(stats);
+    } catch (error) {
+      console.error('Error refreshing review stats:', error);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -1065,34 +1166,64 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 pt-6">
-          <div className="text-sm text-muted-foreground bg-deep-burgundy/10 p-3 rounded-lg">
-            🚧 <strong>Phase 2 Feature - Coming Soon!</strong> This feature will fetch Google Maps reviews, generate AI summaries, and extract popular dishes mentioned in reviews.
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 opacity-50">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="text-center p-3 bg-muted rounded-lg">
-              <div className="text-2xl font-bold text-foreground">--</div>
+              <div className="text-2xl font-bold text-foreground">{reviewStats.total}</div>
               <div className="text-sm text-muted-foreground">Total Restaurants</div>
             </div>
             <div className="text-center p-3 bg-muted rounded-lg">
-              <div className="text-2xl font-bold text-olive-green">--</div>
+              <div className="text-2xl font-bold text-olive-green">{reviewStats.enriched}</div>
               <div className="text-sm text-muted-foreground">With Reviews</div>
             </div>
             <div className="text-center p-3 bg-muted rounded-lg">
-              <div className="text-2xl font-bold text-burnt-orange">--</div>
+              <div className="text-2xl font-bold text-burnt-orange">{reviewStats.needsUpdate}</div>
               <div className="text-sm text-muted-foreground">Need Updates</div>
             </div>
             <div className="text-center p-3 bg-muted rounded-lg">
-              <div className="text-2xl font-bold text-foreground">--%</div>
+              <div className="text-2xl font-bold text-foreground">
+                {reviewStats.total > 0 ? Math.round((reviewStats.enriched / reviewStats.total) * 100) : 0}%
+              </div>
               <div className="text-sm text-muted-foreground">Complete</div>
             </div>
           </div>
 
+          {reviewProgress && (
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Review Enrichment Progress</span>
+                <span>{reviewProgress.current || 0} / {reviewProgress.total || 0}</span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-2">
+                <div
+                  className="bg-deep-burgundy h-2 rounded-full transition-all duration-300"
+                  style={{
+                    width: reviewProgress.total && reviewProgress.total > 0
+                      ? `${((reviewProgress.current || 0) / reviewProgress.total) * 100}%`
+                      : '0%'
+                  }}
+                ></div>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {reviewProgress.step}
+                {reviewProgress.details && (
+                  <div className="text-xs opacity-75 mt-1">{reviewProgress.details}</div>
+                )}
+                {reviewProgress.total && reviewProgress.current !== reviewProgress.total && (
+                  <span className="ml-2">
+                    <Loader2 className="inline w-3 h-3 animate-spin" />
+                    Processing...
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="space-y-3 pt-2">
-            <div className="flex items-center space-x-2 opacity-50">
+            <div className="flex items-center space-x-2">
               <Checkbox
                 id="force-regenerate-reviews"
-                disabled={true}
+                checked={forceRegenerateReviews}
+                onCheckedChange={(checked) => setForceRegenerateReviews(checked === true)}
               />
               <label
                 htmlFor="force-regenerate-reviews"
@@ -1104,17 +1235,19 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
             <div className="flex gap-3">
               <Button
                 variant="brutalist"
-                disabled={true}
-                className="gap-2 bg-deep-burgundy hover:bg-deep-burgundy/90 text-white opacity-50"
+                onClick={handleStartReviewEnrichment}
+                disabled={!!reviewProgress || (!forceRegenerateReviews && reviewStats.needsUpdate === 0)}
+                className="gap-2 bg-deep-burgundy hover:bg-deep-burgundy/90 text-white"
               >
                 <BarChart3 className="w-4 h-4" />
-                Start Review Enrichment
+                {reviewProgress ? 'Enriching Reviews...' : (forceRegenerateReviews ? 'Regenerate All Reviews' : 'Start Review Enrichment')}
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
-                disabled={true}
-                className="gap-2 opacity-50"
+                onClick={handleRefreshReviewStats}
+                disabled={!!reviewProgress}
+                className="gap-2"
               >
                 <BarChart3 className="w-4 h-4" />
                 Refresh Stats
@@ -1122,9 +1255,42 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
             </div>
           </div>
 
-          <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
-            💡 <strong>Setup Required:</strong> Complete database migration and configure Google Maps API key to enable this feature.
-          </div>
+          {/* Show results if available */}
+          {enrichmentResults.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm">Recent Results:</h4>
+              <div className="max-h-32 overflow-y-auto space-y-1">
+                {enrichmentResults.slice(-5).map((result, index) => (
+                  <div key={index} className="flex justify-between items-center text-xs p-2 bg-muted rounded">
+                    <span className="truncate flex-1 mr-2">{result.restaurantName}</span>
+                    {result.success ? (
+                      <CheckCircle className="w-3 h-3 text-green-600 flex-shrink-0" />
+                    ) : (
+                      <AlertTriangle className="w-3 h-3 text-red-600 flex-shrink-0" />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {reviewStats.needsUpdate === 0 && reviewStats.total > 0 && (
+            <div className="text-sm text-muted-foreground bg-deep-burgundy/10 p-3 rounded-lg">
+              ✅ <strong>All restaurants have current review summaries!</strong> Public review enrichment is up to date.
+            </div>
+          )}
+
+          {reviewStats.needsUpdate > 0 && (
+            <div className="text-sm text-muted-foreground bg-burnt-orange/10 p-3 rounded-lg">
+              📊 <strong>{reviewStats.needsUpdate} restaurants need review enrichment.</strong> Run enrichment to add Google Maps reviews and AI summaries.
+            </div>
+          )}
+
+          {reviewStats.total === 0 && (
+            <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+              💡 <strong>No restaurants found.</strong> Add some restaurants first to use the review enrichment feature.
+            </div>
+          )}
         </CardContent>
       </Card>
 

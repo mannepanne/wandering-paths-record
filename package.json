@@ -12,6 +12,7 @@
     "api": "node server.cjs"
   },
   "dependencies": {
+    "@cablate/mcp-google-map": "^0.0.14",
     "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-accordion": "^1.2.11",
     "@radix-ui/react-alert-dialog": "^1.1.14",

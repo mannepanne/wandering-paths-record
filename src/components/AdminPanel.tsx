@@ -1053,6 +1053,81 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
         </CardContent>
       </Card>
 
+      {/* Review Enrichment Section */}
+      <Card className="border-2 border-deep-burgundy">
+        <CardHeader className="bg-gradient-to-r from-deep-burgundy/10 to-deep-burgundy/5">
+          <CardTitle className="flex items-center gap-2 text-foreground">
+            <BarChart3 className="w-5 h-5" />
+            Public Review Enrichment
+          </CardTitle>
+          <CardDescription>
+            Add Google Maps reviews and AI-generated summaries to enhance restaurant profiles
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 pt-6">
+          <div className="text-sm text-muted-foreground bg-deep-burgundy/10 p-3 rounded-lg">
+            🚧 <strong>Phase 2 Feature - Coming Soon!</strong> This feature will fetch Google Maps reviews, generate AI summaries, and extract popular dishes mentioned in reviews.
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 opacity-50">
+            <div className="text-center p-3 bg-muted rounded-lg">
+              <div className="text-2xl font-bold text-foreground">--</div>
+              <div className="text-sm text-muted-foreground">Total Restaurants</div>
+            </div>
+            <div className="text-center p-3 bg-muted rounded-lg">
+              <div className="text-2xl font-bold text-olive-green">--</div>
+              <div className="text-sm text-muted-foreground">With Reviews</div>
+            </div>
+            <div className="text-center p-3 bg-muted rounded-lg">
+              <div className="text-2xl font-bold text-burnt-orange">--</div>
+              <div className="text-sm text-muted-foreground">Need Updates</div>
+            </div>
+            <div className="text-center p-3 bg-muted rounded-lg">
+              <div className="text-2xl font-bold text-foreground">--%</div>
+              <div className="text-sm text-muted-foreground">Complete</div>
+            </div>
+          </div>
+
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center space-x-2 opacity-50">
+              <Checkbox
+                id="force-regenerate-reviews"
+                disabled={true}
+              />
+              <label
+                htmlFor="force-regenerate-reviews"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Force regenerate all review summaries
+              </label>
+            </div>
+            <div className="flex gap-3">
+              <Button
+                variant="brutalist"
+                disabled={true}
+                className="gap-2 bg-deep-burgundy hover:bg-deep-burgundy/90 text-white opacity-50"
+              >
+                <BarChart3 className="w-4 h-4" />
+                Start Review Enrichment
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={true}
+                className="gap-2 opacity-50"
+              >
+                <BarChart3 className="w-4 h-4" />
+                Refresh Stats
+              </Button>
+            </div>
+          </div>
+
+          <div className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+            💡 <strong>Setup Required:</strong> Complete database migration and configure Google Maps API key to enable this feature.
+          </div>
+        </CardContent>
+      </Card>
+
     </div>
   );
 };

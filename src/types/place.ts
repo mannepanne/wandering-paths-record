@@ -34,6 +34,11 @@ export interface Restaurant {
   // restaurants_with_locations view now shows individual locations, not restaurant aggregations
   latitude?: number; // Legacy field, use locations array for proper multi-location support
   longitude?: number; // Legacy field, use locations array for proper multi-location support
+  // Phase 2: Public review enrichment fields
+  public_rating_count?: number; // Number of Google Maps reviews
+  public_review_summary?: string; // AI-generated summary of reviews
+  public_review_summary_updated_at?: string; // When summary was last generated
+  public_review_latest_created_at?: string; // Date of most recent review
 }
 
 // For backward compatibility during transition

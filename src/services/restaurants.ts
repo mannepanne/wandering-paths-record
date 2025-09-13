@@ -610,48 +610,48 @@ export const restaurantService = {
 
   // Update a restaurant with addresses and automatic geocoding
   async updateRestaurantWithAddressesAndGeocoding(
-    restaurant: Restaurant, 
+    restaurant: Restaurant,
     addresses?: Omit<RestaurantAddress, 'id' | 'restaurant_id' | 'created_at' | 'updated_at'>[],
     onProgress?: (progress: string) => void
   ): Promise<Restaurant> {
     onProgress?.('Updating restaurant data...');
-    
+
     // First, update using the existing function
     const updatedRestaurant = await this.updateRestaurantWithAddresses(restaurant, addresses);
-    
+
     // If addresses were provided, geocode any that don't have coordinates
     if (addresses && addresses.length > 0) {
       onProgress?.('Adding location coordinates...');
-      
+
       // Get the newly created addresses from the database
       const { data: newAddresses, error } = await supabase
         .from('restaurant_addresses')
         .select('*')
         .eq('restaurant_id', restaurant.id);
-        
+
       if (error) {
         console.error('Error fetching addresses for geocoding:', error);
         // Don't throw - restaurant update was successful
         return updatedRestaurant;
       }
-      
+
       // Geocode each address that doesn't already have coordinates
       for (const address of newAddresses || []) {
         if (!address.latitude || !address.longitude) {
           try {
             onProgress?.(`Geocoding ${address.location_name || 'location'}...`);
-            
+
             // Import locationService dynamically to avoid circular imports
             const { locationService } = await import('./locationService');
-            
+
             // Try to geocode the full address
             let coords = await locationService.geocodeLocation(address.full_address);
-            
+
             // If that fails, try just the city if available
             if (!coords && address.city) {
               coords = await locationService.geocodeLocation(address.city);
             }
-            
+
             if (coords) {
               // Update the address with coordinates
               const { error: updateError } = await supabase
@@ -662,7 +662,7 @@ export const restaurantService = {
                   updated_at: new Date().toISOString()
                 })
                 .eq('id', address.id);
-                
+
               if (updateError) {
                 console.error('Error updating address coordinates:', updateError);
               } else {
@@ -671,10 +671,10 @@ export const restaurantService = {
             } else {
               console.warn(`Could not geocode address: ${address.full_address}`);
             }
-            
+
             // Small delay to be respectful to the geocoding service
             await new Promise(resolve => setTimeout(resolve, 500));
-            
+
           } catch (geocodeError) {
             console.error('Error during geocoding:', geocodeError);
             // Continue with other addresses even if one fails
@@ -682,9 +682,121 @@ export const restaurantService = {
         }
       }
     }
-    
+
     onProgress?.('Restaurant updated with coordinates!');
     return updatedRestaurant;
+  },
+
+  // Phase 2: Review enrichment functionality
+  async updateRestaurantReviewData(
+    restaurantId: string,
+    reviewData: {
+      public_rating_count?: number;
+      public_review_summary?: string;
+      public_review_summary_updated_at?: string;
+      public_review_latest_created_at?: string;
+      must_try_dishes?: string[];
+    }
+  ): Promise<Restaurant> {
+    // If adding new dishes, merge with existing ones
+    let updatedDishes = reviewData.must_try_dishes;
+    if (reviewData.must_try_dishes) {
+      const { data: current } = await supabase
+        .from('restaurants')
+        .select('must_try_dishes')
+        .eq('id', restaurantId)
+        .single();
+
+      if (current?.must_try_dishes) {
+        // Merge arrays and remove duplicates
+        const combinedDishes = [...(current.must_try_dishes || []), ...reviewData.must_try_dishes];
+        updatedDishes = [...new Set(combinedDishes)];
+      }
+    }
+
+    const updateData = {
+      ...reviewData,
+      must_try_dishes: updatedDishes,
+      updated_at: new Date().toISOString()
+    };
+
+    const { data, error } = await supabase
+      .from('restaurants')
+      .update(updateData)
+      .eq('id', restaurantId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating restaurant review data:', error);
+      throw error;
+    }
+
+    return data;
+  },
+
+  // Get restaurants that need review enrichment
+  async getRestaurantsNeedingReviews(): Promise<Restaurant[]> {
+    const { data, error } = await supabase
+      .from('restaurants')
+      .select(`
+        *,
+        locations:restaurant_addresses(*)
+      `)
+      .or(
+        'public_review_summary.is.null,' +
+        'public_rating_count.is.null,' +
+        'public_review_summary_updated_at.lt.' + new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+      )
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching restaurants needing reviews:', error);
+      throw error;
+    }
+
+    return data || [];
+  },
+
+  // Get review enrichment statistics
+  async getReviewEnrichmentStats(): Promise<{
+    total: number;
+    enriched: number;
+    needsUpdate: number;
+    lastUpdated?: string;
+  }> {
+    const { data: allRestaurants, error: allError } = await supabase
+      .from('restaurants')
+      .select('public_review_summary, public_review_summary_updated_at');
+
+    if (allError) {
+      console.error('Error fetching review stats:', allError);
+      throw allError;
+    }
+
+    const total = allRestaurants?.length || 0;
+    const enriched = allRestaurants?.filter(r => r.public_review_summary).length || 0;
+
+    // Count restaurants with old summaries (> 30 days)
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const needsUpdate = allRestaurants?.filter(r =>
+      !r.public_review_summary ||
+      (r.public_review_summary_updated_at && new Date(r.public_review_summary_updated_at) < thirtyDaysAgo)
+    ).length || 0;
+
+    // Find most recent update
+    const lastUpdated = allRestaurants
+      ?.map(r => r.public_review_summary_updated_at)
+      .filter(Boolean)
+      .sort()
+      .pop();
+
+    return {
+      total,
+      enriched,
+      needsUpdate,
+      lastUpdated
+    };
   }
 };
 

@@ -27,6 +27,36 @@ export const InteractiveMap = ({
   const [isMapLoading, setIsMapLoading] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
 
+  // Create simple circle PNG marker using Canvas
+  const createCircleMarker = (color: string): Promise<ImageData> => {
+    return new Promise((resolve) => {
+      const size = 32; // Standard power of 2 size
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d')!;
+
+      // Clear canvas
+      ctx.clearRect(0, 0, size, size);
+
+      // Draw outer circle (white border)
+      ctx.beginPath();
+      ctx.fillStyle = '#ffffff';
+      ctx.arc(size / 2, size / 2, 14, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Draw inner circle (colored)
+      ctx.beginPath();
+      ctx.fillStyle = color;
+      ctx.arc(size / 2, size / 2, 11, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Get ImageData instead of Canvas
+      const imageData = ctx.getImageData(0, 0, size, size);
+      resolve(imageData);
+    });
+  };
+
   // Initialize map
   useEffect(() => {
     if (!MAPBOX_TOKEN || MAPBOX_TOKEN === 'your_mapbox_access_token_here') {
@@ -41,7 +71,7 @@ export const InteractiveMap = ({
       mapboxgl.accessToken = MAPBOX_TOKEN;
 
       // Determine initial center
-      const initialCenter: [number, number] = userLocation 
+      const initialCenter: [number, number] = userLocation
         ? [userLocation.lng, userLocation.lat]
         : LONDON_BRIDGE_COORDS;
 
@@ -62,14 +92,31 @@ export const InteractiveMap = ({
         compact: true
       }), 'bottom-right');
 
-      map.current.on('load', () => {
+      map.current.on('load', async () => {
+        console.log('🎯 Loading custom marker images...');
+
+        try {
+          // Create Canvas-based circle markers
+          const redImageData = await createCircleMarker('#dc2626');
+          const blueImageData = await createCircleMarker('#2563eb');
+
+          // Add images to map using proper ImageData format
+          map.current!.addImage('red-droplet', redImageData, { pixelRatio: 1, sdf: false });
+          map.current!.addImage('blue-droplet', blueImageData, { pixelRatio: 1, sdf: false });
+
+          console.log('✅ Canvas circle markers loaded successfully');
+
+        } catch (error) {
+          console.error('❌ Failed to create canvas markers:', error);
+        }
+
         setIsMapLoading(false);
         console.log('🗺️ Mapbox map loaded successfully');
       });
 
       map.current.on('error', (e) => {
         console.error('❌ Mapbox error:', e);
-        
+
         // Handle specific CORS errors more gracefully
         if (e.error && e.error.message && e.error.message.includes('CORS')) {
           setMapError('Map loading issue detected. Please add localhost:8080 to your Mapbox token URL restrictions.');
@@ -253,7 +300,7 @@ export const InteractiveMap = ({
       }
     });
 
-    // Add individual restaurant points (unclustered)
+    // Add circle markers
     map.current.addLayer({
       id: 'restaurant-points',
       type: 'circle',
@@ -263,9 +310,12 @@ export const InteractiveMap = ({
         'circle-color': ['get', 'markerColor'],
         'circle-radius': 8,
         'circle-stroke-width': 2,
-        'circle-stroke-color': '#fff'
+        'circle-stroke-color': '#ffffff',
+        'circle-opacity': 1.0
       }
     });
+
+    console.log('✅ Large circle markers added successfully');
 
     // Add restaurant name labels (visible at close zoom levels)
     map.current.addLayer({
@@ -321,8 +371,8 @@ export const InteractiveMap = ({
       );
     });
 
-    // Click handler for individual restaurants
-    map.current.on('click', 'restaurant-points', (e) => {
+    // Click handlers for individual restaurants (both fallback and droplet markers)
+    const handleRestaurantClick = (e: any) => {
       const features = e.features;
       if (!features || features.length === 0) return;
 
@@ -355,7 +405,10 @@ export const InteractiveMap = ({
         .setLngLat(coordinates)
         .setHTML(popupContent)
         .addTo(map.current!);
-    });
+    };
+
+    // Add click handler for restaurant markers
+    map.current.on('click', 'restaurant-points', handleRestaurantClick);
 
     // Change cursor on hover
     map.current.on('mouseenter', 'restaurant-clusters', () => {
@@ -366,10 +419,11 @@ export const InteractiveMap = ({
       map.current!.getCanvas().style.cursor = '';
     });
 
+    // Add hover handlers for restaurant markers
     map.current.on('mouseenter', 'restaurant-points', () => {
       map.current!.getCanvas().style.cursor = 'pointer';
     });
-    
+
     map.current.on('mouseleave', 'restaurant-points', () => {
       map.current!.getCanvas().style.cursor = '';
     });
@@ -396,9 +450,9 @@ export const InteractiveMap = ({
   const getMarkerColor = (restaurant: Restaurant): string => {
     switch (restaurant.status) {
       case 'visited':
-        return '#6366f1'; // Indigo for visited
+        return '#2563eb'; // Bright blue for visited
       case 'must-visit':
-        return '#f59e0b'; // Amber for must-visit
+        return '#dc2626'; // Red for must-visit
       default:
         return '#6b7280'; // Gray for unknown
     }
@@ -440,11 +494,11 @@ export const InteractiveMap = ({
           <div className="flex flex-wrap justify-between items-center gap-4">
             <div className="flex flex-wrap gap-6 text-sm">
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-[#6366f1] border-2 border-white"></div>
+                <div className="w-4 h-4 rounded-full bg-[#2563eb] border-2 border-white"></div>
                 <span>Visited</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-[#f59e0b] border-2 border-white"></div>
+                <div className="w-4 h-4 rounded-full bg-[#dc2626] border-2 border-white"></div>
                 <span>Must Visit</span>
               </div>
             </div>

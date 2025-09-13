@@ -13,7 +13,15 @@ import { FilterBar } from "@/components/FilterBar";
 import { MapView } from "@/components/MapView";
 import { AdminPanel } from "@/components/AdminPanel";
 import { InteractiveMap } from "@/components/InteractiveMap";
-import { MapPin, Plus, Shield, Compass, Settings, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  MapPin,
+  Plus,
+  Shield,
+  Compass,
+  Settings,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { placesService, restaurantService } from "@/services/restaurants";
 import { Place } from "@/types/place";
 import { useAuth } from "@/contexts/AuthContext";
@@ -34,7 +42,9 @@ const Index = () => {
     lat: number;
     lng: number;
   } | null>(null);
-  const [editingRestaurant, setEditingRestaurant] = useState<Place | null>(null);
+  const [editingRestaurant, setEditingRestaurant] = useState<Place | null>(
+    null,
+  );
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 6;
@@ -47,7 +57,14 @@ const Index = () => {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["places", selectedType, selectedStatus, searchText, searchLocationCoords?.lat, searchLocationCoords?.lng],
+    queryKey: [
+      "places",
+      selectedType,
+      selectedStatus,
+      searchText,
+      searchLocationCoords?.lat,
+      searchLocationCoords?.lng,
+    ],
     queryFn: () =>
       restaurantService.getFilteredRestaurants({
         cuisine: selectedType,
@@ -60,22 +77,22 @@ const Index = () => {
   // Sort places alphabetically and implement pagination
   const { paginatedPlaces, totalPages, totalItems } = useMemo(() => {
     // Sort places alphabetically by name
-    const sortedPlaces = [...allPlaces].sort((a, b) => 
-      a.name.toLowerCase().localeCompare(b.name.toLowerCase())
+    const sortedPlaces = [...allPlaces].sort((a, b) =>
+      a.name.toLowerCase().localeCompare(b.name.toLowerCase()),
     );
-    
+
     const totalItems = sortedPlaces.length;
     const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
-    
+
     // Calculate start and end indices for current page
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const endIndex = startIndex + ITEMS_PER_PAGE;
     const paginatedPlaces = sortedPlaces.slice(startIndex, endIndex);
-    
+
     return {
       paginatedPlaces,
       totalPages,
-      totalItems
+      totalItems,
     };
   }, [allPlaces, currentPage]);
 
@@ -85,9 +102,7 @@ const Index = () => {
   };
 
   // Fetch available cuisines for the filter dropdown
-  const {
-    data: availableCuisines = [],
-  } = useQuery({
+  const { data: availableCuisines = [] } = useQuery({
     queryKey: ["cuisines"],
     queryFn: () => restaurantService.getDistinctCuisines(),
   });
@@ -110,7 +125,7 @@ const Index = () => {
     console.log("🔍 Starting text search for:", location);
     setSearchLocation(location);
     resetPagination(); // Reset to page 1 when searching
-    
+
     if (!location.trim()) {
       // Clear both text and location-based search
       console.log("🧹 Clearing all search filters");
@@ -119,7 +134,7 @@ const Index = () => {
       setUserLocation(null);
       return;
     }
-    
+
     // Simple text search - no geocoding needed
     console.log("📝 Setting text search filter:", location);
     setSearchText(location);
@@ -128,7 +143,7 @@ const Index = () => {
 
   const handleNearMe = () => {
     resetPagination(); // Reset to page 1 when using Near Me
-    
+
     // If already showing near me results, reset to show all
     if (searchLocationCoords) {
       console.log("🧹 Resetting Near Me filter - showing all restaurants");
@@ -138,7 +153,7 @@ const Index = () => {
       setSearchText("");
       return;
     }
-    
+
     // Otherwise, start Near Me search
     if (!navigator.geolocation) {
       alert("Geolocation is not supported by your browser.");
@@ -154,7 +169,7 @@ const Index = () => {
     const options = {
       enableHighAccuracy: false, // Use network location for faster results on mobile
       timeout: 15000, // 15 seconds timeout (mobile can be slow)
-      maximumAge: 300000 // Accept cached location up to 5 minutes old
+      maximumAge: 300000, // Accept cached location up to 5 minutes old
     };
 
     // Wrap geolocation in a promise with manual timeout for mobile Chrome issues
@@ -167,8 +182,14 @@ const Index = () => {
         timeoutId = setTimeout(() => {
           if (!hasResolved) {
             hasResolved = true;
-            console.error("⏰ Manual timeout: Geolocation request took too long on mobile");
-            reject(new Error("Location request timed out. This is common on mobile networks."));
+            console.error(
+              "⏰ Manual timeout: Geolocation request took too long on mobile",
+            );
+            reject(
+              new Error(
+                "Location request timed out. This is common on mobile networks.",
+              ),
+            );
           }
         }, 20000); // 20 seconds manual timeout
 
@@ -187,56 +208,65 @@ const Index = () => {
               reject(error);
             }
           },
-          options
+          options,
         );
       });
     };
 
-    getLocationWithTimeout().then(
-      (position) => {
+    getLocationWithTimeout()
+      .then((position) => {
         const { latitude, longitude } = position.coords;
         const coords = { lat: latitude, lng: longitude };
-        
+
         console.log("🗺️ GPS location obtained:", coords);
-        console.log("📊 Location accuracy:", position.coords.accuracy, "meters");
-        
+        console.log(
+          "📊 Location accuracy:",
+          position.coords.accuracy,
+          "meters",
+        );
+
         // Clear text search when doing GPS-based search
         setSearchText("");
         setUserLocation(coords);
         setSearchLocationCoords(coords);
         setSearchLocation("Near me (20 min walk)");
         setIsGettingLocation(false);
-        
-        console.log("🚶 Near Me search activated - finding restaurants within 20 minutes walking distance");
-      }
-    ).catch(
-      (error) => {
+
+        console.log(
+          "🚶 Near Me search activated - finding restaurants within 20 minutes walking distance",
+        );
+      })
+      .catch((error) => {
         console.error("❌ Error getting GPS location:", error);
-        
+
         // Reset loading state
         setSearchLocation("");
         setIsGettingLocation(false);
-        
+
         // Provide detailed error messages based on error type
         let errorMessage = "Unable to get your location. ";
-        
+
         // Handle both GeolocationPositionError and regular Error objects
         if (error instanceof GeolocationPositionError) {
           console.error("❌ Geolocation error code:", error.code);
           console.error("❌ Geolocation error message:", error.message);
-          
+
           switch (error.code) {
             case error.PERMISSION_DENIED:
-              errorMessage += "Location access was denied. Please enable location access in your browser settings and try again.";
+              errorMessage +=
+                "Location access was denied. Please enable location access in your browser settings and try again.";
               break;
             case error.POSITION_UNAVAILABLE:
-              errorMessage += "Location information is unavailable. Please check your internet connection and try again.";
+              errorMessage +=
+                "Location information is unavailable. Please check your internet connection and try again.";
               break;
             case error.TIMEOUT:
-              errorMessage += "Location request timed out. This can happen on mobile networks. Please try again or check your connection.";
+              errorMessage +=
+                "Location request timed out. This can happen on mobile networks. Please try again or check your connection.";
               break;
             default:
-              errorMessage += "Please ensure location access is enabled and try again.";
+              errorMessage +=
+                "Please ensure location access is enabled and try again.";
               break;
           }
         } else {
@@ -244,16 +274,19 @@ const Index = () => {
           console.error("❌ Error message:", error.message);
           errorMessage += error.message;
         }
-        
+
         // Add mobile-specific guidance
-        const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const isMobile =
+          /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+            navigator.userAgent,
+          );
         if (isMobile) {
-          errorMessage += "\n\nOn mobile: Make sure you're using HTTPS and have given permission when prompted.";
+          errorMessage +=
+            "\n\nOn mobile: Make sure you're using HTTPS and have given permission when prompted.";
         }
-        
+
         alert(errorMessage);
-      }
-    );
+      });
   };
 
   const handleStatusChange = (id: string, status: "must-visit" | "visited") => {
@@ -261,7 +294,7 @@ const Index = () => {
   };
 
   const handleEdit = (id: string) => {
-    const restaurant = allPlaces.find(place => place.id === id);
+    const restaurant = allPlaces.find((place) => place.id === id);
     if (restaurant) {
       setEditingRestaurant(restaurant);
       setCurrentView("admin");
@@ -273,8 +306,8 @@ const Index = () => {
       <div className="min-h-screen bg-background">
         <nav className="border-b-2 border-border bg-card p-4">
           <div className="container mx-auto flex justify-between items-center">
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               onClick={() => {
                 setCurrentView("public");
                 setEditingRestaurant(null);
@@ -285,7 +318,7 @@ const Index = () => {
           </div>
         </nav>
         <div className="container mx-auto px-4 py-8 max-w-4xl">
-          <AdminPanel 
+          <AdminPanel
             onBack={() => {
               setCurrentView("public");
               setEditingRestaurant(null);
@@ -303,7 +336,7 @@ const Index = () => {
       <nav className="border-b-2 border-border bg-card p-4">
         <div className="container mx-auto flex justify-between items-center max-w-6xl">
           <h1 className="text-xl font-geo font-bold text-foreground">
-            Curated Restaurant Hit List
+            Curated
           </h1>
           <div className="flex gap-2">
             <Button
@@ -354,7 +387,7 @@ const Index = () => {
 
           {/* Map View */}
           {isMapView && (
-            <InteractiveMap 
+            <InteractiveMap
               restaurants={allPlaces} // Use all places for map view
               userLocation={userLocation}
               isNearMeActive={!!searchLocationCoords}
@@ -412,7 +445,7 @@ const Index = () => {
                       />
                     ))}
                   </div>
-                  
+
                   {/* Pagination Controls */}
                   {totalPages > 1 && (
                     <div className="flex justify-center items-center gap-4 mt-8">
@@ -426,7 +459,7 @@ const Index = () => {
                         <ChevronLeft className="w-4 h-4" />
                         Previous
                       </Button>
-                      
+
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-muted-foreground font-mono">
                           Page {currentPage} of {totalPages}
@@ -435,7 +468,7 @@ const Index = () => {
                           ({totalItems} total restaurants)
                         </span>
                       </div>
-                      
+
                       <Button
                         variant="outline"
                         size="sm"

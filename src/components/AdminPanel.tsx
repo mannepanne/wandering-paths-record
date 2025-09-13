@@ -481,9 +481,25 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
       setEnrichmentResults([]);
 
       // Get restaurants that need review enrichment
+      console.log('🔍 Force regenerate mode:', forceRegenerateReviews);
+
       const restaurantsToEnrich = forceRegenerateReviews
         ? await restaurantService.getAllRestaurants()
         : await restaurantService.getRestaurantsNeedingReviews();
+
+      console.log(`📊 Query returned ${restaurantsToEnrich.length} restaurants to enrich`);
+
+      // Debug: show current review data for first few restaurants
+      if (restaurantsToEnrich.length > 0) {
+        console.log('🔍 Sample restaurant review data:');
+        restaurantsToEnrich.slice(0, 3).forEach(r => {
+          console.log(`  - ${r.name}:`, {
+            public_rating_count: r.public_rating_count,
+            has_summary: !!r.public_review_summary,
+            summary_updated: r.public_review_summary_updated_at
+          });
+        });
+      }
 
       if (restaurantsToEnrich.length === 0) {
         setReviewProgress(null);
@@ -492,6 +508,7 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
       }
 
       console.log(`🚀 Starting review enrichment for ${restaurantsToEnrich.length} restaurants`);
+      console.log('📋 Restaurants to enrich:', restaurantsToEnrich.map(r => `${r.name} (${r.id})`));
 
       // Initialize review enrichment service (both API keys handled server-side)
       const reviewService = new ReviewEnrichmentService('', '');
@@ -502,17 +519,41 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
         (progress) => setReviewProgress(progress)
       );
 
+      console.log('📊 Enrichment results:', results);
+
       // Save successful enrichments to database
+      let successCount = 0;
+      let failureCount = 0;
+
       for (const result of results) {
         if (result.success && result.data) {
-          await restaurantService.updateRestaurantReviewData(result.restaurantId, {
-            public_rating_count: result.data.ratingCount,
-            public_review_summary: result.data.reviewSummary,
-            public_review_summary_updated_at: new Date().toISOString(),
-            public_review_latest_created_at: result.data.latestReviewDate,
-            must_try_dishes: result.data.extractedDishes
-          });
+          try {
+            await restaurantService.updateRestaurantReviewData(result.restaurantId, {
+              public_rating: result.data.rating,
+              public_rating_count: result.data.ratingCount,
+              public_review_summary: result.data.reviewSummary,
+              public_review_summary_updated_at: new Date().toISOString(),
+              public_review_latest_created_at: result.data.latestReviewDate,
+              must_try_dishes: result.data.extractedDishes
+            });
+            successCount++;
+            console.log(`✅ Saved review data for ${result.restaurantName}`);
+          } catch (error) {
+            console.error(`❌ Failed to save data for ${result.restaurantName}:`, error);
+            failureCount++;
+          }
+        } else {
+          console.log(`⚠️ No data to save for ${result.restaurantName}: ${result.message || result.error}`);
+          failureCount++;
         }
+      }
+
+      console.log(`📈 Final results: ${successCount} successful, ${failureCount} failed/skipped`);
+
+      if (successCount === 0 && failureCount > 0) {
+        alert(`Review enrichment completed but no data was saved. Check console for details. ${failureCount} restaurants had issues.`);
+      } else if (successCount > 0) {
+        alert(`Review enrichment completed! Successfully enriched ${successCount} restaurants.`);
       }
 
       setEnrichmentResults(results);

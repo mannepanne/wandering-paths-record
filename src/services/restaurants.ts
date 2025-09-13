@@ -691,6 +691,7 @@ export const restaurantService = {
   async updateRestaurantReviewData(
     restaurantId: string,
     reviewData: {
+      public_rating?: number;
       public_rating_count?: number;
       public_review_summary?: string;
       public_review_summary_updated_at?: string;

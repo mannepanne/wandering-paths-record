@@ -90,16 +90,23 @@ export class ReviewEnrichmentService {
         details: `Rating: ${placeDetails.rating || 'N/A'}/5`
       });
 
-      // Step 2: Get reviews if available
+      // Step 2: Handle rating data even if no reviews available
+      console.log(`📊 Restaurant has ${placeDetails.user_ratings_total || 0} total reviews, ${placeDetails.reviews?.length || 0} detailed reviews available`);
+
       if (!placeDetails.reviews || placeDetails.reviews.length === 0) {
+        console.log(`⚠️ No detailed reviews available for ${restaurant.name}, but saving rating data if available`);
+
         return {
           success: true,
           restaurantId: restaurant.id,
           restaurantName: restaurant.name,
-          message: 'Found restaurant but no reviews available',
+          message: `Found restaurant with ${placeDetails.user_ratings_total || 0} reviews but no detailed review text available`,
           data: {
             rating: placeDetails.rating,
-            ratingCount: placeDetails.user_ratings_total || 0
+            ratingCount: placeDetails.user_ratings_total || 0,
+            reviewSummary: `Restaurant found on Google Maps with ${placeDetails.rating ? `${placeDetails.rating}/5 rating` : 'no rating'} from ${placeDetails.user_ratings_total || 0} reviews. No detailed review text available for AI analysis.`,
+            latestReviewDate: new Date().toISOString(),
+            extractedDishes: []
           }
         };
       }
@@ -298,9 +305,18 @@ GUIDELINES:
 - Confidence: high (10+ reviews, clear patterns), medium (5-9 reviews), low (<5 reviews or unclear)
 `;
 
+    let response = '';
     try {
-      const response = await this.callClaudeApi(prompt);
-      const parsed = JSON.parse(response);
+      response = await this.callClaudeApi(prompt);
+      console.log('🤖 Claude response for review analysis:', response.substring(0, 200) + '...');
+
+      // Extract JSON from Claude's response (sometimes it includes extra text)
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error('No JSON found in Claude response');
+      }
+
+      const parsed = JSON.parse(jsonMatch[0]);
 
       return {
         summary: parsed.summary || 'Unable to generate summary',
@@ -310,8 +326,9 @@ GUIDELINES:
       };
     } catch (error) {
       console.error('Review summary generation failed:', error);
+      console.error('Claude response that failed to parse:', response.substring(0, 500));
       return {
-        summary: 'Unable to analyze reviews at this time',
+        summary: 'Unable to analyze reviews at this time - AI response parsing failed',
         popularDishes: [],
         sentiment: 'mixed',
         confidence: 'low'

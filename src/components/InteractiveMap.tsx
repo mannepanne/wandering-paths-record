@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Restaurant } from '@/types/place';
@@ -24,6 +25,7 @@ export const InteractiveMap = ({
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
+  const navigate = useNavigate();
   const [isMapLoading, setIsMapLoading] = useState(true);
   const [mapError, setMapError] = useState<string | null>(null);
 
@@ -66,6 +68,11 @@ export const InteractiveMap = ({
     }
 
     if (map.current || !mapContainer.current) return;
+
+    // Create global navigation function for popup buttons
+    (window as any).navigateToRestaurant = (restaurantId: string) => {
+      navigate(`/restaurant/${restaurantId}`);
+    };
 
     try {
       mapboxgl.accessToken = MAPBOX_TOKEN;
@@ -133,10 +140,12 @@ export const InteractiveMap = ({
     }
 
     return () => {
+      // Clean up global navigation function
+      delete (window as any).navigateToRestaurant;
       map.current?.remove();
       map.current = null;
     };
-  }, []);
+  }, [navigate]);
 
   // Update map center when user location changes
   useEffect(() => {
@@ -394,7 +403,7 @@ export const InteractiveMap = ({
             ${properties.public_rating ? `<p><strong>Rating:</strong> ${properties.public_rating}/5</p>` : ''}
           </div>
           <div class="mt-2 space-y-1">
-            <a href="/restaurant/${properties.restaurant_id}" class="inline-block text-blue-600 hover:text-blue-800 text-sm">More Details →</a>
+            <button onclick="window.navigateToRestaurant('${properties.restaurant_id}')" class="inline-block text-blue-600 hover:text-blue-800 text-sm cursor-pointer bg-none border-none underline">More Details →</button>
             ${properties.website ? `<br><a href="${properties.website}" target="_blank" rel="noopener noreferrer" class="inline-block text-blue-600 hover:text-blue-800 text-sm">Visit Website →</a>` : ''}
           </div>
         </div>

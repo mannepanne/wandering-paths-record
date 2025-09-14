@@ -576,6 +576,23 @@ async function handleGoogleMapsRequest(request, env) {
       }
 
       googleMapsUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&key=${env.GOOGLE_MAPS_API_KEY}&fields=place_id,name,rating,user_ratings_total,formatted_address,geometry`;
+    } else if (endpoint === 'geocode') {
+      if (!query) {
+        return new Response(JSON.stringify({ error: 'Query parameter required for geocoding' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Build geocoding URL
+      googleMapsUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${env.GOOGLE_MAPS_API_KEY}`;
+
+      // Add location bias if provided
+      const location = searchParams.get('location');
+      const radius = searchParams.get('radius');
+      if (location && radius) {
+        googleMapsUrl += `&location=${encodeURIComponent(location)}&radius=${encodeURIComponent(radius)}`;
+      }
     } else if (endpoint === 'details') {
       if (!placeId) {
         return new Response(JSON.stringify({ error: 'place_id parameter required for details' }), {
@@ -586,7 +603,7 @@ async function handleGoogleMapsRequest(request, env) {
 
       googleMapsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(placeId)}&key=${env.GOOGLE_MAPS_API_KEY}&fields=place_id,name,rating,user_ratings_total,reviews,formatted_address,geometry`;
     } else {
-      return new Response(JSON.stringify({ error: 'Invalid endpoint. Use textsearch or details' }), {
+      return new Response(JSON.stringify({ error: 'Invalid endpoint. Use textsearch, geocode, or details' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });

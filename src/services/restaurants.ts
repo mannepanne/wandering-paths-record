@@ -64,6 +64,23 @@ export const restaurantService = {
     return data || [];
   },
 
+  // Get all restaurants with their locations (for city matching and analysis)
+  async getAllRestaurantsWithLocations(): Promise<Restaurant[]> {
+    const { data, error } = await supabase
+      .from('restaurants')
+      .select(`
+        *,
+        locations:restaurant_addresses(*)
+      `);
+
+    if (error) {
+      console.error('Error fetching restaurants with locations:', error);
+      throw error;
+    }
+
+    return data || [];
+  },
+
   // Get restaurants by status
   async getRestaurantsByStatus(status: string): Promise<Restaurant[]> {
     const { data, error } = await supabase

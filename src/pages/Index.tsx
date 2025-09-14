@@ -23,6 +23,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { placesService, restaurantService } from "@/services/restaurants";
+import { smartGeoSearch, SearchResult } from "@/services/smartGeoSearch";
 import { Place } from "@/types/place";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -49,9 +50,13 @@ const Index = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 6;
 
+  // Smart search state
+  const [searchResult, setSearchResult] = useState<SearchResult | null>(null);
+  const [isSmartSearching, setIsSmartSearching] = useState(false);
+
   const queryClient = useQueryClient();
 
-  // Fetch places from Supabase
+  // Fetch places from Supabase (regular filtering without text search)
   const {
     data: allPlaces = [],
     isLoading,
@@ -61,7 +66,6 @@ const Index = () => {
       "places",
       selectedType,
       selectedStatus,
-      searchText,
       searchLocationCoords?.lat,
       searchLocationCoords?.lng,
     ],
@@ -69,15 +73,39 @@ const Index = () => {
       restaurantService.getFilteredRestaurants({
         cuisine: selectedType,
         status: selectedStatus,
-        searchText: searchText || undefined, // NEW: Text search parameter
         location: searchLocationCoords || undefined,
       }),
+    enabled: !searchText, // Only run this query when there's no text search
+  });
+
+  // Smart search query (when there is text search)
+  const {
+    data: smartSearchData,
+    isLoading: isSmartSearchLoading,
+    error: smartSearchError,
+  } = useQuery({
+    queryKey: ["smartSearch", searchText, userLocation?.lat, userLocation?.lng],
+    queryFn: async () => {
+      if (!searchText) return null;
+      setIsSmartSearching(true);
+      try {
+        const result = await smartGeoSearch.search(searchText, userLocation || undefined);
+        setSearchResult(result);
+        return result;
+      } finally {
+        setIsSmartSearching(false);
+      }
+    },
+    enabled: !!searchText, // Only run when there's a text search
   });
 
   // Sort places alphabetically and implement pagination
   const { paginatedPlaces, totalPages, totalItems } = useMemo(() => {
+    // Determine which data source to use
+    const places = searchText && smartSearchData?.restaurants ? smartSearchData.restaurants : allPlaces;
+
     // Sort places alphabetically by name
-    const sortedPlaces = [...allPlaces].sort((a, b) =>
+    const sortedPlaces = [...places].sort((a, b) =>
       a.name.toLowerCase().localeCompare(b.name.toLowerCase()),
     );
 
@@ -94,7 +122,7 @@ const Index = () => {
       totalPages,
       totalItems,
     };
-  }, [allPlaces, currentPage]);
+  }, [allPlaces, smartSearchData, currentPage, searchText]);
 
   // Reset to page 1 when filters change
   const resetPagination = () => {
@@ -397,21 +425,28 @@ const Index = () => {
           {/* Places List */}
           {!isMapView && (
             <div className="space-y-4">
-              {isLoading ? (
+              {(isLoading || isSmartSearchLoading) ? (
                 <Card className="border-2 border-border">
                   <CardContent className="py-12 text-center">
                     <div className="text-lg font-geo font-medium text-foreground mb-2">
-                      Loading places...
+                      {isSmartSearchLoading ? "Searching locations..." : "Loading places..."}
                     </div>
+                    {isSmartSearchLoading && (
+                      <p className="text-muted-foreground">
+                        Using smart geographical search
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
-              ) : error ? (
+              ) : (error || smartSearchError) ? (
                 <Card className="border-2 border-border border-red-200">
                   <CardContent className="py-12 text-center">
                     <div className="text-lg font-geo font-medium text-red-600 mb-2">
                       Error loading places
                     </div>
-                    <p className="text-muted-foreground">{error.message}</p>
+                    <p className="text-muted-foreground">
+                      {smartSearchError ? smartSearchError.message : error?.message}
+                    </p>
                   </CardContent>
                 </Card>
               ) : totalItems === 0 ? (
@@ -429,6 +464,26 @@ const Index = () => {
                 </Card>
               ) : (
                 <>
+                  {/* Search Result Context */}
+                  {searchText && searchResult && (
+                    <Card className="border-2 border-border bg-muted/30">
+                      <CardContent className="py-4">
+                        <div className="text-sm text-muted-foreground">
+                          {searchResult.message}
+                          {searchResult.searchLocation && (
+                            <div className="mt-1">
+                              <span className="font-mono text-xs">
+                                Found via {searchResult.strategy === 'local' ? 'text search' :
+                                         searchResult.strategy === 'proximity' ? 'location search' :
+                                         'city search'} • {searchResult.searchTime}ms
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {paginatedPlaces.map((place) => (
                       <PlaceCard

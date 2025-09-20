@@ -293,7 +293,23 @@ app.post('/api/extract-restaurant', async (req, res) => {
     }
 
     console.log('🔍 Starting extraction for:', url);
-    
+
+    // Check for trusted review sites that should bypass business type detection
+    const trustedReviewSites = [
+      'theinfatuation.com',
+      'timeout.com',
+      'opentable.com',
+      'yelp.com',
+      'tripadvisor.com'
+    ];
+
+    const urlDomain = new URL(url).hostname.replace('www.', '');
+    const isTrustedReviewSite = trustedReviewSites.some(domain => urlDomain.includes(domain));
+
+    if (isTrustedReviewSite) {
+      console.log('🏆 Trusted review site detected, bypassing business type check:', urlDomain);
+    }
+
     // Fetch main page content
     const mainContent = await fetchPageWithProxy(url);
     if (!mainContent) {
@@ -313,8 +329,10 @@ app.post('/api/extract-restaurant', async (req, res) => {
     const limitedContent = meaningfulContent.slice(0, 8000); // ~2000 tokens max
     console.log('🔍 Using limited content for analysis, length:', limitedContent.length);
 
-    // Business type detection prompt
-    const businessPrompt = `
+    // Business type detection (skip for trusted review sites)
+    if (!isTrustedReviewSite) {
+      // Business type detection prompt
+      const businessPrompt = `
 Analyze this website content and determine if this is a restaurant business.
 
 CONTENT:
@@ -374,18 +392,19 @@ IMPORTANT:
     const businessAnalysis = extractJSONFromResponse(businessResponse);
     console.log('🔍 Business analysis:', businessAnalysis);
 
-    if (businessAnalysis.businessType !== 'restaurant') {
-      return res.json({
-        success: false,
-        isNotRestaurant: true,
-        detectedType: businessAnalysis.businessType,
-        message: `This appears to be a ${businessAnalysis.businessType} website, not a restaurant. Please use manual entry instead.`
-      });
+      if (businessAnalysis.businessType !== 'restaurant') {
+        return res.json({
+          success: false,
+          isNotRestaurant: true,
+          detectedType: businessAnalysis.businessType,
+          message: `This appears to be a ${businessAnalysis.businessType} website, not a restaurant. Please use manual entry instead.`
+        });
+      }
     }
 
-    // Restaurant extraction prompt
+    // Restaurant extraction prompt (handles both restaurant websites and review sites)
     const restaurantPrompt = `
-Analyze this restaurant website content and extract structured information:
+Analyze this ${isTrustedReviewSite ? 'restaurant review page' : 'restaurant website'} content and extract structured information about the restaurant being featured:
 
 CONTENT TO ANALYZE:
 ${limitedContent}
@@ -402,7 +421,6 @@ EXTRACT THE FOLLOWING and return as JSON:
   "priceRange": "$|$$|$$$|$$$$",
   "atmosphere": "1-2 sentences about ambiance and dining experience", 
   "mustTryDishes": ["dish1", "dish2", "dish3"],
-  "publicRating": null,
   "locations": [
     {
       "locationName": "Area/neighborhood name (e.g., 'Shoreditch', 'King's Cross')",

@@ -284,13 +284,39 @@ const RestaurantDetails = () => {
             {restaurant.locations && restaurant.locations.length === 1 ? (
               /* Single Location Layout: Description full-width top, then 3 columns with Location + Dietary/Must Try + Atmosphere */
               <div className="space-y-8">
-                {/* Description - Full Width Top */}
-                {restaurant.description && (
-                  <div>
-                    <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Description</h3>
-                    <p className="text-muted-foreground leading-relaxed">{restaurant.description}</p>
-                  </div>
-                )}
+                {/* Description and Source - Responsive Layout */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Description - 2 columns on desktop */}
+                  {restaurant.description && (
+                    <div className="lg:col-span-2">
+                      <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Description</h3>
+                      <p className="text-muted-foreground leading-relaxed">{restaurant.description}</p>
+                    </div>
+                  )}
+
+                  {/* Source - 1 column on desktop */}
+                  {restaurant.source && (
+                    <div className="lg:col-span-1">
+                      <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Source</h3>
+                      <p className="text-muted-foreground leading-relaxed">
+                        {restaurant.source}
+                        {restaurant.source_url && (
+                          <>
+                            {' '}
+                            <a
+                              href={restaurant.source_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-burnt-orange hover:text-burnt-orange/80 hover:underline transition-colors"
+                            >
+                              (more...)
+                            </a>
+                          </>
+                        )}
+                      </p>
+                    </div>
+                  )}
+                </div>
 
                 {/* Smart Review Summary - Full Width */}
                 {restaurant.public_review_summary && (
@@ -424,51 +450,78 @@ const RestaurantDetails = () => {
                   </div>
                 )}
 
-                {/* Three Column Layout */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {/* Column 1: Description */}
-                <div>
+                {/* Description and Source - Responsive Layout */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Description - 2 columns on desktop */}
                   {restaurant.description && (
-                    <div>
+                    <div className="lg:col-span-2">
                       <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Description</h3>
                       <p className="text-muted-foreground leading-relaxed">{restaurant.description}</p>
                     </div>
                   )}
 
-                  {restaurant.visit_count && restaurant.visit_count > 1 && (
-                    <div className="flex items-center gap-2 text-muted-foreground pt-4">
-                      <Clock className="w-4 h-4" />
-                      <span>Visited {restaurant.visit_count} times</span>
+                  {/* Source - 1 column on desktop */}
+                  {restaurant.source && (
+                    <div className="lg:col-span-1">
+                      <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Source</h3>
+                      <p className="text-muted-foreground leading-relaxed">
+                        {restaurant.source}
+                        {restaurant.source_url && (
+                          <>
+                            {' '}
+                            <a
+                              href={restaurant.source_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-burnt-orange hover:text-burnt-orange/80 hover:underline transition-colors"
+                            >
+                              (more...)
+                            </a>
+                          </>
+                        )}
+                      </p>
                     </div>
                   )}
                 </div>
 
-                {/* Column 2: Atmosphere */}
-                <div>
-                  {restaurant.atmosphere && (
-                    <div>
-                      <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Atmosphere</h3>
-                      <p className="text-muted-foreground leading-relaxed">{restaurant.atmosphere}</p>
-                    </div>
-                  )}
-                </div>
+                {/* Three Column Layout: Atmosphere + Dietary + Must Try */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  {/* Column 1: Atmosphere */}
+                  <div>
+                    {restaurant.atmosphere && (
+                      <div>
+                        <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Atmosphere</h3>
+                        <p className="text-muted-foreground leading-relaxed">{restaurant.atmosphere}</p>
+                      </div>
+                    )}
 
-                {/* Column 3: Dietary + Must Try */}
-                <div className="space-y-6">
-                  {restaurant.dietary_options && (
-                    <div>
-                      <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Dietary</h3>
-                      <p className="text-muted-foreground leading-relaxed">{restaurant.dietary_options}</p>
-                    </div>
-                  )}
+                    {restaurant.visit_count && restaurant.visit_count > 1 && (
+                      <div className="flex items-center gap-2 text-muted-foreground pt-4">
+                        <Clock className="w-4 h-4" />
+                        <span>Visited {restaurant.visit_count} times</span>
+                      </div>
+                    )}
+                  </div>
 
-                  {restaurant.must_try_dishes && restaurant.must_try_dishes.length > 0 && (
-                    <div>
-                      <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Must Try</h3>
-                      <MustTryDishes dishes={restaurant.must_try_dishes} />
-                    </div>
-                  )}
-                </div>
+                  {/* Column 2: Dietary */}
+                  <div>
+                    {restaurant.dietary_options && (
+                      <div>
+                        <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Dietary</h3>
+                        <p className="text-muted-foreground leading-relaxed">{restaurant.dietary_options}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Column 3: Must Try */}
+                  <div>
+                    {restaurant.must_try_dishes && restaurant.must_try_dishes.length > 0 && (
+                      <div>
+                        <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Must Try</h3>
+                        <MustTryDishes dishes={restaurant.must_try_dishes} />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}

@@ -27,6 +27,8 @@ export interface Restaurant {
   price_range?: '$' | '$$' | '$$$' | '$$$$';
   atmosphere?: string;
   dietary_options?: string;
+  source?: string; // Brief note about how the restaurant was discovered
+  source_url?: string; // Optional URL where restaurant was found/mentioned
   created_at: string;
   updated_at: string;
   locations?: RestaurantAddress[]; // From joined restaurant_addresses query

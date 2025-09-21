@@ -117,6 +117,8 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
         priceRange: editingRestaurant.price_range,
         atmosphere: editingRestaurant.atmosphere,
         dietaryOptions: editingRestaurant.dietary_options,
+        source: editingRestaurant.source,
+        source_url: editingRestaurant.source_url,
         locations: restaurantAddresses.length > 0 
           ? restaurantAddresses.map(addr => ({
               locationName: addr.location_name || '',
@@ -159,7 +161,9 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
         must_try_dishes: restaurantData.mustTryDishes,
         price_range: restaurantData.priceRange,
         atmosphere: restaurantData.atmosphere,
-        dietary_options: restaurantData.dietaryOptions
+        dietary_options: restaurantData.dietaryOptions,
+        source: restaurantData.source,
+        source_url: restaurantData.source_url
       };
       
       // Convert locations to address format for the service
@@ -213,7 +217,9 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
         price_range: restaurantData.priceRange,
         atmosphere: restaurantData.atmosphere,
         dietary_options: restaurantData.dietaryOptions,
-        chef_name: restaurantData.chefName
+        chef_name: restaurantData.chefName,
+        source: restaurantData.source,
+        source_url: restaurantData.source_url
       };
       
       // Convert locations to address format for the service
@@ -686,6 +692,8 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
                           website: newPlaceUrl,
                           addressSummary: '',
                           cuisine: '',
+                          source: '',
+                          source_url: '',
                           locations: []
                         });
                       }}
@@ -745,7 +753,27 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
                     className="mt-1"
                   />
                 </div>
-                
+
+                {/* Source Information Row */}
+                <div className="md:col-span-1">
+                  <label className="text-sm font-medium text-foreground">Source</label>
+                  <Input
+                    value={formData.source || ''}
+                    onChange={(e) => handleFormChange('source', e.target.value)}
+                    placeholder="Friend recommendation, Instagram, blog..."
+                    className="mt-1"
+                  />
+                </div>
+                <div className="md:col-span-1">
+                  <label className="text-sm font-medium text-foreground">Source URL</label>
+                  <Input
+                    value={formData.source_url || ''}
+                    onChange={(e) => handleFormChange('source_url', e.target.value)}
+                    placeholder="https://..."
+                    className="mt-1"
+                  />
+                </div>
+
                 {/* Dynamic Locations Section */}
                 {formData.locations && formData.locations.length > 0 && (
                   <div className="md:col-span-2">

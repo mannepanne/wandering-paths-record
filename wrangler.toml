@@ -4,6 +4,10 @@ compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]
 main = "./src/worker.js"
 
+# Static assets configuration
+[assets]
+directory = "./dist/client"
+
 # Environment variables (non-sensitive)
 [vars]
 SUPABASE_URL = "https://drtjfbvudzacixvqkzav.supabase.co"

@@ -709,11 +709,29 @@ export default {
     }
     
     // For all other requests, handle SPA routing
-    // Check if ASSETS is available (production) or pass through to Vite (development)
+    // Check if ASSETS is available (production) or handle fallback
     if (!env.ASSETS) {
-      // Development mode - pass through to let Vite handle all non-API requests
-      // This ensures Vite's dev server handles SPA routing properly
-      return fetch(request);
+      // No ASSETS available - serve a basic HTML page for SPA routing
+      return new Response(`
+        <!DOCTYPE html>
+        <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Wandering Paths</title>
+            <script type="module">
+              // Redirect to home and let React Router handle it
+              window.location.href = '/';
+            </script>
+          </head>
+          <body>
+            <div id="root">Loading...</div>
+          </body>
+        </html>
+      `, {
+        status: 200,
+        headers: { 'Content-Type': 'text/html; charset=utf-8' }
+      });
     }
 
     // Production mode: Simple fallback to serve static assets or index.html

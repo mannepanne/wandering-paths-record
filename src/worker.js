@@ -708,7 +708,18 @@ export default {
       return newResponse;
     }
     
-    // For all other requests, serve static assets (React app)
-    return env.ASSETS.fetch(request);
+    // For all other requests, handle SPA routing
+    // First try to serve static assets (CSS, JS, images, etc.)
+    const response = await env.ASSETS.fetch(request);
+
+    // If the file exists, serve it
+    if (response.status === 200) {
+      return response;
+    }
+
+    // If no static file found, serve index.html for SPA routing
+    // This allows React Router to handle routes like /restaurant/123
+    const indexRequest = new Request(new URL('/', request.url), request);
+    return env.ASSETS.fetch(indexRequest);
   }
 };

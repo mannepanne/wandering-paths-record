@@ -710,7 +710,7 @@ export default {
     
     // For all other requests, handle SPA routing
     const url = new URL(request.url);
-    console.log('Non-API request:', url.pathname, 'ASSETS available:', !!env.ASSETS);
+    console.log('Non-API request:', url.pathname, 'ASSETS available:', !!env.ASSETS, 'v2025-09-22-09:21');
 
     // Development mode fallback
     if (!env.ASSETS) {
@@ -733,7 +733,12 @@ export default {
       const indexResponse = await env.ASSETS.fetch('/');
       return new Response(indexResponse.body, {
         status: 200,
-        headers: indexResponse.headers
+        headers: {
+          ...indexResponse.headers,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
       });
     } catch (error) {
       console.error('Error in SPA routing:', error);

@@ -709,18 +709,35 @@ export default {
     }
     
     // For all other requests, handle SPA routing
-    // Check if ASSETS is available (production) or pass through to Vite (development)
+    const url = new URL(request.url);
+    console.log('Non-API request:', url.pathname, 'ASSETS available:', !!env.ASSETS);
+
+    // Development mode fallback
     if (!env.ASSETS) {
-      // Development mode - pass through to let Vite handle all non-API requests
-      // This ensures Vite's dev server handles SPA routing properly
+      console.log('Development mode - passing through to Vite');
       return fetch(request);
     }
 
-    // Production mode: Simple fallback to serve static assets or index.html
-    // First try to serve the request as-is, and if it fails, serve index.html
-    return env.ASSETS.fetch(request).catch(() => {
-      // If that fails, serve index.html for SPA routing
-      return env.ASSETS.fetch(new Request(new URL('/', request.url)));
-    });
+    // Production mode: Try to serve static files, fallback to index.html for SPA routes
+    try {
+      console.log('Trying to serve:', url.pathname);
+      const response = await env.ASSETS.fetch(request);
+
+      if (response.status === 200) {
+        console.log('Served static file:', url.pathname);
+        return response;
+      }
+
+      console.log('File not found, serving index.html for SPA routing');
+      // For SPA routes, serve index.html
+      const indexResponse = await env.ASSETS.fetch('/');
+      return new Response(indexResponse.body, {
+        status: 200,
+        headers: indexResponse.headers
+      });
+    } catch (error) {
+      console.error('Error in SPA routing:', error);
+      return new Response('Error loading page', { status: 500 });
+    }
   }
 };

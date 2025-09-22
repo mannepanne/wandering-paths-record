@@ -716,42 +716,11 @@ export default {
       return fetch(request);
     }
 
-    // Production mode: Handle SPA routing with CloudFlare Workers
-    try {
-      // First try to serve static assets (CSS, JS, images, etc.)
-      const response = await env.ASSETS.fetch(request);
-
-      // If the file exists, serve it
-      if (response.status === 200) {
-        return response;
-      }
-
-      // If no static file found, serve index.html for SPA routing
-      // This allows React Router to handle routes like /restaurant/123
-      const indexUrl = new URL('/', request.url);
-      const indexRequest = new Request(indexUrl.toString(), {
-        method: 'GET',
-        headers: {
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-        }
-      });
-      return env.ASSETS.fetch(indexRequest);
-    } catch (error) {
-      console.error('SPA routing error:', error);
-      // Fallback: simple HTML response
-      return new Response(`
-        <!DOCTYPE html>
-        <html>
-          <head><title>Loading...</title></head>
-          <body>
-            <div id="root">Loading...</div>
-            <script>window.location.reload();</script>
-          </body>
-        </html>
-      `, {
-        status: 200,
-        headers: { 'Content-Type': 'text/html' }
-      });
-    }
+    // Production mode: Simple fallback to serve static assets or index.html
+    // Just try to serve the request as-is, and if it fails, serve index.html
+    return env.ASSETS.fetch(request).catch(() => {
+      // If that fails, serve index.html for SPA routing
+      return env.ASSETS.fetch(new Request(new URL('/', request.url)));
+    });
   }
 };

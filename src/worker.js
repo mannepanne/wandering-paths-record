@@ -709,6 +709,14 @@ export default {
     }
     
     // For all other requests, handle SPA routing
+    // Check if ASSETS is available (production) or pass through to Vite (development)
+    if (!env.ASSETS) {
+      // Development mode - pass through to let Vite handle all non-API requests
+      // This ensures Vite's dev server handles SPA routing properly
+      return fetch(request);
+    }
+
+    // Production mode: Handle SPA routing with CloudFlare Workers
     // First try to serve static assets (CSS, JS, images, etc.)
     const response = await env.ASSETS.fetch(request);
 

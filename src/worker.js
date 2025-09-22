@@ -635,7 +635,10 @@ async function handleGoogleMapsRequest(request, env) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    
+
+    // Log EVERY request to see if worker is being called at all
+    console.log('WORKER ENTRY:', request.method, url.pathname, 'v2025-09-22-09:29');
+
     // Handle CORS preflight requests
     if (request.method === 'OPTIONS') {
       return new Response(null, {

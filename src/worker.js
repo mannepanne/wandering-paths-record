@@ -637,7 +637,12 @@ export default {
     const url = new URL(request.url);
 
     // Log EVERY request to see if worker is being called at all
-    console.log('WORKER ENTRY:', request.method, url.pathname, 'v2025-09-22-09:29');
+    console.log('WORKER ENTRY:', request.method, url.pathname, 'v2025-09-22-09:40-FORCE-BYPASS');
+
+    // Force cache bypass for restaurant routes
+    if (url.pathname.startsWith('/restaurant/')) {
+      console.log('Restaurant route detected - FORCING CACHE BYPASS');
+    }
 
     // Handle CORS preflight requests
     if (request.method === 'OPTIONS') {
@@ -738,9 +743,11 @@ export default {
         status: 200,
         headers: {
           ...indexResponse.headers,
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Cache-Control': 'no-cache, no-store, must-revalidate, private',
           'Pragma': 'no-cache',
-          'Expires': '0'
+          'Expires': '0',
+          'CF-Cache-Status': 'BYPASS',
+          'X-Worker-Version': 'v2025-09-22-09:40-CACHE-BYPASS'
         }
       });
     } catch (error) {

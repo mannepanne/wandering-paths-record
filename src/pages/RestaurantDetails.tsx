@@ -440,9 +440,9 @@ const RestaurantDetails = () => {
               <div className="space-y-8">
                 {/* Description and Source - Responsive Layout */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Description - 2 columns on desktop */}
+                  {/* Description - conditional width based on source presence */}
                   {restaurant.description && (
-                    <div className="lg:col-span-2">
+                    <div className={restaurant.source ? "lg:col-span-2" : "lg:col-span-3"}>
                       <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Description</h3>
                       <p className="text-muted-foreground leading-relaxed">{restaurant.description}</p>
                     </div>
@@ -658,9 +658,9 @@ const RestaurantDetails = () => {
 
                 {/* Description and Source - Responsive Layout */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Description - 2 columns on desktop */}
+                  {/* Description - conditional width based on source presence */}
                   {restaurant.description && (
-                    <div className="lg:col-span-2">
+                    <div className={restaurant.source ? "lg:col-span-2" : "lg:col-span-3"}>
                       <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Description</h3>
                       <p className="text-muted-foreground leading-relaxed">{restaurant.description}</p>
                     </div>

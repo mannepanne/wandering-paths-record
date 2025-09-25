@@ -139,8 +139,12 @@ const RestaurantDetails = () => {
       setPendingStatus(newStatus);
       setShowAppreciationPicker(true);
     } else {
-      // Simple toggle for to-visit
-      updateStatusMutation.mutate({ id: restaurant.id, status: newStatus });
+      // When toggling back to to-visit, reset appreciation to unknown
+      updateStatusMutation.mutate({
+        id: restaurant.id,
+        status: newStatus,
+        personal_appreciation: 'unknown'
+      });
     }
   };
 

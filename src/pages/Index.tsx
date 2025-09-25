@@ -171,10 +171,14 @@ const Index = () => {
       status: RestaurantStatus;
       appreciation?: PersonalAppreciation;
     }) => {
-      if (appreciation) {
+      if (appreciation && appreciation !== 'unknown') {
         return restaurantService.updateRestaurantStatusWithAppreciation(id, status, appreciation);
       } else {
-        return restaurantService.updateRestaurantStatus(id, status);
+        // For 'unknown' appreciation or no appreciation, use the combined update method
+        return restaurantService.updateRestaurant(id, {
+          status,
+          personal_appreciation: appreciation || 'unknown'
+        });
       }
     },
     onSuccess: () => {

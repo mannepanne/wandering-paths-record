@@ -54,8 +54,8 @@ export const PlaceCard = ({ place, onStatusChange, onAppreciationChange, onEdit 
       setPendingStatus(newStatus);
       setShowAppreciationPicker(true);
     } else {
-      // Simple toggle for to-visit (rare case)
-      onStatusChange?.(place.id, newStatus);
+      // When toggling back to to-visit, reset appreciation to unknown
+      onStatusChange?.(place.id, newStatus, 'unknown');
     }
   };
 

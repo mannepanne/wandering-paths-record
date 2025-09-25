@@ -655,14 +655,8 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
     setIndividualReviewState('loading');
 
     try {
-      const claudeApiKey = import.meta.env.VITE_CLAUDE_API_KEY;
-      const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-
-      if (!claudeApiKey || !googleMapsApiKey) {
-        throw new Error('API keys not configured');
-      }
-
-      const reviewService = new ReviewEnrichmentService(claudeApiKey, googleMapsApiKey);
+      // Initialize review enrichment service (both API keys handled server-side)
+      const reviewService = new ReviewEnrichmentService('', '');
 
       // Create a temporary restaurant object with the updated form data
       const restaurantToEnrich = {
@@ -686,23 +680,20 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
         })
       };
 
-      const result = await reviewService.enrichRestaurant(restaurantToEnrich, () => {
-        // Progress callback - we could show more detailed progress if needed
-      });
+      // Process single restaurant using the same method as bulk operations
+      const results = await reviewService.enrichMultipleRestaurants(
+        [restaurantToEnrich],
+        () => {
+          // Progress callback - we could show more detailed progress if needed
+        },
+        false // Don't force regenerate by default for individual operations
+      );
 
-      if (result.success && result.data) {
-        // Update the restaurant in the database
-        await restaurantService.updateRestaurant(editingRestaurant.id, {
-          public_rating: result.data.rating,
-          public_rating_count: result.data.ratingCount,
-          public_review_summary: result.data.reviewSummary,
-          public_review_summary_updated_at: result.data.latestReviewDate,
-          must_try_dishes: result.data.extractedDishes
-        });
-
+      if (results.length > 0 && results[0].success) {
         setIndividualReviewState('success');
       } else {
-        throw new Error(result.error || 'Review enrichment failed');
+        const errorMessage = results[0]?.error || 'Review enrichment failed';
+        throw new Error(errorMessage);
       }
 
       // Reset after 5 seconds
@@ -710,8 +701,9 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
         setIndividualReviewState('idle');
       }, 5000);
 
-      // Refresh the editing restaurant data to reflect the review updates
+      // Refresh the restaurant data to reflect the review updates
       queryClient.invalidateQueries({ queryKey: ["restaurants"] });
+      queryClient.invalidateQueries({ queryKey: ['places'] });
 
     } catch (error) {
       console.error('Individual review enrichment failed:', error);

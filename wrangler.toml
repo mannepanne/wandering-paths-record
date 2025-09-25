@@ -1,5 +1,5 @@
 #:schema node_modules/wrangler/config-schema.json
-name = "wandering-paths-record"
+name = "wandering-paths-record-v3"
 compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]
 main = "./src/worker.js"
@@ -13,10 +13,18 @@ directory = "./dist/client"
 SUPABASE_URL = "https://drtjfbvudzacixvqkzav.supabase.co"
 AUTHORIZED_ADMIN_EMAIL = "magnus.hultberg@gmail.com"
 
-# Custom domain configuration
+# Custom domain configuration - force fresh route binding
+[[routes]]
+pattern = "restaurants.hultberg.org/"
+zone_name = "hultberg.org"
+
 [[routes]]
 pattern = "restaurants.hultberg.org/*"
 zone_name = "hultberg.org"
+
+# Force cache invalidation
+[analytics]
+enabled = true
 
 # Enable logging
 [observability]

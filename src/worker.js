@@ -717,7 +717,6 @@ export default {
     }
     
     // For all other requests, handle SPA routing
-    const url = new URL(request.url);
     console.log('Non-API request:', url.pathname, 'ASSETS available:', !!env.ASSETS, 'v2025-09-22-09:21');
 
     // Development mode fallback

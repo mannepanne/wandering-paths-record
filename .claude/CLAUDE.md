@@ -47,6 +47,7 @@
 - **Don't rewrite working code** - Make the smallest reasonable changes to get to the desired outcome. Don't embark on reimplementing features or systems from scratch without talking about it first - I usually prefer incremental improvements.
 - **Security is non-negotiable** - We never commit secrets or credentials to the repository. Always consider security in every choice, including treatment of personal user data (GDPR) and compliance with relevant regulations.
 - **Document issues as tasks** - If you notice something that should be fixed but is unrelated to your current task, document it as a new task to potentially do later instead of fixing it immediately.
+- **Keep documentation current** - When making significant changes to architecture, APIs, or core functionality, proactively update @SPECIFICATIONS/DEVELOPMENT.md to reflect the new reality. This documentation is critical for future development work.
 - **Don't waste tokens** - Be succinct and concise.
 
 ### Decision Making Process

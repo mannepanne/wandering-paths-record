@@ -1,0 +1,14 @@
+# [Brief description of changes]
+
+# Longer description (optional)
+# - What was changed and why
+# - Any breaking changes or important notes
+
+# Documentation check:
+# - [ ] Does this change affect SPECIFICATIONS/DEVELOPMENT.md?
+# - [ ] Are environment variables or setup steps changed?
+# - [ ] Would a new developer be confused by this change?
+# - [ ] Do deployment commands still work as documented?
+
+# 🤖 Generated with Claude Code
+# Co-Authored-By: Claude <noreply@anthropic.com>

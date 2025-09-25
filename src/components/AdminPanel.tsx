@@ -60,7 +60,11 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
   const [reviewProgress, setReviewProgress] = useState<ReviewEnrichmentProgress | null>(null);
   const [forceRegenerateReviews, setForceRegenerateReviews] = useState<boolean>(false);
   const [enrichmentResults, setEnrichmentResults] = useState<EnrichmentResult[]>([]);
-  
+
+  // Individual restaurant operations state
+  const [individualGeocodingState, setIndividualGeocodingState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [individualReviewState, setIndividualReviewState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+
   // Update cache stats when extraction completes
   useEffect(() => {
     if (formData && !extraction.isExtracting) {
@@ -583,6 +587,143 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
     }
   };
 
+  // Individual restaurant operation handlers
+  const handleIndividualGeocoding = async () => {
+    if (!editingRestaurant) return;
+
+    setIndividualGeocodingState('loading');
+
+    try {
+      // Use the existing restaurant's locations directly
+      const locationsToGeocode = editingRestaurant.locations || [];
+
+      if (locationsToGeocode.length === 0) {
+        console.warn('No locations found to geocode for restaurant:', editingRestaurant.name);
+        setIndividualGeocodingState('error');
+        setTimeout(() => {
+          setIndividualGeocodingState('idle');
+        }, 5000);
+        return;
+      }
+
+      console.log('Starting individual geocoding for restaurant:', editingRestaurant.name);
+      console.log('Locations to geocode:', locationsToGeocode);
+
+      // Geocode all addresses for this restaurant
+      for (const location of locationsToGeocode) {
+        console.log('Processing location:', {
+          id: location.id,
+          restaurant_id: location.restaurant_id,
+          location_name: location.location_name,
+          full_address: location.full_address
+        });
+
+        // Ensure we have a valid address to geocode
+        if (!location.full_address || location.full_address === 'undefined' || location.full_address.trim() === '') {
+          console.warn('Skipping location with invalid/empty address:', location);
+          continue;
+        }
+
+        await geocodingUtility.geocodeAddress(location);
+      }
+
+      setIndividualGeocodingState('success');
+
+      // Reset after 5 seconds
+      setTimeout(() => {
+        setIndividualGeocodingState('idle');
+      }, 5000);
+
+      // Refresh the editing restaurant data to reflect the geocoding updates
+      queryClient.invalidateQueries({ queryKey: ["restaurants"] });
+      queryClient.invalidateQueries({ queryKey: ['places'] });
+
+    } catch (error) {
+      console.error('Individual geocoding failed:', error);
+      setIndividualGeocodingState('error');
+
+      // Reset after 5 seconds
+      setTimeout(() => {
+        setIndividualGeocodingState('idle');
+      }, 5000);
+    }
+  };
+
+  const handleIndividualReviewEnrichment = async () => {
+    if (!editingRestaurant) return;
+
+    setIndividualReviewState('loading');
+
+    try {
+      const claudeApiKey = import.meta.env.VITE_CLAUDE_API_KEY;
+      const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+
+      if (!claudeApiKey || !googleMapsApiKey) {
+        throw new Error('API keys not configured');
+      }
+
+      const reviewService = new ReviewEnrichmentService(claudeApiKey, googleMapsApiKey);
+
+      // Create a temporary restaurant object with the updated form data
+      const restaurantToEnrich = {
+        ...editingRestaurant,
+        // Apply any form data updates to the restaurant
+        ...(formData && {
+          name: formData.name || editingRestaurant.name,
+          address: formData.addressSummary || editingRestaurant.address,
+          locations: formData.locations?.map(loc => ({
+            id: loc.id || `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            restaurant_id: editingRestaurant.id,
+            location_name: loc.location_name,
+            full_address: loc.full_address,
+            city: loc.city,
+            country: loc.country,
+            latitude: loc.latitude,
+            longitude: loc.longitude,
+            phone: loc.phone,
+            created_at: new Date().toISOString()
+          })) || editingRestaurant.locations
+        })
+      };
+
+      const result = await reviewService.enrichRestaurant(restaurantToEnrich, () => {
+        // Progress callback - we could show more detailed progress if needed
+      });
+
+      if (result.success && result.data) {
+        // Update the restaurant in the database
+        await restaurantService.updateRestaurant(editingRestaurant.id, {
+          public_rating: result.data.rating,
+          public_rating_count: result.data.ratingCount,
+          public_review_summary: result.data.reviewSummary,
+          public_review_summary_updated_at: result.data.latestReviewDate,
+          must_try_dishes: result.data.extractedDishes
+        });
+
+        setIndividualReviewState('success');
+      } else {
+        throw new Error(result.error || 'Review enrichment failed');
+      }
+
+      // Reset after 5 seconds
+      setTimeout(() => {
+        setIndividualReviewState('idle');
+      }, 5000);
+
+      // Refresh the editing restaurant data to reflect the review updates
+      queryClient.invalidateQueries({ queryKey: ["restaurants"] });
+
+    } catch (error) {
+      console.error('Individual review enrichment failed:', error);
+      setIndividualReviewState('error');
+
+      // Reset after 5 seconds
+      setTimeout(() => {
+        setIndividualReviewState('idle');
+      }, 5000);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -709,6 +850,78 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
           
         </CardContent>
       </Card>
+
+      {/* Individual restaurant operations - only show when editing existing restaurant */}
+      {editingRestaurant && (
+        <Card className="border-2 border-deep-burgundy">
+          <CardHeader className="bg-gradient-to-r from-deep-burgundy/10 to-deep-burgundy/5">
+            <CardTitle className="flex items-center gap-2 text-foreground">
+              <Database className="w-5 h-5" />
+              Individual Restaurant Operations
+            </CardTitle>
+            <CardDescription>
+              Regenerate specific data for this restaurant only
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Geocoding Button */}
+              <Button
+                onClick={handleIndividualGeocoding}
+                disabled={individualGeocodingState === 'loading'}
+                variant="outline"
+                className="h-auto py-4 flex flex-col gap-2 items-center"
+              >
+                {individualGeocodingState === 'loading' && (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                )}
+                {individualGeocodingState === 'idle' && <MapPin className="w-4 h-4" />}
+                {individualGeocodingState === 'success' && <CheckCircle className="w-4 h-4 text-green-600" />}
+                {individualGeocodingState === 'error' && <AlertTriangle className="w-4 h-4 text-red-600" />}
+
+                <div className="text-center">
+                  <div className="font-medium text-sm">
+                    {individualGeocodingState === 'loading' && 'Processing...'}
+                    {individualGeocodingState === 'success' && 'Geocoding updated!'}
+                    {individualGeocodingState === 'error' && 'An error occurred, try again later'}
+                    {individualGeocodingState === 'idle' && 'Regenerate Location Geocoding'}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Updates latitude/longitude coordinates
+                  </div>
+                </div>
+              </Button>
+
+              {/* Review Enrichment Button */}
+              <Button
+                onClick={handleIndividualReviewEnrichment}
+                disabled={individualReviewState === 'loading'}
+                variant="outline"
+                className="h-auto py-4 flex flex-col gap-2 items-center"
+              >
+                {individualReviewState === 'loading' && (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                )}
+                {individualReviewState === 'idle' && <BarChart3 className="w-4 h-4" />}
+                {individualReviewState === 'success' && <CheckCircle className="w-4 h-4 text-green-600" />}
+                {individualReviewState === 'error' && <AlertTriangle className="w-4 h-4 text-red-600" />}
+
+                <div className="text-center">
+                  <div className="font-medium text-sm">
+                    {individualReviewState === 'loading' && 'Processing...'}
+                    {individualReviewState === 'success' && 'Reviews updated!'}
+                    {individualReviewState === 'error' && 'An error occurred, try again later'}
+                    {individualReviewState === 'idle' && 'Update Public Reviews'}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Fetches latest Google reviews & ratings
+                  </div>
+                </div>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Restaurant Form - Show after extraction or for manual entry */}
       {formData && (
@@ -1024,7 +1237,10 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
         </Card>
       )}
 
-      {/* Cache Management Section */}
+      {/* Admin sections - only show when adding new restaurant, not when editing */}
+      {!editingRestaurant && (
+        <>
+          {/* Cache Management Section */}
       <Card className="border-2 border-olive-green">
         <CardHeader className="bg-gradient-to-r from-olive-green/10 to-olive-green/5">
           <CardTitle className="flex items-center gap-2 text-foreground">
@@ -1349,6 +1565,8 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
           )}
         </CardContent>
       </Card>
+        </>
+      )}
 
     </div>
   );

@@ -169,6 +169,12 @@ npm run api
 - Cache management for development
 - Manual restaurant entry and editing
 
+#### About Page (`/about`)
+- Comprehensive explanation of the appreciation system
+- Feature overview and tech stack information
+- Personal branding and curation philosophy
+- User guide for behavioral rating scale
+
 #### Interactive Features
 - Multi-location restaurant search
 - GPS-based "Near Me" functionality
@@ -471,7 +477,7 @@ npx wrangler deploy --dry-run
 ## Future Development Roadmap
 
 ### Phase 4: Personal Visit Tracking & Individual Operations (✅ COMPLETED)
-- ✅ **Behavioral appreciation scale**: 5-level system (unknown/avoid/fine/good/great)
+- ✅ **Behavioral appreciation scale**: 5-level system (unknown/skip/fine/recommend/must-visit)
 - ✅ **Personal rating system**: Separate from public Google ratings
 - ✅ **Smart status management**: Auto-prompts for appreciation when marking as visited
 - ✅ **Interactive tooltips**: Hover descriptions for all appreciation levels
@@ -480,6 +486,9 @@ npx wrangler deploy --dry-run
 - ✅ **Individual restaurant operations**: Single-restaurant geocoding and review enrichment
 - ✅ **Admin UI improvements**: Context-aware admin sections (hide bulk ops when editing)
 - ✅ **Smart reset behavior**: Appreciation resets to "unknown" when toggling back to 'to-visit'
+- ✅ **About page (4.3)**: Comprehensive explanation of appreciation system and features
+- ✅ **Navigation integration**: About button in header with seamless routing
+- ✅ **Personal branding**: Customized content reflecting Magnus's curation approach
 
 ### Potential Enhancements
 - **Advanced Analytics**: Visit patterns and preference analysis
@@ -511,4 +520,4 @@ npx wrangler deploy --dry-run
 ---
 
 **Last Updated**: September 2025
-**System Version**: Phase 4.2 (Personal Visit Tracking & Individual Restaurant Operations) - Production Ready
+**System Version**: Phase 4.3 (Personal Visit Tracking & About Page) - Production Ready

@@ -19,7 +19,8 @@ export interface Restaurant {
   website?: string;
   public_rating?: number;
   personal_rating?: number;
-  status: 'must-visit' | 'visited';
+  status: 'to-visit' | 'visited';
+  personal_appreciation: 'unknown' | 'avoid' | 'fine' | 'good' | 'great';
   description?: string;
   visit_count?: number;
   cuisine?: string;
@@ -42,6 +43,57 @@ export interface Restaurant {
   public_review_summary_updated_at?: string; // When summary was last generated
   public_review_latest_created_at?: string; // Date of most recent review
 }
+
+// Phase 4: Personal appreciation system types
+export type PersonalAppreciation = 'unknown' | 'avoid' | 'fine' | 'good' | 'great';
+export type RestaurantStatus = 'to-visit' | 'visited';
+
+export interface AppreciationLevel {
+  value: PersonalAppreciation;
+  label: string;
+  description: string;
+  icon: string;
+  badgeStyle: string;
+}
+
+// Appreciation level definitions for UI
+export const APPRECIATION_LEVELS: Record<PersonalAppreciation, AppreciationLevel> = {
+  unknown: {
+    value: 'unknown',
+    label: 'Not visited',
+    description: 'Haven\'t been here yet',
+    icon: '?',
+    badgeStyle: 'hidden' // No badge for unknown
+  },
+  avoid: {
+    value: 'avoid',
+    label: 'Skip this',
+    description: 'I went here so you didn\'t have to',
+    icon: '⚠',
+    badgeStyle: 'bg-red-100 text-red-800 border-red-200'
+  },
+  fine: {
+    value: 'fine',
+    label: 'It\'s fine',
+    description: 'Perfectly fine but won\'t return or recommend',
+    icon: '○',
+    badgeStyle: 'bg-gray-100 text-gray-700 border-gray-200'
+  },
+  good: {
+    value: 'good',
+    label: 'Recommend',
+    description: 'Would recommend to friends but won\'t seek out again',
+    icon: '✓',
+    badgeStyle: 'bg-blue-100 text-blue-800 border-blue-200'
+  },
+  great: {
+    value: 'great',
+    label: 'Must visit!',
+    description: 'Will definitely return, people are missing out',
+    icon: '★',
+    badgeStyle: 'bg-green-100 text-green-800 border-green-200'
+  }
+};
 
 // For backward compatibility during transition
 export type Place = Restaurant;

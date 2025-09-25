@@ -491,12 +491,39 @@ export const restaurantService = {
   },
 
   // Update restaurant status
-  async updateRestaurantStatus(id: string, status: 'must-visit' | 'visited'): Promise<Restaurant> {
+  async updateRestaurantStatus(id: string, status: 'to-visit' | 'visited'): Promise<Restaurant> {
     const updates: Partial<Restaurant> = { status };
     
     // If changing to visited and it's the first visit, set visit_count to 1
     if (status === 'visited') {
       updates.visit_count = 1;
+    }
+
+    return this.updateRestaurant(id, updates);
+  },
+
+  // Phase 4.1: Update personal appreciation level
+  async updateRestaurantAppreciation(id: string, appreciation: 'unknown' | 'avoid' | 'fine' | 'good' | 'great'): Promise<Restaurant> {
+    const updates: Partial<Restaurant> = { personal_appreciation: appreciation };
+    return this.updateRestaurant(id, updates);
+  },
+
+  // Phase 4.1: Enhanced status update with optional appreciation
+  async updateRestaurantStatusWithAppreciation(
+    id: string,
+    status: 'to-visit' | 'visited',
+    appreciation?: 'unknown' | 'avoid' | 'fine' | 'good' | 'great'
+  ): Promise<Restaurant> {
+    const updates: Partial<Restaurant> = { status };
+
+    // If changing to visited and it's the first visit, set visit_count to 1
+    if (status === 'visited') {
+      updates.visit_count = 1;
+    }
+
+    // Add appreciation if provided
+    if (appreciation) {
+      updates.personal_appreciation = appreciation;
     }
 
     return this.updateRestaurant(id, updates);
@@ -848,5 +875,8 @@ export const placesService = {
   createPlace: (restaurant: any) => restaurantService.createRestaurant(restaurant),
   updatePlace: (id: string, updates: any) => restaurantService.updateRestaurant(id, updates),
   deletePlace: (id: string) => restaurantService.deleteRestaurant(id),
-  updatePlaceStatus: (id: string, status: any) => restaurantService.updateRestaurantStatus(id, status)
+  updatePlaceStatus: (id: string, status: any) => restaurantService.updateRestaurantStatus(id, status),
+  // Phase 4.1: New appreciation functions
+  updatePlaceAppreciation: (id: string, appreciation: any) => restaurantService.updateRestaurantAppreciation(id, appreciation),
+  updatePlaceStatusWithAppreciation: (id: string, status: any, appreciation?: any) => restaurantService.updateRestaurantStatusWithAppreciation(id, status, appreciation)
 };

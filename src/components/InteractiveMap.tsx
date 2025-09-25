@@ -396,7 +396,7 @@ export const InteractiveMap = ({
           ${properties.location_name && properties.location_name !== 'Main Location' ? `<p class="text-sm font-medium text-blue-600 mb-2">${properties.location_name}</p>` : ''}
           <div class="space-y-1 text-sm">
             <p><strong>Cuisine:</strong> ${properties.cuisine || 'Not specified'}</p>
-            <p><strong>Status:</strong> <span class="inline-block px-2 py-1 rounded text-xs font-medium ${getStatusBadgeClass(properties.status)}">${properties.status === 'must-visit' ? 'Must Visit' : 'Visited'}</span></p>
+            <p><strong>Status:</strong> <span class="inline-block px-2 py-1 rounded text-xs font-medium ${getStatusBadgeClass(properties.status)}">${properties.status === 'to-visit' ? 'To Visit' : 'Visited'}</span></p>
             <p><strong>Address:</strong> ${properties.address}</p>
             ${properties.phone ? `<p><strong>Phone:</strong> ${properties.phone}</p>` : ''}
             ${properties.price_range ? `<p><strong>Price:</strong> ${properties.price_range}</p>` : ''}
@@ -460,8 +460,8 @@ export const InteractiveMap = ({
     switch (restaurant.status) {
       case 'visited':
         return '#2563eb'; // Bright blue for visited
-      case 'must-visit':
-        return '#dc2626'; // Red for must-visit
+      case 'to-visit':
+        return '#dc2626'; // Red for to-visit
       default:
         return '#6b7280'; // Gray for unknown
     }
@@ -472,7 +472,7 @@ export const InteractiveMap = ({
     switch (status) {
       case 'visited':
         return 'bg-blue-100 text-blue-800';
-      case 'must-visit':
+      case 'to-visit':
         return 'bg-yellow-100 text-yellow-800';
       default:
         return 'bg-gray-100 text-gray-800';

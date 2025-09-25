@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -24,11 +25,13 @@ import {
 } from "lucide-react";
 import { placesService, restaurantService } from "@/services/restaurants";
 import { smartGeoSearch, SearchResult } from "@/services/smartGeoSearch";
-import { Place } from "@/types/place";
+import { Place, RestaurantStatus, PersonalAppreciation } from "@/types/place";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
   const { user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [currentView, setCurrentView] = useState<"public" | "admin">("public");
   const [isMapView, setIsMapView] = useState(false);
   const [selectedType, setSelectedType] = useState("all");
@@ -135,15 +138,59 @@ const Index = () => {
     queryFn: () => restaurantService.getDistinctCuisines(),
   });
 
+  // Handle URL parameters for admin mode and editing
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const editId = searchParams.get('edit');
+    const adminMode = searchParams.get('admin');
+
+    if (adminMode === 'true' && user) {
+      setCurrentView('admin');
+      setEditingRestaurant(null);
+      // Clear URL parameter after handling
+      navigate('/', { replace: true });
+    } else if (editId && user && allPlaces.length > 0) {
+      const restaurant = allPlaces.find(place => place.id === editId);
+      if (restaurant) {
+        setEditingRestaurant(restaurant);
+        setCurrentView('admin');
+        // Clear URL parameter after handling
+        navigate('/', { replace: true });
+      }
+    }
+  }, [location.search, user, allPlaces, navigate]);
+
   // Mutation for updating place status
   const updatePlaceStatusMutation = useMutation({
     mutationFn: ({
       id,
       status,
+      appreciation,
     }: {
       id: string;
-      status: "must-visit" | "visited";
-    }) => restaurantService.updateRestaurantStatus(id, status),
+      status: RestaurantStatus;
+      appreciation?: PersonalAppreciation;
+    }) => {
+      if (appreciation) {
+        return restaurantService.updateRestaurantStatusWithAppreciation(id, status, appreciation);
+      } else {
+        return restaurantService.updateRestaurantStatus(id, status);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["places"] });
+    },
+  });
+
+  // Mutation for updating appreciation only
+  const updateAppreciationMutation = useMutation({
+    mutationFn: ({
+      id,
+      appreciation,
+    }: {
+      id: string;
+      appreciation: PersonalAppreciation;
+    }) => restaurantService.updateRestaurantAppreciation(id, appreciation),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["places"] });
     },
@@ -317,8 +364,12 @@ const Index = () => {
       });
   };
 
-  const handleStatusChange = (id: string, status: "must-visit" | "visited") => {
-    updatePlaceStatusMutation.mutate({ id, status });
+  const handleStatusChange = (id: string, status: RestaurantStatus, appreciation?: PersonalAppreciation) => {
+    updatePlaceStatusMutation.mutate({ id, status, appreciation });
+  };
+
+  const handleAppreciationChange = (id: string, appreciation: PersonalAppreciation) => {
+    updateAppreciationMutation.mutate({ id, appreciation });
   };
 
   const handleEdit = (id: string) => {
@@ -496,6 +547,7 @@ const Index = () => {
                           mustTryDishes: place.must_try_dishes,
                         }}
                         onStatusChange={user ? handleStatusChange : undefined}
+                        onAppreciationChange={user ? handleAppreciationChange : undefined}
                         onEdit={user ? handleEdit : undefined}
                       />
                     ))}

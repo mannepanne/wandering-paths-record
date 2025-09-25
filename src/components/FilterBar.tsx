@@ -22,7 +22,7 @@ interface FilterBarProps {
 
 const statusOptions = [
   { value: "all", label: "All Status" },
-  { value: "must-visit", label: "Must Visit" },
+  { value: "to-visit", label: "To Visit" },
   { value: "visited", label: "Visited" },
 ];
 

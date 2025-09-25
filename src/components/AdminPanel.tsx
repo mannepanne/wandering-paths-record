@@ -155,7 +155,7 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
         address: restaurantData.addressSummary || '',
         website: restaurantData.website || newPlaceUrl,
         public_rating: restaurantData.publicRating,
-        status: 'must-visit' as const,
+        status: 'to-visit' as const,
         description: restaurantData.description,
         cuisine: restaurantData.cuisine,
         must_try_dishes: restaurantData.mustTryDishes,

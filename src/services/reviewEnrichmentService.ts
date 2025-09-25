@@ -183,7 +183,7 @@ export class ReviewEnrichmentService {
 
       // Add delay between requests to respect API rate limits
       if (i < restaurants.length - 1) {
-        await this.delay(2000); // 2 second delay
+        await this.delay(5000); // 5 second delay between restaurants
       }
     }
 
@@ -334,9 +334,22 @@ GUIDELINES:
       };
     } catch (error) {
       console.error('Review summary generation failed:', error);
-      console.error('Claude response that failed to parse:', response.substring(0, 500));
+      console.error('Raw Claude response:', response);
+      console.error('Response length:', response.length);
+      console.error('First 500 chars:', response.substring(0, 500));
+
+      // Try to provide more specific error information
+      let errorSummary = 'Unable to analyze reviews at this time';
+      if (response.length === 0) {
+        errorSummary += ' - empty API response';
+      } else if (!response.includes('{')) {
+        errorSummary += ' - non-JSON response from AI';
+      } else {
+        errorSummary += ' - AI response parsing failed';
+      }
+
       return {
-        summary: 'Unable to analyze reviews at this time - AI response parsing failed',
+        summary: errorSummary,
         popularDishes: [],
         sentiment: 'mixed',
         confidence: 'low'
@@ -344,37 +357,87 @@ GUIDELINES:
     }
   }
 
-  private async callClaudeApi(prompt: string): Promise<string> {
-    // Use our API proxy instead of direct Claude API calls
-    const response = await fetch('/api/claude', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 1000,
-        messages: [
-          {
-            role: 'user',
-            content: prompt
+  private async callClaudeApi(prompt: string, retries = 3): Promise<string> {
+    const maxRetries = retries;
+    let lastError: Error | null = null;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`🤖 Claude API attempt ${attempt}/${maxRetries}`);
+
+        // Use our API proxy instead of direct Claude API calls
+        const response = await fetch('/api/claude', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'claude-3-5-sonnet-20240620',
+            max_tokens: 1000,
+            messages: [
+              {
+                role: 'user',
+                content: prompt
+              }
+            ]
+          })
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Claude API HTTP error:', response.status, response.statusText);
+          console.error('Claude API error body:', errorText);
+
+          // Check if this is a retryable error (overload, rate limit, server error)
+          const isRetryable = response.status === 529 || // Overloaded
+                             response.status === 503 || // Service unavailable
+                             response.status === 502 || // Bad gateway
+                             response.status === 500 || // Internal server error
+                             response.status === 429;   // Too many requests
+
+          if (isRetryable && attempt < maxRetries) {
+            // Custom retry delays: 7s after first failure, 10s after second failure
+            const delay = attempt === 1 ? 7000 : 10000;
+            console.log(`⏳ Retrying in ${delay/1000}s due to ${response.status} error... (attempt ${attempt + 1}/${maxRetries})`);
+            await this.delay(delay);
+            lastError = new Error(`Claude API error: ${response.status} - ${errorText}`);
+            continue;
           }
-        ]
-      })
-    });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Claude API error: ${response.status} - ${errorText}`);
+          throw new Error(`Claude API error: ${response.status} - ${errorText}`);
+        }
+
+        const result = await response.json();
+        console.log('Claude API success on attempt', attempt);
+
+        if (result.error) {
+          console.error('Claude API returned error:', result.error);
+          throw new Error(`Claude API error: ${result.error}`);
+        }
+
+        if (!result.content || !result.content[0] || !result.content[0].text) {
+          console.error('Unexpected Claude API response structure:', result);
+          throw new Error('Invalid response structure from Claude API');
+        }
+
+        return result.content[0].text;
+
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+
+        if (attempt === maxRetries) {
+          console.error(`❌ Claude API failed after ${maxRetries} attempts`);
+          throw lastError;
+        }
+
+        // For non-HTTP errors, still try to retry with custom delays
+        const delay = attempt === 1 ? 7000 : 10000; // Same delays as HTTP errors
+        console.log(`⏳ Retrying in ${delay/1000}s due to error: ${lastError.message} (attempt ${attempt + 1}/${maxRetries})`);
+        await this.delay(delay);
+      }
     }
 
-    const result = await response.json();
-
-    if (result.error) {
-      throw new Error(`Claude API error: ${result.error}`);
-    }
-
-    return result.content[0].text;
+    throw lastError || new Error('Claude API failed after all retries');
   }
 
   private getLatestReviewDate(reviews: GooglePlaceReview[]): string {

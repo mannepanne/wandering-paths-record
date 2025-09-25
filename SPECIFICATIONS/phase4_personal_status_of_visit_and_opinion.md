@@ -8,11 +8,11 @@ The system allows Magnus to track restaurant visits and opinions using a unique 
 ## Core Concept
 Rather than traditional star ratings, use a behavioral appreciation scale that reflects real-world recommendation and revisit intentions:
 
-1. **Unknown** - Not visited yet (Schrödinger's restaurant)
-2. **Avoid** - So bad I would warn people against it
-3. **Fine** - Perfectly fine but won't return or recommend
-4. **Good** - Would recommend to friends but won't seek out again
-5. **Great** - Will definitely return, people are missing out
+1. **Schrödingers cat** - Not visited yet (Unknown, Schrödinger's restaurant)
+2. **Skip** - I went here so you didn't have to (Avoid)
+3. **Fine** - Perfectly fine but won't return or recommend (Neutral)
+4. **Recommend** - Would recommend to friends but won't seek out again (Good)
+5. **Must visit!** - Will definitely return, people are missing out (Great)
 
 ## Design Philosophy
 - **Preserve existing UX** - Don't break current workflows
@@ -67,11 +67,11 @@ CREATE INDEX idx_restaurant_visits_date ON restaurant_visits(visit_date DESC);
 - ✅ **Status toggle preserved**: Quick to-visit ↔ visited changes maintained
 - ✅ **Rate button implemented**: Standalone appreciation selector (admin only)
 - ✅ **Appreciation badges deployed**:
-  - Unknown: No badge (default state)
-  - Avoid: Red "⚠ I went here so you didn't have to"
-  - Fine: Gray "○ Perfectly fine, probably won't return"
-  - Good: Blue "✓ Good! I'd recommend to others"
-  - Great: Green "★ Must visit! Will definitely return"
+  - Unknown: Grey "Schrödingers cat..." (default state, unknown)
+  - Skip: Red "⚠ I went here so you didn't have to"
+  - Fine: Gray "○ Perfectly fine, but won't return or recommend"
+  - Good: Blue "✓ Recommend, would recommend to friends but won't seek out again"
+  - Great: Green "★ Must visit! Will definitely return, people are missing out"
 
 **Smart Status Toggle Behavior:**
 - ✅ **To-visit → Visited**: Prompts for appreciation level automatically

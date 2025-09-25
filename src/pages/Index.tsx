@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -22,6 +22,7 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  Info,
 } from "lucide-react";
 import { placesService, restaurantService } from "@/services/restaurants";
 import { smartGeoSearch, SearchResult } from "@/services/smartGeoSearch";
@@ -430,6 +431,12 @@ const Index = () => {
             >
               <MapPin className="w-4 h-4" />
               {isMapView ? "List View" : "Map View"}
+            </Button>
+            <Button asChild variant="outline" size="sm" className="gap-2">
+              <Link to="/about">
+                <Info className="w-4 h-4" />
+                About
+              </Link>
             </Button>
             <Button
               variant="brutalist"

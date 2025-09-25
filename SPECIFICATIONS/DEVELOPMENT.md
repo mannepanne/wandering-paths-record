@@ -165,6 +165,7 @@ npm run api
 #### Admin Panel (`/admin`)
 - AI-powered restaurant extraction from URLs
 - Batch geocoding and review enrichment
+- Individual restaurant operations (geocoding & review updates)
 - Cache management for development
 - Manual restaurant entry and editing
 
@@ -329,7 +330,7 @@ npx wrangler deploy
 
 **File**: `wrangler.toml`
 ```toml
-name = "wandering-paths-record-v3"
+name = "wandering-paths-record"
 compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]
 main = "./src/worker.js"
@@ -339,6 +340,10 @@ main = "./src/worker.js"
 directory = "./dist/client"
 
 # Custom domain routing
+[[routes]]
+pattern = "restaurants.hultberg.org/"
+zone_name = "hultberg.org"
+
 [[routes]]
 pattern = "restaurants.hultberg.org/*"
 zone_name = "hultberg.org"
@@ -465,13 +470,16 @@ npx wrangler deploy --dry-run
 
 ## Future Development Roadmap
 
-### Phase 4: Personal Visit Tracking (✅ COMPLETED)
+### Phase 4: Personal Visit Tracking & Individual Operations (✅ COMPLETED)
 - ✅ **Behavioral appreciation scale**: 5-level system (unknown/avoid/fine/good/great)
 - ✅ **Personal rating system**: Separate from public Google ratings
 - ✅ **Smart status management**: Auto-prompts for appreciation when marking as visited
 - ✅ **Interactive tooltips**: Hover descriptions for all appreciation levels
 - ✅ **UI consistency**: Matching experience across PlaceCard and RestaurantDetails
 - ✅ **Database migration**: Schema updated with personal_appreciation field
+- ✅ **Individual restaurant operations**: Single-restaurant geocoding and review enrichment
+- ✅ **Admin UI improvements**: Context-aware admin sections (hide bulk ops when editing)
+- ✅ **Smart reset behavior**: Appreciation resets to "unknown" when toggling back to 'to-visit'
 
 ### Potential Enhancements
 - **Advanced Analytics**: Visit patterns and preference analysis
@@ -502,5 +510,5 @@ npx wrangler deploy --dry-run
 
 ---
 
-**Last Updated**: January 2025
-**System Version**: Phase 4.1 (Personal Visit Tracking & Appreciation System) - Production Ready
+**Last Updated**: September 2025
+**System Version**: Phase 4.2 (Personal Visit Tracking & Individual Restaurant Operations) - Production Ready

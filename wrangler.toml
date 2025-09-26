@@ -4,7 +4,7 @@ compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]
 main = "./src/worker.js"
 
-# Static assets configuration
+# Static assets configuration - modern format for Vite compatibility
 [assets]
 directory = "./dist/client"
 

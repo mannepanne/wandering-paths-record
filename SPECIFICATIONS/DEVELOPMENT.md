@@ -175,11 +175,20 @@ npm run api
 - Personal branding and curation philosophy
 - User guide for behavioral rating scale
 
+#### Restaurant Details (`/restaurant/:id`)
+- Comprehensive restaurant information display
+- Multi-location support with individual location cards
+- Smart layout: Description spans full width when Source is empty
+- Interactive maps integration
+- Personal appreciation badges with tooltips
+- Admin controls for authenticated users
+
 #### Interactive Features
 - Multi-location restaurant search
 - GPS-based "Near Me" functionality
 - Interactive Mapbox maps with clustering
 - Advanced filtering (cuisine, status, location)
+- SPA routing with deep linking support
 
 ## Core System Components
 
@@ -436,6 +445,28 @@ npx wrangler deploy --dry-run
 # ❌ Mapbox maps not displaying
 # ✅ Verify VITE_MAPBOX_ACCESS_TOKEN is set
 # ✅ Check Mapbox account limits and usage
+```
+
+### 5. SPA Routing Issues
+```bash
+# ❌ 522 errors on restaurant detail page refresh (production)
+# ✅ This is resolved - worker handles SPA routing with embedded HTML
+
+# ❌ Localhost development SPA routing issues
+# ✅ Known issue - production works perfectly, use production for testing deep links
+# ✅ For development, navigate via the app rather than direct URL refresh
+```
+
+### 6. CloudFlare Workers Deployment
+```bash
+# ❌ ASSETS binding not available
+# ✅ This is resolved - worker uses environment-aware routing
+# ✅ Development: passes through to Vite
+# ✅ Production: serves embedded HTML for SPA routes
+
+# ❌ Worker version not updating
+# ✅ Check CloudFlare dashboard for deployment status
+# ✅ Use `npx wrangler tail` to monitor real-time logs
 ```
 
 ## Performance Considerations

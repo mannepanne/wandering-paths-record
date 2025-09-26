@@ -716,42 +716,69 @@ export default {
       return newResponse;
     }
     
-    // For all other requests, handle SPA routing
-    console.log('Non-API request:', url.pathname, 'ASSETS available:', !!env.ASSETS, 'v2025-09-22-09:21');
+    // Check if we're in development mode (localhost)
+    const isDevelopment = url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname.endsWith('.local');
 
-    // Development mode fallback
-    if (!env.ASSETS) {
-      console.log('Development mode - passing through to Vite');
+    console.log('Non-API request:', url.pathname, isDevelopment ? 'DEV-MODE' : 'PROD-MODE', 'v2025-09-26-09:30-ENV-AWARE');
+
+    if (isDevelopment) {
+      // Development mode: Let Vite handle everything
+      console.log('🔧 Development mode - passing through to Vite for:', url.pathname);
       return fetch(request);
     }
 
-    // Production mode: Try to serve static files, fallback to index.html for SPA routes
-    try {
-      console.log('Trying to serve:', url.pathname);
-      const response = await env.ASSETS.fetch(request);
-
-      if (response.status === 200) {
-        console.log('Served static file:', url.pathname);
-        return response;
-      }
-
-      console.log('File not found, serving index.html for SPA routing');
-      // For SPA routes, serve index.html
-      const indexResponse = await env.ASSETS.fetch('/');
-      return new Response(indexResponse.body, {
-        status: 200,
-        headers: {
-          ...indexResponse.headers,
-          'Cache-Control': 'no-cache, no-store, must-revalidate, private',
-          'Pragma': 'no-cache',
-          'Expires': '0',
-          'CF-Cache-Status': 'BYPASS',
-          'X-Worker-Version': 'v2025-09-22-09:40-CACHE-BYPASS'
-        }
-      });
-    } catch (error) {
-      console.error('Error in SPA routing:', error);
-      return new Response('Error loading page', { status: 500 });
+    // Production mode: Check if this is an asset request that should be handled by CloudFlare
+    if (url.pathname.startsWith('/assets/')) {
+      console.log('📁 Asset request in production - should be handled by CloudFlare:', url.pathname);
+      // This shouldn't happen in production as assets are served directly by CloudFlare
+      // But if it does, return a 404 to indicate the asset wasn't found
+      return new Response('Asset not found', { status: 404 });
     }
+
+    // Production SPA routes: serve embedded index.html content
+    const indexHtmlContent = `<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Wandering Paths - Magnus' Restaurant Hitlist</title>
+        <meta
+            name="description"
+            content="It started with a Lovable prompt...and ended with a restaurant hitlist, a curated list of must visit restaurants."
+        />
+        <meta name="author" content="Claude and Magnus" />
+
+        <meta
+            property="og:title"
+            content="Wandering Paths - Magnus' Restaurant Hitlist"
+        />
+        <meta
+            property="og:description"
+            content="It started with a Lovable prompt...and ended with a restaurant hitlist, a curated list of must visit restaurants."
+        />
+        <meta property="og:type" content="website" />
+        <meta property="og:image" content="" />
+      <script type="module" crossorigin src="/assets/index-C1ecQnNk.js"></script>
+      <link rel="stylesheet" crossorigin href="/assets/index-CfPyalCL.css">
+    </head>
+
+    <body>
+        <div id="root"></div>
+    </body>
+</html>`;
+
+    console.log('✅ Serving embedded index.html for SPA route:', url.pathname);
+
+    return new Response(indexHtmlContent, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-cache, no-store, must-revalidate, private',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'X-Worker-Version': 'v2025-09-26-09:30-ENV-AWARE',
+        'X-SPA-Route': url.pathname
+      }
+    });
   }
 };

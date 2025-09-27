@@ -388,7 +388,7 @@ const RestaurantDetails = () => {
                 <CardTitle className="text-2xl font-geo font-semibold text-foreground">
                   {restaurant.name}
                 </CardTitle>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div className="flex items-center gap-3">
                     {restaurant.cuisine && (
                       <Badge className="bg-burnt-orange text-white font-mono text-sm">
@@ -400,12 +400,9 @@ const RestaurantDetails = () => {
                         {restaurant.price_range}
                       </Badge>
                     )}
-                    <Badge variant={restaurant.status === 'visited' ? 'default' : 'secondary'} className="font-mono text-sm">
-                      {restaurant.status}
-                    </Badge>
                   </div>
                   <div className="flex items-center gap-6">
-                    <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <MapPin className="w-4 h-4" />
                       <a
                         href={getGoogleMapsUrl(restaurant, restaurant.locations?.[0], true)}
@@ -417,8 +414,8 @@ const RestaurantDetails = () => {
                       </a>
                     </div>
                     {restaurant.website && (
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         size="sm"
                         onClick={() => window.open(restaurant.website, '_blank')}
                         className="gap-2 text-sm"
@@ -478,7 +475,7 @@ const RestaurantDetails = () => {
                     <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Smart Review Summary</h3>
                     <p className="text-muted-foreground leading-relaxed mb-4">{restaurant.public_review_summary}</p>
                     {/* Personal and Public Ratings row */}
-                    <div className="flex items-center justify-between text-sm mb-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-2 text-sm mb-4">
                       {shouldShowAppreciationBadge ? (
                         <div className="flex items-center gap-2">
                           <Tooltip delayDuration={300}>
@@ -606,7 +603,7 @@ const RestaurantDetails = () => {
                     <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Smart Review Summary</h3>
                     <p className="text-muted-foreground leading-relaxed mb-4">{restaurant.public_review_summary}</p>
                     {/* Personal and Public Ratings row */}
-                    <div className="flex items-center justify-between text-sm mb-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-2 text-sm mb-4">
                       {shouldShowAppreciationBadge ? (
                         <div className="flex items-center gap-2">
                           <Tooltip delayDuration={300}>

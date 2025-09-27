@@ -161,6 +161,13 @@ const Index = () => {
     }
   }, [location.search, user, allPlaces, navigate]);
 
+  // Scroll to top when switching to admin view
+  useEffect(() => {
+    if (currentView === 'admin') {
+      window.scrollTo(0, 0);
+    }
+  }, [currentView]);
+
   // Mutation for updating place status
   const updatePlaceStatusMutation = useMutation({
     mutationFn: ({
@@ -432,21 +439,6 @@ const Index = () => {
               <MapPin className="w-4 h-4" />
               {isMapView ? "List View" : "Map View"}
             </Button>
-            <Button asChild variant="outline" size="sm" className="gap-2">
-              <Link to="/about">
-                <Info className="w-4 h-4" />
-                About
-              </Link>
-            </Button>
-            <Button
-              variant="brutalist"
-              size="sm"
-              className="gap-2"
-              onClick={() => setCurrentView("admin")}
-            >
-              <Shield className="w-4 h-4" />
-              Admin
-            </Button>
           </div>
         </div>
       </nav>
@@ -609,9 +601,28 @@ const Index = () => {
       {/* Footer */}
       <footer className="border-t-2 border-border bg-card mt-16">
         <div className="container mx-auto px-4 py-8 text-center">
-          <p className="text-sm text-muted-foreground font-mono">
+          <p className="text-sm text-muted-foreground font-mono mb-4">
             So many restaurants, so much delicious food, so little time...
           </p>
+          <div className="flex justify-center gap-3">
+            <Button asChild variant="outline" size="sm" className="gap-2">
+              <Link to="/about">
+                <Info className="w-4 h-4" />
+                About
+              </Link>
+            </Button>
+            {user && (
+              <Button
+                variant="brutalist"
+                size="sm"
+                className="gap-2"
+                onClick={() => setCurrentView("admin")}
+              >
+                <Shield className="w-4 h-4" />
+                Admin
+              </Button>
+            )}
+          </div>
         </div>
       </footer>
     </div>

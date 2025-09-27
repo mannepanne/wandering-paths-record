@@ -26,17 +26,19 @@ const About = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <nav className="border-b-2 border-border bg-card p-4">
-        <div className="container mx-auto flex justify-between items-center max-w-6xl">
-          <Button asChild variant="ghost" className="gap-2">
-            <Link to="/">
-              <ArrowLeft className="w-4 h-4" />
-              Back to Restaurants
-            </Link>
-          </Button>
-          <h1 className="text-xl font-geo font-bold text-foreground">
-            About Curated on hultberg.org
-          </h1>
-          <div className="w-32" /> {/* Spacer for centering */}
+        <div className="container mx-auto max-w-6xl">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+            <Button asChild variant="ghost" className="gap-2 self-start">
+              <Link to="/">
+                <ArrowLeft className="w-4 h-4" />
+                Back to Restaurants
+              </Link>
+            </Button>
+            <h1 className="text-xl font-geo font-bold text-foreground sm:text-center">
+              About Curated on hultberg.org
+            </h1>
+            <div className="hidden sm:block w-32" /> {/* Spacer for desktop centering */}
+          </div>
         </div>
       </nav>
 

@@ -100,11 +100,17 @@ async function callClaudeApi(prompt, apiKey) {
 
 // Fetch page content with proxy
 async function fetchPageWithProxy(url) {
+  // Instagram-specific handling
+  if (isInstagramUrl(url)) {
+    console.log('🟣 Instagram URL detected, using specialized scraping');
+    return await fetchInstagramContent(url);
+  }
+
   const proxies = [
     `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
     `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`
   ];
-  
+
   for (const proxyUrl of proxies) {
     try {
       const response = await fetch(proxyUrl);
@@ -123,22 +129,77 @@ async function fetchPageWithProxy(url) {
   return null;
 }
 
+// Check if URL is Instagram
+function isInstagramUrl(url) {
+  return url.includes('instagram.com/') || url.includes('instagr.am/');
+}
+
+// Specialized Instagram content fetching
+async function fetchInstagramContent(url) {
+  const proxies = [
+    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+    `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+    // Instagram-specific proxy alternatives if needed
+    `https://cors-anywhere.herokuapp.com/${encodeURIComponent(url)}`
+  ];
+
+  for (const proxyUrl of proxies) {
+    try {
+      const response = await fetch(proxyUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+      });
+
+      if (response.ok) {
+        let content;
+        if (proxyUrl.includes('allorigins')) {
+          const data = await response.json();
+          content = data.contents;
+        } else {
+          content = await response.text();
+        }
+
+        // Instagram pages are heavily JavaScript-dependent, so we need to extract what we can
+        if (content && content.length > 1000) {
+          console.log('✅ Instagram content fetched via', proxyUrl.includes('allorigins') ? 'allorigins' : 'codetabs');
+          return content;
+        }
+      }
+    } catch (error) {
+      console.log('❌ Instagram fetch failed via', proxyUrl, error.message);
+      continue;
+    }
+  }
+
+  console.log('⚠️ All Instagram proxy attempts failed, returning minimal content');
+  return null;
+}
+
 // Extract meaningful content from HTML (same logic as server.cjs)
-function extractMeaningfulContent(html) {
+function extractMeaningfulContent(html, url = '') {
   if (!html) return '';
-  
+
   try {
+    // Check if this is Instagram content
+    const isInstagram = isInstagramUrl(url);
+
     // Remove script tags and their content
     let cleaned = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
-    
+
     // Remove style tags and their content
     cleaned = cleaned.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
-    
+
     // Extract meta descriptions and titles
     const metaDesc = html.match(/<meta[^>]*name=['"]*description['"]*[^>]*content=['"]*([^'"]*)['"]*[^>]*>/i);
     const title = html.match(/<title[^>]*>([^<]*)<\/title>/i);
     const ogTitle = html.match(/<meta[^>]*property=['"]*og:title['"]*[^>]*content=['"]*([^'"]*)['"]*[^>]*>/i);
     const ogDesc = html.match(/<meta[^>]*property=['"]*og:description['"]*[^>]*content=['"]*([^'"]*)['"]*[^>]*>/i);
+
+    // Instagram-specific meta tags
+    const igType = html.match(/<meta[^>]*property=['"]*og:type['"]*[^>]*content=['"]*([^'"]*)['"]*[^>]*>/i);
+    const igImage = html.match(/<meta[^>]*property=['"]*og:image['"]*[^>]*content=['"]*([^'"]*)['"]*[^>]*>/i);
+    const igSiteName = html.match(/<meta[^>]*property=['"]*og:site_name['"]*[^>]*content=['"]*([^'"]*)['"]*[^>]*>/i);
     
     // Extract text from common content tags
     const headings = html.match(/<h[1-6][^>]*>([^<]*)<\/h[1-6]>/gi) || [];
@@ -165,13 +226,56 @@ function extractMeaningfulContent(html) {
     const phonePattern = /(?:tel|phone|call|contact)[^:]*:?\s*([0-9\s\-\+\(\)]{10,20})/gi;
     
     
+    // Instagram-specific content extraction
+    if (isInstagram) {
+      // Extract JSON-LD data which Instagram often uses
+      const jsonLdPattern = /"@type":"([^"]*)"[^}]*"name":"([^"]*)"[^}]*"description":"([^"]*)"[^}]*"address":\{[^}]*"streetAddress":"([^"]*)"[^}]*"addressLocality":"([^"]*)"[^}]*"telephone":"([^"]*)"/g;
+      const instagramJsonData = html.match(jsonLdPattern);
+
+      // Extract profile info from window._sharedData
+      const sharedDataPattern = /window\._sharedData\s*=\s*({.*?});/s;
+      const sharedDataMatch = html.match(sharedDataPattern);
+
+      // Extract bio and contact info from profile pages
+      const bioPattern = /"biography":"([^"]*)"[^}]*"business_contact_method":"([^"]*)"[^}]*"business_email":"([^"]*)"[^}]*"business_phone_number":"([^"]*)"/g;
+      const bioMatch = html.match(bioPattern);
+
+      // Extract location mentions from captions and bio
+      const locationPattern = /"text":"([^"]*(?:restaurant|cafe|bar|eatery|dining|food|kitchen|bistro|brasserie)[^"]*)"[^}]*"location"[^}]*"name":"([^"]*)"/gi;
+      const locationMatches = html.match(locationPattern) || [];
+    }
+
     // Combine meaningful content
     let meaningfulContent = [];
-    
+
     if (title && title[1]) meaningfulContent.push(`TITLE: ${title[1].trim()}`);
     if (ogTitle && ogTitle[1]) meaningfulContent.push(`OG_TITLE: ${ogTitle[1].trim()}`);
     if (metaDesc && metaDesc[1]) meaningfulContent.push(`META_DESC: ${metaDesc[1].trim()}`);
     if (ogDesc && ogDesc[1]) meaningfulContent.push(`OG_DESC: ${ogDesc[1].trim()}`);
+
+    // Instagram-specific meta content
+    if (isInstagram) {
+      if (igType && igType[1]) meaningfulContent.push(`IG_TYPE: ${igType[1].trim()}`);
+      if (igSiteName && igSiteName[1]) meaningfulContent.push(`IG_SITE: ${igSiteName[1].trim()}`);
+
+      // Add specific patterns for Instagram business profiles
+      const businessPatterns = [
+        /"category_name":"([^"]*restaurant[^"]*)"/gi,
+        /"category_name":"([^"]*food[^"]*)"/gi,
+        /"category_name":"([^"]*dining[^"]*)"/gi,
+        /"public_phone_number":"([^"]*)"/gi,
+        /"public_email":"([^"]*)"/gi,
+        /"address_street":"([^"]*)"/gi,
+        /"city_name":"([^"]*)"/gi
+      ];
+
+      businessPatterns.forEach(pattern => {
+        let match;
+        while ((match = pattern.exec(html)) !== null && match[1]) {
+          meaningfulContent.push(`INSTAGRAM_DATA: ${match[1].trim()}`);
+        }
+      });
+    }
     
     // Add headings
     headings.forEach(h => {
@@ -250,6 +354,35 @@ function extractMeaningfulContent(html) {
     if (html.includes('book') || html.includes('reservation')) {
       meaningfulContent.push('INDICATOR: Contains booking references');
     }
+
+    // Instagram-specific indicators
+    if (isInstagram) {
+      meaningfulContent.push('PLATFORM: Instagram business profile');
+
+      // Look for food-related hashtags and keywords
+      const foodKeywords = ['#restaurant', '#food', '#dining', '#eatery', '#cafe', '#bar', '#kitchen', '#chef', '#menu', '#delicious', '#tasty', '#foodie'];
+      foodKeywords.forEach(keyword => {
+        if (html.toLowerCase().includes(keyword.toLowerCase())) {
+          meaningfulContent.push(`FOOD_INDICATOR: ${keyword}`);
+        }
+      });
+
+      // Look for location and address patterns in Instagram data
+      const addressPattern = /"address_street":"([^"]+)"/gi;
+      const cityPattern = /"city_name":"([^"]+)"/gi;
+      const phonePattern = /"public_phone_number":"([^"]+)"/gi;
+
+      let match;
+      while ((match = addressPattern.exec(html)) !== null) {
+        meaningfulContent.push(`IG_ADDRESS: ${match[1]}`);
+      }
+      while ((match = cityPattern.exec(html)) !== null) {
+        meaningfulContent.push(`IG_CITY: ${match[1]}`);
+      }
+      while ((match = phonePattern.exec(html)) !== null) {
+        meaningfulContent.push(`IG_PHONE: ${match[1]}`);
+      }
+    }
     
     return meaningfulContent.join('\n\n');
     
@@ -280,7 +413,31 @@ async function handleRestaurantExtraction(request, env) {
     }
 
     console.log('🔍 Starting extraction for:', url);
-    
+
+    // Check for trusted review sites that should bypass business type detection
+    const trustedReviewSites = [
+      'theinfatuation.com',
+      'timeout.com',
+      'opentable.com',
+      'yelp.com',
+      'tripadvisor.com',
+      'intravel.net',
+      'squaremeal.co.uk',
+      'guide.michelin.com',
+      'hardens.com'
+    ];
+
+    const urlDomain = new URL(url).hostname.replace('www.', '');
+    const isTrustedReviewSite = trustedReviewSites.some(domain => urlDomain.includes(domain));
+
+    console.log('🔍 URL domain:', urlDomain);
+    console.log('🔍 Trusted review sites:', trustedReviewSites);
+    console.log('🔍 Is trusted review site:', isTrustedReviewSite);
+
+    if (isTrustedReviewSite) {
+      console.log('✅ Trusted review site detected:', urlDomain, '- skipping business type detection');
+    }
+
     // Fetch main page content
     const mainContent = await fetchPageWithProxy(url);
     if (!mainContent) {
@@ -291,23 +448,27 @@ async function handleRestaurantExtraction(request, env) {
     }
 
     console.log('📄 Content fetched, length:', mainContent.length);
-    
+
     // Extract meaningful content from the HTML
-    const meaningfulContent = extractMeaningfulContent(mainContent);
+    const meaningfulContent = extractMeaningfulContent(mainContent, url);
     console.log('🔍 Meaningful content extracted:', meaningfulContent.slice(0, 1000) + '...');
 
     // Limit content size to reduce token usage and avoid acceleration limits
     const limitedContent = meaningfulContent.slice(0, 8000); // ~2000 tokens max
     console.log('🔍 Using limited content for analysis, length:', limitedContent.length);
 
-    // Business type detection prompt
-    const businessPrompt = `
-Analyze this website content and determine if this is a restaurant business.
+    // Business type detection (skip for trusted review sites)
+    const isInstagramUrl = url.includes('instagram.com/') || url.includes('instagr.am/');
+
+    if (!isTrustedReviewSite) {
+      // Business type detection prompt with Instagram-specific handling
+      const businessPrompt = `
+Analyze this ${isInstagramUrl ? 'Instagram profile' : 'website'} content and determine if this is a restaurant business.
 
 CONTENT:
-<website_content>
+<${isInstagramUrl ? 'instagram_profile' : 'website'}_content>
 ${limitedContent}
-</website_content>
+</${isInstagramUrl ? 'instagram_profile' : 'website'}_content>
 
 ANALYSIS REQUIRED:
 1. Is this primarily a restaurant/dining establishment?
@@ -315,23 +476,37 @@ ANALYSIS REQUIRED:
 
 Return JSON in this format:
 {
-  "businessType": "restaurant|hotel|retail|gallery|bookshop|service|other",
-  "confidence": "high|medium|low", 
+  "businessType": "restaurant|cafe|bakery|bar|pub|hotel|retail|gallery|bookshop|service|other",
+  "confidence": "high|medium|low",
   "reasoning": "Brief explanation of your determination"
 }
 
 BUSINESS TYPE DEFINITIONS:
-- restaurant: Serves food/drinks for dine-in (includes restaurants, bistros, cafes, wine bars, pubs, brasseries, eateries, food halls, etc.)
+- restaurant: Primarily serves food/drinks for dine-in
+- cafe: Coffee shop or casual eatery with food service
+- bakery: Bakery with seating/food service (not just retail baked goods)
+- bar: Bar or pub serving drinks with food options
+- pub: Traditional pub serving drinks and meals
 - hotel: Accommodation with possible restaurant component
-- retail: Sells products/goods
+- retail: Sells products/goods (without significant food service)
 - gallery: Art gallery or museum
 - bookshop: Bookstore or library
 - service: Professional services, consulting, etc.
 - other: Doesn't fit clear categories
 
-IMPORTANT: 
-- Wine bars, bistros, cafes, pubs, brasseries, and similar establishments that serve food should be classified as "restaurant"
-- If you find a hotel or venue with a restaurant component, classify as "restaurant" only if the restaurant is the primary business focus
+${isInstagramUrl ? `
+INSTAGRAM-SPECIFIC GUIDANCE:
+- Look for PLATFORM indicators showing this is an Instagram business profile
+- Pay attention to IG_ADDRESS, IG_CITY, IG_PHONE fields for business information
+- Check for FOOD_INDICATOR tags showing food-related hashtags and keywords
+- Instagram business categories (category_name) often indicate restaurant businesses
+- Look for bio content mentioning food, dining, chef, restaurant concepts
+- Food photos and meal posts are strong indicators of restaurant businesses
+` : ''}
+
+IMPORTANT: If you find a hotel or venue with a restaurant component, classify as "restaurant" only if the restaurant is the primary business focus.
+FOOD SERVICE PRIORITY: If a business serves food for sit-in dining (even if they also sell retail products), classify it as the appropriate food service type (restaurant/cafe/bakery/bar/pub) rather than "retail".
+${isInstagramUrl ? '- Instagram food influencers or personal accounts should be classified as "other" unless they represent an actual restaurant business' : ''}
 `;
 
     const businessResponse = await callClaudeApi(businessPrompt, apiKey);
@@ -361,7 +536,19 @@ IMPORTANT:
     const businessAnalysis = extractJSONFromResponse(businessResponse);
     console.log('🔍 Business analysis:', businessAnalysis);
 
-    if (businessAnalysis.businessType !== 'restaurant') {
+    const validFoodBusinessTypes = ['restaurant', 'cafe', 'bakery', 'bar', 'pub'];
+    if (!validFoodBusinessTypes.includes(businessAnalysis.businessType)) {
+      // Special handling for Instagram login wall
+      if (isInstagramUrl && businessAnalysis.reasoning &&
+          (businessAnalysis.reasoning.toLowerCase().includes('login') ||
+           businessAnalysis.reasoning.toLowerCase().includes('instagram') && businessAnalysis.reasoning.toLowerCase().includes('code'))) {
+        return Response.json({
+          success: false,
+          isInstagramLoginWall: true,
+          message: `Instagram requires login to view this profile. Due to Instagram's privacy settings, automatic extraction is not possible. Please manually enter the restaurant details or try using the restaurant's main website instead.`
+        });
+      }
+
       return Response.json({
         success: false,
         isNotRestaurant: true,
@@ -369,10 +556,11 @@ IMPORTANT:
         message: `This appears to be a ${businessAnalysis.businessType} website, not a restaurant. Please use manual entry instead.`
       });
     }
+    } // End of business type detection block
 
-    // Restaurant extraction prompt (same as server.cjs)
+    // Restaurant extraction prompt with Instagram-specific handling
     const restaurantPrompt = `
-Analyze this restaurant website content and extract structured information:
+Analyze this restaurant ${isInstagramUrl ? 'Instagram profile' : 'website'} content and extract structured information:
 
 CONTENT TO ANALYZE:
 ${limitedContent}
@@ -381,13 +569,13 @@ EXTRACT THE FOLLOWING and return as JSON:
 {
   "name": "Official restaurant name",
   "addressSummary": "Human-readable location summary - if single location: 'Shoreditch, London', if multiple: 'Multiple locations in London (Shoreditch, King's Cross) & Edinburgh'",
-  "phone": "Main phone number if found", 
+  "phone": "Main phone number if found",
   "chefName": "Head chef name if mentioned",
   "cuisine": "Standardized cuisine type (Italian/French/British/Modern European/Asian Fusion/etc)",
   "description": "2-3 sentence summary of the restaurant's concept and appeal",
   "dietaryOptions": "1-2 sentences about cooking style, ingredients, dietary accommodations",
   "priceRange": "$|$$|$$$|$$$$",
-  "atmosphere": "1-2 sentences about ambiance and dining experience", 
+  "atmosphere": "1-2 sentences about ambiance and dining experience",
   "mustTryDishes": ["dish1", "dish2", "dish3"],
   "publicRating": null,
   "locations": [
@@ -412,6 +600,19 @@ GUIDELINES:
 - IMPORTANT: Look specifically for ADDRESS:, PHONE:, and LOCATION_DETAIL: patterns in the content
 - EXTRACT ADDRESSES: Use any street addresses, postcodes, or location details found in ADDRESS: or LOCATION_DETAIL: sections
 - PHONE NUMBERS: Use specific phone numbers found in PHONE: sections for each location if available
+
+${isInstagramUrl ? `
+INSTAGRAM-SPECIFIC EXTRACTION GUIDANCE:
+- Look for IG_ADDRESS, IG_CITY, IG_PHONE fields for structured business information
+- Check INSTAGRAM_DATA fields for parsed business category and contact info
+- Use FOOD_INDICATOR tags to understand cuisine type and specialties
+- Instagram business profiles often have limited text, so infer from available bio content
+- If address information is sparse, use neighborhood/area mentioned in bio or posts
+- Extract restaurant concept from bio description and visible food posts
+- Price range may need to be inferred from food types and presentation quality
+- Must-try dishes can come from popular posts, hashtags, or bio highlights
+- For atmosphere, consider the visual style and presentation in food photos
+` : ''}
 
 LOCATION EXTRACTION GUIDELINES:
 - For single location restaurants, include one location object with all address details

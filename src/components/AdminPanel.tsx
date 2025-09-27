@@ -624,7 +624,7 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
           continue;
         }
 
-        await geocodingUtility.geocodeAddress(location);
+        await geocodingUtility.geocodeAddress(location, editingRestaurant.name);
       }
 
       setIndividualGeocodingState('success');
@@ -689,7 +689,17 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
         false // Don't force regenerate by default for individual operations
       );
 
-      if (results.length > 0 && results[0].success) {
+      if (results.length > 0 && results[0].success && results[0].data) {
+        // Save the enrichment results to the database
+        await restaurantService.updateRestaurantReviewData(editingRestaurant.id, {
+          public_rating: results[0].data.rating,
+          public_rating_count: results[0].data.ratingCount,
+          public_review_summary: results[0].data.reviewSummary,
+          public_review_summary_updated_at: new Date().toISOString(),
+          public_review_latest_created_at: results[0].data.latestReviewDate,
+          must_try_dishes: results[0].data.extractedDishes
+        });
+
         setIndividualReviewState('success');
       } else {
         const errorMessage = results[0]?.error || 'Review enrichment failed';

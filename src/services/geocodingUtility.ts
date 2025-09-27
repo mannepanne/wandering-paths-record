@@ -14,11 +14,14 @@ export interface GeocodingProgress {
 }
 
 export const geocodingUtility = {
-  // Get all restaurant addresses that need geocoding (missing coordinates)
-  async getAddressesNeedingGeocoding(forceAll: boolean = false): Promise<RestaurantAddress[]> {
+  // Get all restaurant addresses that need geocoding (missing coordinates) with restaurant names
+  async getAddressesNeedingGeocoding(forceAll: boolean = false): Promise<(RestaurantAddress & { restaurant_name?: string })[]> {
     const query = supabase
       .from('restaurant_addresses')
-      .select('*')
+      .select(`
+        *,
+        restaurants!inner(name)
+      `)
       .order('created_at', { ascending: true });
 
     // If forceAll is true, get ALL addresses, otherwise only get those missing coordinates
@@ -33,39 +36,70 @@ export const geocodingUtility = {
       throw error;
     }
 
-    return data || [];
+    // Transform the data to include restaurant_name at the top level
+    const transformedData = (data || []).map(item => ({
+      ...item,
+      restaurant_name: item.restaurants?.name || undefined,
+      restaurants: undefined // Remove the nested object
+    }));
+
+    return transformedData;
   },
 
   // Geocode a single address and update the database
-  async geocodeAddress(address: RestaurantAddress): Promise<boolean> {
+  async geocodeAddress(address: RestaurantAddress, restaurantName?: string): Promise<boolean> {
     try {
       console.log(`🔍 GEOCODING DEBUG - Restaurant ID: ${address.restaurant_id}, Address ID: ${address.id}`);
+      console.log(`🔍 Restaurant Name: "${restaurantName || 'Unknown'}"`);
       console.log(`🔍 Full Address: "${address.full_address}"`);
       console.log(`🔍 City: "${address.city}"`);
       console.log(`🔍 Country: "${address.country}"`);
-      
-      // Try to geocode the full address
-      let coords = await locationService.geocodeLocation(address.full_address);
+
+      // Try to geocode the full address with restaurant name for enhanced accuracy
+      let coords = await locationService.geocodeLocation(address.full_address, restaurantName);
       
       // If that fails, try progressive fallback strategies
       if (!coords) {
         console.log('🔍 Full address failed, trying fallback strategies...');
         
-        // Strategy 1: Try extracting UK postcode + city
+        // Strategy 1: Try restaurant name + postcode + city
         const postcodeMatch = address.full_address.match(/\b[A-Z]{1,2}\d{1,2}[A-Z]?\s?\d[A-Z]{2}\b/i);
-        if (postcodeMatch && address.city) {
+        if (!coords && postcodeMatch && address.city && restaurantName) {
+          const postcodeQuery = `${postcodeMatch[0]}, ${address.city}`;
+          console.log(`🔍 Trying restaurant name + postcode + city: "${restaurantName}, ${postcodeQuery}"`);
+          coords = await locationService.geocodeLocation(postcodeQuery, restaurantName);
+        }
+
+        // Strategy 2: Try extracting UK postcode + city (without restaurant name)
+        if (!coords && postcodeMatch && address.city) {
           const postcodeQuery = `${postcodeMatch[0]}, ${address.city}`;
           console.log(`🔍 Trying postcode + city: "${postcodeQuery}"`);
           coords = await locationService.geocodeLocation(postcodeQuery);
         }
-        
-        // Strategy 2: Try just the postcode
+
+        // Strategy 3: Try just the postcode with restaurant name
+        if (!coords && postcodeMatch && restaurantName) {
+          console.log(`🔍 Trying restaurant name + postcode: "${restaurantName}, ${postcodeMatch[0]}"`);
+          coords = await locationService.geocodeLocation(postcodeMatch[0], restaurantName);
+        }
+
+        // Strategy 4: Try just the postcode
         if (!coords && postcodeMatch) {
           console.log(`🔍 Trying just postcode: "${postcodeMatch[0]}"`);
           coords = await locationService.geocodeLocation(postcodeMatch[0]);
         }
-        
-        // Strategy 3: Try street address without building name (remove first part before comma)
+
+        // Strategy 5: Try street address without building name + restaurant name
+        if (!coords && restaurantName) {
+          const addressParts = address.full_address.split(',').map(p => p.trim());
+          if (addressParts.length > 1) {
+            const streetQuery = addressParts.slice(1).join(', '); // Skip the first part (building name)
+            console.log(`🔍 Trying restaurant name + street without building: "${restaurantName}, ${streetQuery}"`);
+            coords = await locationService.geocodeLocation(streetQuery, restaurantName);
+          }
+        }
+
+        // Strategy 6: Try street address without building name (remove first part before comma)
         if (!coords) {
           const addressParts = address.full_address.split(',').map(p => p.trim());
           if (addressParts.length > 1) {
@@ -74,8 +108,18 @@ export const geocodingUtility = {
             coords = await locationService.geocodeLocation(streetQuery);
           }
         }
-        
-        // Strategy 4: Try just the street and city
+
+        // Strategy 7: Try restaurant name + street + city
+        if (!coords && restaurantName) {
+          const addressParts = address.full_address.split(',').map(p => p.trim());
+          if (addressParts.length >= 2 && address.city) {
+            const streetAndCity = `${addressParts[1]}, ${address.city}`;
+            console.log(`🔍 Trying restaurant name + street + city: "${restaurantName}, ${streetAndCity}"`);
+            coords = await locationService.geocodeLocation(streetAndCity, restaurantName);
+          }
+        }
+
+        // Strategy 8: Try just the street and city
         if (!coords) {
           const addressParts = address.full_address.split(',').map(p => p.trim());
           if (addressParts.length >= 2 && address.city) {
@@ -84,8 +128,14 @@ export const geocodingUtility = {
             coords = await locationService.geocodeLocation(streetAndCity);
           }
         }
-        
-        // Strategy 5: Last resort - just the city (original fallback)
+
+        // Strategy 9: Try restaurant name + city
+        if (!coords && restaurantName && address.city) {
+          console.log(`🔍 Trying restaurant name + city: "${restaurantName}, ${address.city}"`);
+          coords = await locationService.geocodeLocation(address.city, restaurantName);
+        }
+
+        // Strategy 10: Last resort - just the city (original fallback)
         if (!coords && address.city) {
           console.log(`🔍 Last resort - trying just city: "${address.city}"`);
           coords = await locationService.geocodeLocation(address.city);
@@ -147,24 +197,24 @@ export const geocodingUtility = {
     // Process addresses one by one with a small delay to be respectful to the geocoding service
     for (const address of addressesToGeocode) {
       try {
-        const success = await this.geocodeAddress(address);
-        
+        const success = await this.geocodeAddress(address, address.restaurant_name);
+
         progress.processed++;
         if (success) {
           progress.success++;
         } else {
-          progress.errors.push(`Failed to geocode: ${address.full_address}`);
+          progress.errors.push(`Failed to geocode: ${address.restaurant_name || 'Unknown'} - ${address.full_address}`);
         }
 
         // Call progress callback
         onProgress?.(progress);
 
-        // Small delay to be respectful to the free geocoding service
+        // Small delay to be respectful to the geocoding service
         await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay
 
       } catch (error) {
         progress.processed++;
-        progress.errors.push(`Error processing ${address.full_address}: ${error}`);
+        progress.errors.push(`Error processing ${address.restaurant_name || 'Unknown'} - ${address.full_address}: ${error}`);
         onProgress?.(progress);
       }
     }

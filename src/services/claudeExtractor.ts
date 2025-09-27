@@ -70,7 +70,8 @@ export class ClaudeExtractor {
       progressCallback?.({ step: 'Analyzing business type...' });
       const businessAnalysis = await this.analyzeBusinessType(content);
       
-      if (businessAnalysis.businessType !== 'restaurant') {
+      const validFoodBusinessTypes = ['restaurant', 'cafe', 'bakery', 'bar', 'pub'];
+      if (!validFoodBusinessTypes.includes(businessAnalysis.businessType)) {
         return {
           success: false,
           isNotRestaurant: true,
@@ -217,21 +218,26 @@ ANALYSIS REQUIRED:
 
 Return JSON in this format:
 {
-  "businessType": "restaurant|hotel|retail|gallery|bookshop|service|other",
-  "confidence": "high|medium|low", 
+  "businessType": "restaurant|cafe|bakery|bar|pub|hotel|retail|gallery|bookshop|service|other",
+  "confidence": "high|medium|low",
   "reasoning": "Brief explanation of your determination"
 }
 
 BUSINESS TYPE DEFINITIONS:
 - restaurant: Primarily serves food/drinks for dine-in
+- cafe: Coffee shop or casual eatery with food service
+- bakery: Bakery with seating/food service (not just retail baked goods)
+- bar: Bar or pub serving drinks with food options
+- pub: Traditional pub serving drinks and meals
 - hotel: Accommodation with possible restaurant component
-- retail: Sells products/goods
+- retail: Sells products/goods (without significant food service)
 - gallery: Art gallery or museum
 - bookshop: Bookstore or library
 - service: Professional services, consulting, etc.
 - other: Doesn't fit clear categories
 
 IMPORTANT: If you find a hotel or venue with a restaurant component, classify as "restaurant" only if the restaurant is the primary business focus.
+FOOD SERVICE PRIORITY: If a business serves food for sit-in dining (even if they also sell retail products), classify it as the appropriate food service type (restaurant/cafe/bakery/bar/pub) rather than "retail".
 `;
 
     const response = await this.callClaudeApi(prompt);

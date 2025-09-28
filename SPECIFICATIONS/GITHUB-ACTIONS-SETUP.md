@@ -16,7 +16,7 @@ The GitHub Actions workflow (`.github/workflows/deploy.yml`) automatically:
 
 ## Required GitHub Secrets
 
-You need to configure three secrets in your GitHub repository:
+You need to configure five secrets in your GitHub repository:
 
 ### 1. CLOUDFLARE_API_TOKEN
 
@@ -53,15 +53,35 @@ You need to configure three secrets in your GitHub repository:
 
 **Important**: This is the anonymous public key that's safe to use in client-side applications. The workflow will securely pass this to CloudFlare Workers.
 
+### 4. GOOGLE_MAPS_API_KEY
+
+**How to find:**
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Navigate to **APIs & Services > Credentials**
+3. Copy your Google Maps API key (should have Geocoding and Places APIs enabled)
+
+**Important**: This key is used for location services and geocoding functionality.
+
+### 5. MAPBOX_ACCESS_TOKEN
+
+**How to find:**
+1. Go to [Mapbox Account](https://account.mapbox.com/)
+2. Navigate to **Access tokens**
+3. Copy your public access token (starts with `pk.`)
+
+**Important**: This token is used for interactive map display and is safe for client-side use.
+
 ## Setting GitHub Secrets
 
 1. Go to your GitHub repository
 2. Navigate to **Settings > Secrets and variables > Actions**
 3. Click "New repository secret"
-4. Add all three secrets:
+4. Add all five secrets:
    - Name: `CLOUDFLARE_API_TOKEN`, Value: [your API token]
    - Name: `CLOUDFLARE_ACCOUNT_ID`, Value: [your account ID]
    - Name: `SUPABASE_ANON_KEY`, Value: [your Supabase anon public key]
+   - Name: `GOOGLE_MAPS_API_KEY`, Value: [your Google Maps API key]
+   - Name: `MAPBOX_ACCESS_TOKEN`, Value: [your Mapbox access token]
 
 ## Security Best Practices
 

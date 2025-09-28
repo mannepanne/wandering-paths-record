@@ -32,6 +32,9 @@ jobs:
         env:
           VITE_SUPABASE_URL: https://drtjfbvudzacixvqkzav.supabase.co
           VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          VITE_AUTHORIZED_ADMIN_EMAIL: magnus.hultberg@gmail.com
+          VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+          VITE_MAPBOX_ACCESS_TOKEN: ${{ secrets.MAPBOX_ACCESS_TOKEN }}
         # This automatically runs our asset reference updater script
 
       - name: Set CloudFlare Workers secrets

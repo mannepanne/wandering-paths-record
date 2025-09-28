@@ -611,17 +611,15 @@ const Index = () => {
                 About
               </Link>
             </Button>
-            {user && (
-              <Button
-                variant="brutalist"
-                size="sm"
-                className="gap-2"
-                onClick={() => setCurrentView("admin")}
-              >
-                <Shield className="w-4 h-4" />
-                Admin
-              </Button>
-            )}
+            <Button
+              variant="brutalist"
+              size="sm"
+              className="gap-2"
+              onClick={() => setCurrentView("admin")}
+            >
+              <Shield className="w-4 h-4" />
+              Admin
+            </Button>
           </div>
         </div>
       </footer>

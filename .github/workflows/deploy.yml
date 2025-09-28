@@ -29,6 +29,9 @@ jobs:
 
       - name: Build application
         run: npm run build
+        env:
+          VITE_SUPABASE_URL: https://drtjfbvudzacixvqkzav.supabase.co
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         # This automatically runs our asset reference updater script
 
       - name: Set CloudFlare Workers secrets

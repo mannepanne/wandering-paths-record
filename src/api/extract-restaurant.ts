@@ -82,7 +82,7 @@ export async function extractRestaurantLocal(request: APIRequest): Promise<Resta
 }
 
 // Netlify function structure (for future deployment)
-export async function netlifyFunctionHandler(event: any, context: any): Promise<APIResponse> {
+export async function netlifyFunctionHandler(event: Record<string, unknown>, context: Record<string, unknown>): Promise<APIResponse> {
   // CORS headers for local development
   const headers = {
     'Access-Control-Allow-Origin': '*',

@@ -46,7 +46,7 @@ export interface CrawledContent {
   menuPages?: string[];
   contactPage?: string;
   aboutPage?: string;
-  googleMapsData?: any;
+  googleMapsData?: Record<string, unknown>;
 }
 
 export class ClaudeExtractor {
@@ -305,7 +305,7 @@ LOCATION EXTRACTION GUIDELINES:
     console.log('Parsed Claude extraction data:', data);
     
     // Post-process to ensure city and country fields are populated
-    const processedLocations = data.locations?.map((location: any) => ({
+    const processedLocations = data.locations?.map((location: Record<string, unknown>) => ({
       ...location,
       city: location.city || this.inferCityFromLocation(location) || 'London',
       country: location.country || 'United Kingdom'
@@ -374,7 +374,7 @@ LOCATION EXTRACTION GUIDELINES:
     return result.content[0].text;
   }
 
-  private inferCityFromLocation(location: any): string | null {
+  private inferCityFromLocation(location: Record<string, unknown>): string | null {
     // Try to infer city from locationName or fullAddress
     const locationName = location.locationName?.toLowerCase() || '';
     const fullAddress = location.fullAddress?.toLowerCase() || '';

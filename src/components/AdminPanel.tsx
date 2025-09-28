@@ -371,7 +371,7 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
     }
   };
 
-  const handleFormChange = (field: keyof ExtractedRestaurantData, value: any) => {
+  const handleFormChange = (field: keyof ExtractedRestaurantData, value: unknown) => {
     setFormData(prev => prev ? { ...prev, [field]: value } : { [field]: value });
   };
 

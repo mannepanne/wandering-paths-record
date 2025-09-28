@@ -262,11 +262,10 @@ const Index = () => {
     // Wrap geolocation in a promise with manual timeout for mobile Chrome issues
     const getLocationWithTimeout = (): Promise<GeolocationPosition> => {
       return new Promise((resolve, reject) => {
-        let timeoutId: NodeJS.Timeout;
         let hasResolved = false;
 
         // Manual timeout handler for mobile Chrome issues
-        timeoutId = setTimeout(() => {
+        const timeoutId = setTimeout(() => {
           if (!hasResolved) {
             hasResolved = true;
             console.error(

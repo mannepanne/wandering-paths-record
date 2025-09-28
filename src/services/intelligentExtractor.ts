@@ -333,7 +333,7 @@ export class IntelligentExtractor {
     const url = basicInfo.website.toLowerCase();
     const name = basicInfo.name.toLowerCase();
     
-    let typeScores: Record<string, number> = {
+    const typeScores: Record<string, number> = {
       restaurant: 0,
       gallery: 0,
       bookshop: 0,

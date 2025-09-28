@@ -70,7 +70,7 @@ export const InteractiveMap = ({
     if (map.current || !mapContainer.current) return;
 
     // Create global navigation function for popup buttons
-    (window as any).navigateToRestaurant = (restaurantId: string) => {
+    (window as typeof window & { navigateToRestaurant: (restaurantId: string) => void }).navigateToRestaurant = (restaurantId: string) => {
       navigate(`/restaurant/${restaurantId}`);
     };
 
@@ -141,11 +141,11 @@ export const InteractiveMap = ({
 
     return () => {
       // Clean up global navigation function
-      delete (window as any).navigateToRestaurant;
+      delete (window as typeof window & { navigateToRestaurant?: (restaurantId: string) => void }).navigateToRestaurant;
       map.current?.remove();
       map.current = null;
     };
-  }, [navigate]);
+  }, [navigate, userLocation]);
 
   // Update map center when user location changes
   useEffect(() => {
@@ -381,7 +381,7 @@ export const InteractiveMap = ({
     });
 
     // Click handlers for individual restaurants (both fallback and droplet markers)
-    const handleRestaurantClick = (e: any) => {
+    const handleRestaurantClick = (e: mapboxgl.MapMouseEvent & mapboxgl.EventData) => {
       const features = e.features;
       if (!features || features.length === 0) return;
 

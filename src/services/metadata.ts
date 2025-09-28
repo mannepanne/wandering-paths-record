@@ -40,7 +40,7 @@ class MetadataExtractor {
 
       // Try different approaches to get the content
       let html: string | null = null;
-      let lastError: string = '';
+      const lastError: string = '';
 
       // First, try to extract from the URL directly (for basic metadata)
       html = await this.tryDirectExtraction(validatedUrl);

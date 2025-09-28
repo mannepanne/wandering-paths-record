@@ -35,8 +35,8 @@ export const LoginForm = ({ onBack }: LoginFormProps) => {
     try {
       await signInWithEmail(email);
       setIsEmailSent(true);
-    } catch (error: any) {
-      setError(error.message || "Failed to send magic link");
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : "Failed to send magic link");
     } finally {
       setIsLoading(false);
     }

@@ -936,7 +936,8 @@ export default {
       return new Response('Asset not found', { status: 404 });
     }
 
-    // Production SPA routes: serve embedded index.html content
+    // Production SPA routes: serve the built index.html content
+    // NOTE: Asset references are automatically updated by build script
     const indexHtmlContent = `<!doctype html>
 <html lang="en">
     <head>
@@ -959,8 +960,8 @@ export default {
         />
         <meta property="og:type" content="website" />
         <meta property="og:image" content="" />
-      <script type="module" crossorigin src="/assets/index-C1ecQnNk.js"></script>
-      <link rel="stylesheet" crossorigin href="/assets/index-CfPyalCL.css">
+      <!-- ASSET_PLACEHOLDER_SCRIPT -->
+      <!-- ASSET_PLACEHOLDER_CSS -->
     </head>
 
     <body>

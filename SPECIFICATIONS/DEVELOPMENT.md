@@ -332,14 +332,44 @@ npm run preview    # Preview production build locally
 ```
 
 ### Production Deployment
+
+#### Automated Deployment (Recommended)
+**GitHub Actions automatically deploys when you push to `main` branch:**
 ```bash
-# Deploy to CloudFlare Workers
+git add .
+git commit -m "Your changes"
+git push origin main
+# 🚀 Automatic deployment triggered!
+```
+
+**Setup Required**: Configure GitHub secrets for automated deployment. See [`GITHUB-ACTIONS-SETUP.md`](GITHUB-ACTIONS-SETUP.md) for complete setup instructions.
+
+**Benefits:**
+- ✅ Zero manual deployment steps
+- ✅ Asset reference synchronization guaranteed
+- ✅ Quality gates (linting) prevent broken deployments
+- ✅ Fast feedback on deployment success/failure
+
+#### Manual Deployment (Fallback)
+```bash
+# Deploy to CloudFlare Workers manually
+npm run build  # Automatically updates Worker asset references
 npx wrangler deploy
 
 # Production URLs:
 # - https://restaurants.hultberg.org (custom domain)
 # - https://wandering-paths-record.herrings.workers.dev (workers.dev)
 ```
+
+**⚠️ IMPORTANT: Asset Reference Automation**
+
+The build process includes automatic asset reference synchronization to prevent deployment issues. See [`DEPLOYMENT-NOTES.md`](DEPLOYMENT-NOTES.md) for complete details.
+
+**Key Points:**
+- `npm run build` automatically updates CloudFlare Worker with correct asset references
+- This prevents MIME type and 404 errors that occurred with manual deployments
+- The `scripts/update-worker-assets.js` script runs after every build
+- No manual intervention required - assets always sync correctly
 
 ### CloudFlare Workers Configuration
 

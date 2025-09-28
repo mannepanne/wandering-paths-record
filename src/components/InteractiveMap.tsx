@@ -537,7 +537,7 @@ export const InteractiveMap = ({
         <div className="relative">
           <div
             ref={mapContainer}
-            className="h-[70vh] md:h-96 w-full rounded-sm"
+            className="h-[70vh] md:h-[60vh] lg:h-[70vh] xl:h-[75vh] w-full rounded-sm"
             style={{ minHeight: '384px' }}
           />
           {isMapLoading && (

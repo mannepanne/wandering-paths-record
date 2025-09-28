@@ -304,7 +304,8 @@ app.post('/api/extract-restaurant', async (req, res) => {
       'intravel.net',
       'squaremeal.co.uk',
       'guide.michelin.com',
-      'hardens.com'
+      'hardens.com',
+      'restaurantguru.com'
     ];
 
     const urlDomain = new URL(url).hostname.replace('www.', '');

@@ -778,13 +778,12 @@ const RestaurantDetails = () => {
             {/* Full Width Map */}
             <div>
               <h3 className="font-semibold text-foreground font-geo text-xl mb-4">Location on Map</h3>
-              <div className="h-64">
-                <InteractiveMap
-                  restaurants={mapRestaurants}
-                  userLocation={null}
-                  isNearMeActive={false}
-                />
-              </div>
+              <InteractiveMap
+                restaurants={mapRestaurants}
+                userLocation={null}
+                isNearMeActive={false}
+                height="h-64"
+              />
             </div>
           </CardContent>
         </Card>

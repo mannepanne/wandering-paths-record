@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Globe, Plus, Shield, Database, LogOut, User, Search, AlertTriangle, CheckCircle, Loader2, Trash2, BarChart3, MapPin, X } from "lucide-react";
+import { Globe, Plus, Shield, Database, Search, AlertTriangle, CheckCircle, Loader2, Trash2, BarChart3, MapPin, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { LoginForm } from "@/components/LoginForm";
 import { PlacePreview } from "@/components/PlacePreview";
@@ -28,6 +29,7 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
   const [newPlaceUrl, setNewPlaceUrl] = useState("");
   const [formData, setFormData] = useState<Partial<ExtractedRestaurantData> | null>(null);
   const { user, loading, signOut } = useAuth();
+  const navigate = useNavigate();
   const AUTHORIZED_EMAIL = import.meta.env.VITE_AUTHORIZED_ADMIN_EMAIL;
   
   // Use our new extraction hook
@@ -309,7 +311,14 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
               You are not authorized to access the admin panel.
             </p>
             <div className="flex gap-2 justify-center">
-              <Button variant="outline" onClick={handleSignOut}>
+              <Button variant="outline" onClick={async () => {
+                try {
+                  await signOut();
+                  if (onBack) onBack();
+                } catch (error) {
+                  console.error('Error signing out:', error);
+                }
+              }}>
                 Sign Out
               </Button>
               {onBack && (
@@ -475,14 +484,6 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
     setFormData(prev => prev ? { ...prev, locations: updatedLocations } : null);
   };
 
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      if (onBack) onBack();
-    } catch (error) {
-      console.error('Error signing out:', error);
-    }
-  };
 
   // Review enrichment handlers
   const handleStartReviewEnrichment = async () => {
@@ -728,27 +729,10 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Shield className="w-6 h-6 text-accent" />
-          <h1 className="text-2xl font-geo font-bold text-foreground">Admin Panel</h1>
-          <Badge variant="secondary" className="font-mono">Protected Area</Badge>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <User className="w-4 h-4" />
-            <span className="font-mono">{user.email}</span>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleSignOut}
-            className="gap-2"
-          >
-            <LogOut className="w-4 h-4" />
-            Sign Out
-          </Button>
-        </div>
+      <div className="flex items-center gap-3">
+        <Shield className="w-6 h-6 text-accent" />
+        <h1 className="text-2xl font-geo font-bold text-foreground">Admin Panel</h1>
+        <Badge variant="secondary" className="font-mono">Protected Area</Badge>
       </div>
 
       {/* URL Input Section */}
@@ -791,7 +775,7 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
               ) : (
                 <>
                   <Search className="w-4 h-4" />
-                  Extract Info
+                  Fetch
                 </>
               )}
             </Button>
@@ -866,7 +850,7 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Geocoding Button */}
               <Button
                 onClick={handleIndividualGeocoding}
@@ -886,7 +870,7 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
                     {individualGeocodingState === 'loading' && 'Processing...'}
                     {individualGeocodingState === 'success' && 'Geocoding updated!'}
                     {individualGeocodingState === 'error' && 'An error occurred, try again later'}
-                    {individualGeocodingState === 'idle' && 'Regenerate Location Geocoding'}
+                    {individualGeocodingState === 'idle' && 'Regenerate Geocoding'}
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
                     Updates latitude/longitude coordinates
@@ -917,6 +901,27 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">
                     Fetches latest Google reviews & ratings
+                  </div>
+                </div>
+              </Button>
+
+              {/* Restaurant Details Page Button */}
+              <Button
+                onClick={() => {
+                  if (editingRestaurant) {
+                    window.open(`/restaurant/${editingRestaurant.id}`, '_blank');
+                  }
+                }}
+                variant="outline"
+                className="h-auto py-4 flex flex-col gap-2 items-center"
+              >
+                <Globe className="w-4 h-4" />
+                <div className="text-center">
+                  <div className="font-medium text-sm">
+                    Restaurant Details Page
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    See latest edits on the restaurant's page
                   </div>
                 </div>
               </Button>

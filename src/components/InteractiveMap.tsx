@@ -12,15 +12,17 @@ interface InteractiveMapProps {
   restaurants: Restaurant[];
   userLocation?: { lat: number; lng: number } | null;
   isNearMeActive?: boolean;
+  height?: string; // Optional height override (e.g., "h-64", "h-96")
 }
 
 // London Bridge coordinates as fallback
 const LONDON_BRIDGE_COORDS: [number, number] = [-0.0877, 51.5074];
 
-export const InteractiveMap = ({ 
-  restaurants, 
+export const InteractiveMap = ({
+  restaurants,
   userLocation,
-  isNearMeActive = false 
+  isNearMeActive = false,
+  height = "h-[70vh] md:h-[60vh] lg:h-[70vh] xl:h-[75vh]" // Default responsive height
 }: InteractiveMapProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
@@ -537,8 +539,8 @@ export const InteractiveMap = ({
         <div className="relative">
           <div
             ref={mapContainer}
-            className="h-[70vh] md:h-[60vh] lg:h-[70vh] xl:h-[75vh] w-full rounded-sm"
-            style={{ minHeight: '384px' }}
+            className={`${height} w-full rounded-sm`}
+            style={{ minHeight: height.includes('h-') && !height.includes('vh') ? undefined : '384px' }}
           />
           {isMapLoading && (
             <div className="absolute inset-0 bg-gradient-earth rounded-sm flex items-center justify-center">

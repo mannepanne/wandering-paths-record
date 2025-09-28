@@ -23,6 +23,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Info,
+  User,
+  LogOut,
 } from "lucide-react";
 import { placesService, restaurantService } from "@/services/restaurants";
 import { smartGeoSearch, SearchResult } from "@/services/smartGeoSearch";
@@ -30,7 +32,7 @@ import { Place, RestaurantStatus, PersonalAppreciation } from "@/types/place";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [currentView, setCurrentView] = useState<"public" | "admin">("public");
@@ -411,16 +413,45 @@ const Index = () => {
     return (
       <div className="min-h-screen bg-background">
         <nav className="border-b-2 border-border bg-card p-4">
-          <div className="container mx-auto flex justify-between items-center">
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setCurrentView("public");
-                setEditingRestaurant(null);
-              }}
-            >
-              ← Back to Public View
-            </Button>
+          <div className="container mx-auto">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setCurrentView("public");
+                  setEditingRestaurant(null);
+                }}
+                className="self-start"
+              >
+                ← Back to Public View
+              </Button>
+
+              {/* User info and sign out - right aligned on desktop, below on mobile */}
+              {user && (
+                <div className="flex items-center gap-3 sm:self-end">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <User className="w-4 h-4" />
+                    <span className="font-mono">{user.email}</span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      try {
+                        await signOut();
+                        setCurrentView("public");
+                      } catch (error) {
+                        console.error('Error signing out:', error);
+                      }
+                    }}
+                    className="gap-2"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Sign Out
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
         </nav>
         <div className="container mx-auto px-4 py-8 max-w-4xl">

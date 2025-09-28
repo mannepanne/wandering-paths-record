@@ -568,12 +568,14 @@ const RestaurantDetails = () => {
                       </div>
                     )}
 
+                    {/* Temporarily hidden - data quality needs improvement
                     {restaurant.must_try_dishes && restaurant.must_try_dishes.length > 0 && (
                       <div>
                         <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Must Try</h3>
                         <MustTryDishes dishes={restaurant.must_try_dishes} />
                       </div>
                     )}
+                    */}
                   </div>
 
                   {/* Column 3: Atmosphere */}
@@ -716,14 +718,16 @@ const RestaurantDetails = () => {
                     )}
                   </div>
 
-                  {/* Column 3: Must Try */}
+                  {/* Column 3: Must Try - Temporarily hidden */}
                   <div>
+                    {/* Temporarily hidden - data quality needs improvement
                     {restaurant.must_try_dishes && restaurant.must_try_dishes.length > 0 && (
                       <div>
                         <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Must Try</h3>
                         <MustTryDishes dishes={restaurant.must_try_dishes} />
                       </div>
                     )}
+                    */}
                   </div>
                 </div>
               </div>

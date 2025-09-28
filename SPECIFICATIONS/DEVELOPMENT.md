@@ -87,7 +87,8 @@ VITE_API_BASE_URL=http://localhost:3001
 SUPABASE_URL = "https://drtjfbvudzacixvqkzav.supabase.co"
 AUTHORIZED_ADMIN_EMAIL = "magnus.hultberg@gmail.com"
 
-# Set via: wrangler secret put <KEY>
+# Set via: wrangler secret put <KEY> or GitHub Actions
+SUPABASE_ANON_KEY=<secret>
 CLAUDE_API_KEY=<secret>
 GOOGLE_MAPS_API_KEY=<secret>
 ```
@@ -343,6 +344,11 @@ git push origin main
 ```
 
 **Setup Required**: Configure GitHub secrets for automated deployment. See [`GITHUB-ACTIONS-SETUP.md`](GITHUB-ACTIONS-SETUP.md) for complete setup instructions.
+
+**Required GitHub Secrets:**
+- `CLOUDFLARE_API_TOKEN`: CloudFlare Workers deployment access
+- `CLOUDFLARE_ACCOUNT_ID`: Your CloudFlare account identifier
+- `SUPABASE_ANON_KEY`: Supabase anonymous public key for database access
 
 **Benefits:**
 - ✅ Zero manual deployment steps

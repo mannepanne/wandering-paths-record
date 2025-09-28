@@ -72,8 +72,9 @@ The script will output confirmation:
 
 1. ✅ Builds the application with fresh asset hashes
 2. ✅ Runs the asset synchronization script
-3. ✅ Deploys to CloudFlare Workers with correct references
-4. ✅ Provides immediate feedback on deployment success
+3. ✅ Sets CloudFlare Workers secrets (including Supabase authentication)
+4. ✅ Deploys to CloudFlare Workers with correct references
+5. ✅ Provides immediate feedback on deployment success
 
 **Benefits:**
 - Zero manual deployment steps required
@@ -82,3 +83,13 @@ The script will output confirmation:
 - Safe branching (only `main` triggers deployment)
 
 This completely eliminates the risk of asset reference mismatches and the time/token waste they caused.
+
+## Environment Variables & Secrets
+
+**Production secrets are now managed via GitHub Actions**, providing secure deployment without exposing sensitive keys:
+
+- `SUPABASE_ANON_KEY`: Database authentication (set via GitHub secret)
+- `CLOUDFLARE_API_TOKEN`: Deployment authorization (set via GitHub secret)
+- `CLOUDFLARE_ACCOUNT_ID`: Account identification (set via GitHub secret)
+
+The workflow automatically configures these secrets during deployment, ensuring the production environment has all necessary credentials for database access and API functionality.

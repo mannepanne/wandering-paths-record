@@ -16,7 +16,7 @@ The GitHub Actions workflow (`.github/workflows/deploy.yml`) automatically:
 
 ## Required GitHub Secrets
 
-You need to configure two secrets in your GitHub repository:
+You need to configure three secrets in your GitHub repository:
 
 ### 1. CLOUDFLARE_API_TOKEN
 
@@ -43,14 +43,25 @@ You need to configure two secrets in your GitHub repository:
 2. Select your account
 3. In the right sidebar, copy the "Account ID"
 
+### 3. SUPABASE_ANON_KEY
+
+**How to find:**
+1. Go to [Supabase Dashboard](https://supabase.com/dashboard)
+2. Select your project
+3. Navigate to **Settings > API**
+4. Copy the "anon public" key (not the service_role key)
+
+**Important**: This is the anonymous public key that's safe to use in client-side applications. The workflow will securely pass this to CloudFlare Workers.
+
 ## Setting GitHub Secrets
 
 1. Go to your GitHub repository
 2. Navigate to **Settings > Secrets and variables > Actions**
 3. Click "New repository secret"
-4. Add both secrets:
+4. Add all three secrets:
    - Name: `CLOUDFLARE_API_TOKEN`, Value: [your API token]
    - Name: `CLOUDFLARE_ACCOUNT_ID`, Value: [your account ID]
+   - Name: `SUPABASE_ANON_KEY`, Value: [your Supabase anon public key]
 
 ## Security Best Practices
 

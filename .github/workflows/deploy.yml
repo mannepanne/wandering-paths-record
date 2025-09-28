@@ -31,6 +31,13 @@ jobs:
         run: npm run build
         # This automatically runs our asset reference updater script
 
+      - name: Set CloudFlare Workers secrets
+        run: |
+          echo ${{ secrets.SUPABASE_ANON_KEY }} | npx wrangler secret put SUPABASE_ANON_KEY
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
       - name: Deploy to CloudFlare Workers
         uses: cloudflare/wrangler-action@v3
         with:

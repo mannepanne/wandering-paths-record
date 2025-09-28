@@ -133,17 +133,33 @@ const Index = () => {
     setCurrentPage(1);
   };
 
+  // Helper function to update view and URL
+  const toggleMapView = (newMapView: boolean) => {
+    setIsMapView(newMapView);
+    const searchParams = new URLSearchParams(location.search);
+    searchParams.set('view', newMapView ? 'map' : 'list');
+    navigate({ search: searchParams.toString() }, { replace: true });
+  };
+
   // Fetch available cuisines for the filter dropdown
   const { data: availableCuisines = [] } = useQuery({
     queryKey: ["cuisines"],
     queryFn: () => restaurantService.getDistinctCuisines(),
   });
 
-  // Handle URL parameters for admin mode and editing
+  // Handle URL parameters for admin mode, editing, and view
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     const editId = searchParams.get('edit');
     const adminMode = searchParams.get('admin');
+    const viewMode = searchParams.get('view');
+
+    // Handle view parameter
+    if (viewMode === 'map') {
+      setIsMapView(true);
+    } else if (viewMode === 'list') {
+      setIsMapView(false);
+    }
 
     if (adminMode === 'true' && user) {
       setCurrentView('admin');
@@ -433,7 +449,7 @@ const Index = () => {
               variant="brutalist"
               size="sm"
               className="gap-2 bg-olive-green hover:bg-olive-green/90 text-white"
-              onClick={() => setIsMapView(!isMapView)}
+              onClick={() => toggleMapView(!isMapView)}
             >
               <MapPin className="w-4 h-4" />
               {isMapView ? "List View" : "Map View"}

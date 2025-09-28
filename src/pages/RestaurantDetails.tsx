@@ -778,8 +778,8 @@ const RestaurantDetails = () => {
             {/* Full Width Map */}
             <div>
               <h3 className="font-semibold text-foreground font-geo text-xl mb-4">Location on Map</h3>
-              <div className="h-96">
-                <InteractiveMap 
+              <div className="h-64">
+                <InteractiveMap
                   restaurants={mapRestaurants}
                   userLocation={null}
                   isNearMeActive={false}

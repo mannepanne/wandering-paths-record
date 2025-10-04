@@ -171,7 +171,7 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
         source: restaurantData.source,
         source_url: restaurantData.source_url
       };
-      
+
       // Convert locations to address format for the service
       const addresses = restaurantData.locations?.map(loc => ({
         location_name: loc.locationName,
@@ -182,14 +182,14 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
         latitude: loc.latitude,
         longitude: loc.longitude
       }));
-      
+
       return restaurantService.createRestaurantWithGeocoding(
-        newRestaurant, 
+        newRestaurant,
         addresses,
         (progress) => setSaveGeocodingProgress(progress)
       );
     },
-    onSuccess: () => {
+    onSuccess: (newRestaurant) => {
       queryClient.invalidateQueries({ queryKey: ['places'] });
       setFormData(null);
       setNewPlaceUrl("");
@@ -197,6 +197,8 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
       setSaveGeocodingProgress(null);
       // Refresh geocoding stats to reflect the new coordinates
       handleRefreshGeocodingStats();
+      // Navigate to the edit page for the newly created restaurant using existing URL pattern
+      navigate(`/?edit=${newRestaurant.id}`);
     },
     onError: (error) => {
       console.error('Error creating restaurant:', error);

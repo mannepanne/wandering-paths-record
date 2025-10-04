@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Claude collaboration and ways of working instructions: @.claude/CLAUDE.md
 
+When asked to remember anything, always add project memory in this CLAUDE.md (in the project root), not @.claude/CLAUDE.md, leave @.claude/CLAUDE.md as it is.
+
 ## Project Overview
 
 This is "Wandering Paths - Curated Restaurant Hitlist" - a sophisticated restaurant curation and discovery application built with the Vite + React + shadcn/ui + TypeScript stack. The app provides AI-powered restaurant extraction, multi-location support, interactive maps, and comprehensive search capabilities for building your personal collection of exceptional dining experiences.
@@ -37,7 +39,7 @@ npx wrangler deploy
 
 ## Deployment
 
-This project uses **CloudFlare Workers** (NOT CloudFlare Pages). 
+This project uses **CloudFlare Workers** (NOT CloudFlare Pages).
 
 - **Workers URL**: `wandering-paths-record.herrings.workers.dev`
 - **Custom Domain**: `restaurants.hultberg.org`

@@ -160,7 +160,9 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
         name: restaurantData.name || 'Unknown Restaurant',
         address: restaurantData.addressSummary || '',
         website: restaurantData.website || newPlaceUrl,
-        public_rating: restaurantData.publicRating,
+        public_rating: restaurantData.publicRating && restaurantData.publicRating >= 1 && restaurantData.publicRating <= 5
+          ? restaurantData.publicRating
+          : undefined,
         status: 'to-visit' as const,
         description: restaurantData.description,
         cuisine: restaurantData.cuisine,
@@ -216,7 +218,9 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
         name: restaurantData.name || editingRestaurant.name,
         address: restaurantData.addressSummary || editingRestaurant.address,
         website: restaurantData.website || editingRestaurant.website,
-        public_rating: restaurantData.publicRating,
+        public_rating: restaurantData.publicRating && restaurantData.publicRating >= 1 && restaurantData.publicRating <= 5
+          ? restaurantData.publicRating
+          : editingRestaurant.public_rating, // Keep existing rating if new one is invalid
         personal_rating: editingRestaurant.personal_rating, // Keep existing personal rating
         status: editingRestaurant.status, // Keep existing status
         description: restaurantData.description,

@@ -3,6 +3,10 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
+// Claude API configuration
+const CLAUDE_MODEL_VERSION = 'claude-sonnet-4-20250514';
+const CLAUDE_API_VERSION = '2023-06-01';
+
 const app = express();
 const PORT = 3001;
 
@@ -77,10 +81,10 @@ async function callClaudeApi(prompt, apiKey) {
     headers: {
       'Content-Type': 'application/json',
       'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01'
+      'anthropic-version': CLAUDE_API_VERSION
     },
     body: JSON.stringify({
-      model: 'claude-3-5-sonnet-20241022',
+      model: CLAUDE_MODEL_VERSION,
       max_tokens: 4000,
       messages: [
         {

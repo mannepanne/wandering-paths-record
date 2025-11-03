@@ -192,6 +192,11 @@ wrangler secret put GOOGLE_MAPS_API_KEY
 - [x] **Sentiment Analysis**: Generate balanced summary of positive/negative opinions
 - [x] **API Integration**: Use existing Claude service with new endpoints
 
+**⚠️ Note on Claude Model Management:**
+As of January 2025, Claude model versions are centralized in `src/config/claude.ts` (TypeScript) and as constants in server files (Node.js) to handle Anthropic's model deprecations. Review summarization uses the same centralized config as restaurant extraction. See `SPECIFICATIONS/claude_model_updates.md` for maintenance details.
+
+**Current Model:** `claude-sonnet-4-20250514` (Sonnet 4.5)
+
 ### Step 5: Admin Panel Enhancement ✅ COMPLETED
 - [x] **UI Components**: Add review enrichment section to Admin Panel
 - [x] **Batch Controls**: Progress tracking, force regenerate toggle

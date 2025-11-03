@@ -18,11 +18,13 @@ The Curated Restaurant Hitlist is a sophisticated restaurant curation and discov
 
 **Backend & AI:**
 - **Database**: Supabase with multi-location restaurant architecture
-- **AI Engine**: Anthropic Claude 3.5 Sonnet API for content analysis
+- **AI Engine**: Anthropic Claude Sonnet 4.5 API for content analysis (centralized config in `src/config/claude.ts`)
 - **Production API**: Cloudflare Workers runtime with integrated API routes
 - **Development API**: Express.js development server with CORS support
 - **Content Fetching**: Multi-proxy web scraping with automatic fallbacks
 - **Caching**: URL-based localStorage caching with 24-hour expiration
+
+**⚠️ Claude Model Management:** Model versions are centralized in `src/config/claude.ts` (TypeScript) and as constants in `server.cjs`/`src/worker.js` (Node.js) to handle Anthropic's periodic model deprecations. See `SPECIFICATIONS/claude_model_updates.md` for maintenance instructions.
 
 **Development & Deployment:**
 - **Build System**: Vite with hot module replacement
@@ -396,7 +398,15 @@ map.addSource('restaurants', {
 
 ### AI Extraction Workflow
 
+**Note:** The Claude model version is managed via centralized configuration to handle Anthropic's deprecation cycles.
+
 ```javascript
+// Import centralized config (TypeScript files)
+import { CLAUDE_MODEL_VERSION, CLAUDE_MAX_TOKENS } from '@/config/claude';
+
+// Or use constants (Node.js files: server.cjs, worker.js)
+const CLAUDE_MODEL_VERSION = 'claude-sonnet-4-20250514';
+
 // Claude API integration with structured prompts
 const prompt = `Analyze this restaurant website content and extract structured data:
 - Restaurant name and cuisine type
@@ -408,11 +418,13 @@ const prompt = `Analyze this restaurant website content and extract structured d
 Return JSON with validation...`;
 
 const response = await claude.messages.create({
-  model: "claude-3-5-sonnet-20241022",
+  model: CLAUDE_MODEL_VERSION, // Uses centralized config
   messages: [{ role: "user", content: prompt }],
   max_tokens: 4000
 });
 ```
+
+**Why Centralized Config?** In January 2025, Anthropic deprecated multiple model versions without warning, breaking our extraction features. Centralizing the model version in one place prevents having to update 4+ files when models change. See `claude_model_updates.md` for details.
 
 ## Performance Optimizations
 

@@ -1,6 +1,8 @@
 // ABOUT: Claude API integration for intelligent restaurant data extraction
 // ABOUT: Handles business type detection, restaurant analysis, and review summarization
 
+import { CLAUDE_MODEL_VERSION, CLAUDE_API_VERSION, CLAUDE_MAX_TOKENS } from '@/config/claude';
+
 export interface ExtractionProgress {
   step: string;
   details?: string;
@@ -347,11 +349,11 @@ LOCATION EXTRACTION GUIDELINES:
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': this.apiKey,
-        'anthropic-version': '2023-06-01'
+        'anthropic-version': CLAUDE_API_VERSION
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 4000,
+        model: CLAUDE_MODEL_VERSION,
+        max_tokens: CLAUDE_MAX_TOKENS.EXTRACTION,
         messages: [
           {
             role: 'user',

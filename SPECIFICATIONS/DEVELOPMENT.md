@@ -15,10 +15,12 @@ Wandering Paths is a sophisticated restaurant curation and discovery application
 - **State Management**: TanStack Query v5 for server state
 - **Database**: Supabase PostgreSQL with multi-location schema
 - **Authentication**: Supabase Auth with magic links
-- **AI Integration**: Claude 3.5 Sonnet API for extraction and review summarization
+- **AI Integration**: Claude Sonnet 4.5 API for extraction and review summarization (centralized config)
 - **Maps**: Mapbox GL JS v3.14.0 with clustering support
 - **Geo Services**: Google Maps Geocoding and Places APIs
 - **Deployment**: CloudFlare Workers with static asset serving
+
+**⚠️ Note:** Claude model versions are centralized in `src/config/claude.ts` to handle Anthropic's periodic deprecations. See "Centralized Claude Model Configuration" section below for details.
 
 ### Development vs Production Architecture
 
@@ -213,6 +215,35 @@ const extractionFlow = {
 - Automatic multi-location detection and geocoding
 - 24-hour URL caching to prevent duplicate API calls
 - Cost optimization (~$0.01-0.05 per extraction)
+
+#### Centralized Claude Model Configuration
+
+**⚠️ CRITICAL MAINTENANCE:** Claude model versions are centralized to handle Anthropic's periodic model deprecations.
+
+**Current Model:** `claude-sonnet-4-20250514` (Sonnet 4.5)
+
+**Configuration Locations:**
+- **TypeScript files:** `src/config/claude.ts` (import from here)
+- **Node.js files:** Constants at top of `server.cjs` and `src/worker.js`
+
+**Why This Matters:**
+In January 2025, Anthropic deprecated `claude-3-5-sonnet-20240620` without warning, breaking restaurant extraction and review summarization across the entire application. The model version was hardcoded in 4 different files (server.cjs, worker.js, claudeExtractor.ts, reviewEnrichmentService.ts), making it difficult to fix quickly.
+
+With centralized configuration:
+- **TypeScript services:** Update ONE file (`src/config/claude.ts`)
+- **Node.js files:** Update constants in `server.cjs` and `src/worker.js`
+
+**When Anthropic releases new models:**
+1. See `SPECIFICATIONS/claude_model_updates.md` for step-by-step instructions
+2. Update centralized config
+3. Test locally
+4. Deploy to production
+
+**Files Using Claude API:**
+- `src/services/claudeExtractor.ts` - Restaurant extraction
+- `src/services/reviewEnrichmentService.ts` - Review summarization
+- `server.cjs` - Local development API
+- `src/worker.js` - CloudFlare Workers production API
 
 ### 2. Multi-Location Architecture
 

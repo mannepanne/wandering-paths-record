@@ -2,6 +2,7 @@
 // ABOUT: Fetches reviews, generates AI summaries, and updates restaurant records
 
 import { Restaurant } from '@/types/place';
+import { CLAUDE_MODEL_VERSION, CLAUDE_MAX_TOKENS } from '@/config/claude';
 
 export interface ReviewEnrichmentProgress {
   step: string;
@@ -372,8 +373,8 @@ GUIDELINES:
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'claude-3-5-sonnet-20240620',
-            max_tokens: 1000,
+            model: CLAUDE_MODEL_VERSION,
+            max_tokens: CLAUDE_MAX_TOKENS.REVIEW_SUMMARY,
             messages: [
               {
                 role: 'user',

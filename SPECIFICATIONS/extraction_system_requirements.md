@@ -249,22 +249,39 @@ app.post('/api/extract-restaurant', async (req, res) => {
 ```
 
 ### Claude API Integration
+
+**⚠️ IMPORTANT - Centralized Model Configuration:**
+
+As of January 2025, all Claude model versions are centralized in `src/config/claude.ts` to handle Anthropic's periodic model deprecations efficiently. When Anthropic releases new models or deprecates old ones, update the configuration in ONE place rather than hunting through multiple files.
+
+**Current Model:** `claude-sonnet-4-20250514` (Sonnet 4.5)
+
+**Why We Did This:**
+In January 2025, Anthropic deprecated `claude-3-5-sonnet-20240620` without warning, breaking our restaurant extraction and review summarization features. We had the model version hardcoded in 4 different files (server.cjs, worker.js, claudeExtractor.ts, reviewEnrichmentService.ts). This centralized config prevents this from happening again.
+
+**For Future Model Updates:** See `SPECIFICATIONS/claude_model_updates.md` for step-by-step instructions.
+
 ```javascript
+// Centralized configuration (src/config/claude.ts for TypeScript files)
+// Constants at top of server.cjs and worker.js for Node.js files
+const CLAUDE_MODEL_VERSION = 'claude-sonnet-4-20250514';
+const CLAUDE_API_VERSION = '2023-06-01';
+
 async function callClaudeApi(prompt, apiKey) {
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01'
+      'anthropic-version': CLAUDE_API_VERSION
     },
     body: JSON.stringify({
-      model: 'claude-3-5-sonnet-20241022',
+      model: CLAUDE_MODEL_VERSION, // Uses centralized config
       max_tokens: 4000,
       messages: [{ role: 'user', content: prompt }]
     })
   });
-  
+
   // Returns structured error object instead of throwing
   if (!response.ok) {
     return {
@@ -274,7 +291,7 @@ async function callClaudeApi(prompt, apiKey) {
       errorText: await response.text()
     };
   }
-  
+
   const result = await response.json();
   return result.content[0].text;
 }

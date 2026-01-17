@@ -2,17 +2,17 @@
 
 **Build your curated restaurant hitlist** - A sophisticated app to remember remarkable restaurants and track must-visit destinations for future culinary adventures around the world.
 
-**Visit the live app:** **https://restaurants.hultberg.org**
+**https://restaurants.hultberg.org**
 
 ## Why This Project Exists
 
-When visiting new or even familiar cities, it's easy to lose track of amazing restaurants you've discovered or heard about. This app solves that problem by creating your personal curated collection of exceptional dining experiences, making it easy to look them up when planning an outing.
+When visiting new or even familiar cities, it's easy to lose track of amazing restaurants you've discovered or heard about. This app solves that problem for me by creating my personal curated collection of exceptional dining experiences, making it easy to look them up when planning an outing.
 
-**Perfect for:**
-- **Food Enthusiasts** who want to remember great restaurants they've visited
-- **Travel Planners** building lists of must-visit restaurants before trips
-- **City Explorers** tracking neighborhood gems and restaurant chains across locations
-- **Culinary Adventurers** organizing dining experiences by cuisine, price, and atmosphere
+**Perfect for me as a:**
+- **Food Enthusiast** who want to remember great restaurants I've visited
+- **Travel Planner** building lists of must-visit restaurants before trips
+- **City Explorer** tracking neighborhood gems and restaurant chains across locations
+- **Culinary Adventurer** organizing dining experiences by cuisine, price, and atmosphere
 
 ## Key Features
 
@@ -72,9 +72,10 @@ VITE_MAPBOX_ACCESS_TOKEN=your_mapbox_access_token_here
 
 ## Documentation
 
-- **[Technical Specifications](SPECIFICATIONS/technical_specifications.md)** - Comprehensive developer guide
-- **[Implementation Plan](SPECIFICATIONS/implementation_plan.md)** - Detailed development progress
-- **[CLAUDE.md](CLAUDE.md)** - Project context and collaboration guidelines
+- [technical_specifications.md](./SPECIFICATIONS/technical_specifications.md) - Comprehensive developer guide
+- [DEVELOPMENT.md](./SPECIFICATIONS/DEVELOPMENT.md) - Setup, workflow, and troubleshooting
+- [PROJECT_HISTORY.md](./SPECIFICATIONS/PROJECT_HISTORY.md) - Evolution from concept to production
+- [CLAUDE.md](./CLAUDE.md) - Project context for AI-assisted development
 
 ## Architecture Highlights
 
@@ -86,5 +87,3 @@ VITE_MAPBOX_ACCESS_TOKEN=your_mapbox_access_token_here
 ## Scope
 
 This is a personal curation tool, but the codebase demonstrates modern React patterns with TypeScript, AI integration, and production deployment practices.
-
-**Live Production App:** https://restaurants.hultberg.org

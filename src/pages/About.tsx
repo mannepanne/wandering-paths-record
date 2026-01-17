@@ -37,7 +37,8 @@ const About = () => {
             <h1 className="text-xl font-geo font-bold text-foreground sm:text-center">
               About Curated on hultberg.org
             </h1>
-            <div className="hidden sm:block w-32" /> {/* Spacer for desktop centering */}
+            <div className="hidden sm:block w-32" />{" "}
+            {/* Spacer for desktop centering */}
           </div>
         </div>
       </nav>
@@ -50,7 +51,7 @@ const About = () => {
             <CardHeader className="bg-gradient-to-r from-deep-burgundy/10 to-deep-burgundy/5">
               <CardTitle className="flex items-center gap-2 text-foreground">
                 <Sparkles className="w-5 h-5" />
-                What is Curated?
+                What is this?
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-6">
@@ -99,7 +100,7 @@ const About = () => {
                 <ul className="space-y-2 text-sm">
                   <li>• Highlighting places I have yet to visit</li>
                   <li>• 5-level appreciation system</li>
-                  <li>• Visit history and notes</li>
+                  <li>• TBD: Visit history and notes</li>
                 </ul>
               </CardContent>
             </Card>
@@ -197,7 +198,7 @@ const About = () => {
                   <div>
                     <div className="font-medium">Must visit!</div>
                     <div className="text-sm text-muted-foreground">
-                      Will definitely return, people are missing out!
+                      Will definitely return!
                     </div>
                   </div>
                 </div>
@@ -233,9 +234,7 @@ const About = () => {
               <CardTitle className="text-foreground">
                 Built with Claude Code...
               </CardTitle>
-              <CardDescription>
-                ...and modern web technologies for a great experience
-              </CardDescription>
+              <CardDescription>...and modern web technologies</CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
               <div className="grid md:grid-cols-3 gap-4 text-sm">
@@ -253,7 +252,7 @@ const About = () => {
                   <ul className="space-y-1 text-muted-foreground">
                     <li>CloudFlare Workers</li>
                     <li>Supabase PostgreSQL</li>
-                    <li>Claude 3.5 Sonnet</li>
+                    <li>Claude API</li>
                     <li>Google Maps API</li>
                   </ul>
                 </div>

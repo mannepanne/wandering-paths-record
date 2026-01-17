@@ -10,153 +10,118 @@ When asked to remember anything, always add project memory in this CLAUDE.md (in
 
 ## Project Overview
 
-This is "Wandering Paths - Curated Restaurant Hitlist" - a sophisticated restaurant curation and discovery application built with the Vite + React + shadcn/ui + TypeScript stack. The app provides AI-powered restaurant extraction, multi-location support, interactive maps, and comprehensive search capabilities for building your personal collection of exceptional dining experiences.
+**Wandering Paths - Curated Restaurant Hitlist** is a production restaurant curation app for tracking must-visit and visited restaurants worldwide. Built with Vite + React + TypeScript + shadcn/ui.
+
+**Live at:** https://restaurants.hultberg.org
+
+## Quick Reference
 
 ## Development Commands
 
 ```bash
-# Start development server
-npm run dev
-
-# Build for production
-npm run build
-
-# Build for development (with dev mode)
-npm run build:dev
-
-# Run linter
-npm run lint
-
-# Preview production build
-npm run preview
-
-# Install dependencies
-npm i
-
-# Deploy to CloudFlare Workers (NOT Pages)
-npx wrangler deploy
+npm run dev           # Start frontend dev server (port 8080)
+npm run api           # Start local API server (port 3001) - needed for AI extraction
+npm run build         # Build for production (auto-syncs asset references)
+npm run lint          # Run linter
+npx wrangler deploy   # Deploy to CloudFlare Workers
 ```
 
 ## Deployment
 
-This project uses **CloudFlare Workers** (NOT CloudFlare Pages).
+Model versions are centralized in `src/config/claude.ts`. When Anthropic deprecates models, update there first. See `SPECIFICATIONS/claude_model_updates.md` for instructions.
+- **Platform**: CloudFlare Workers (NOT Pages)
+- **Custom Domain**: restaurants.hultberg.org
+- **CI/CD**: GitHub Actions auto-deploys on push to `main`
 
-- **Workers URL**: `wandering-paths-record.herrings.workers.dev`
-- **Custom Domain**: `restaurants.hultberg.org`
-- **Deploy Command**: `npx wrangler deploy`
+## Architecture
 
-The project is configured as a Workers project with static assets, not a Pages project.
+### Tech Stack
+- **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS + shadcn/ui
+- **Backend**: Supabase (PostgreSQL) + Cloudflare Workers
+- **AI**: Claude Sonnet 4.5 for restaurant extraction and review summarization
+- **Maps**: Mapbox GL JS with clustering
+- **Geo**: Google Maps Geocoding and Places APIs
 
-## Architecture Overview
-
-### Core Application Structure
-- **Main App**: Single-page React application with routing (`App.tsx`)
-- **Pages**: Primary views (`Index.tsx` for main interface, `NotFound.tsx` for 404s)
-- **Components**: Modular UI components with consistent patterns
-
-### Key Components
-- **PlaceCard**: Displays individual restaurant information with multi-location display, rating systems, status badges, and admin-controlled action buttons
-- **AdminPanel**: AI-powered restaurant extraction from URLs with editable forms and multi-location management
-- **FilterBar**: Multi-criteria filtering with text search, cuisine, status, and GPS-based "Near Me" functionality
-- **InteractiveMap**: Full Mapbox integration with clustering, popups, filtering, and restaurant count display
-- **MapView**: Toggle component for seamless list/map view switching
+### Key Features
+- **AI Extraction**: Add restaurants by URL - Claude extracts all details
+- **Multi-Location Support**: Restaurant chains with individual addresses (e.g., Dishoom with 8 locations)
+- **Smart Search**: Three-tier search (text, proximity, city fallback)
+- **GPS "Near Me"**: Find restaurants within walking distance
+- **Personal Appreciation**: Behavioral rating scale (skip/fine/recommend/must-visit)
+- **Public Reviews**: Google Places integration for ratings and AI-summarized reviews
 
 ### Data Model
-The application uses a multi-location restaurant architecture:
 
 ```typescript
 interface Restaurant {
   id: string;
   name: string;
-  address: string; // Human-readable summary
-  website?: string;
-  public_rating?: number; // Public rating 1-5
-  personal_rating?: number; // Personal rating when visited
-  status: 'must-visit' | 'visited';
-  description?: string; // Personal notes
-  visit_count?: number;
+  address: string;                    // Human-readable summary
+  status: 'to-visit' | 'visited';
+  personal_appreciation?: 'unknown' | 'avoid' | 'fine' | 'good' | 'great';
+  public_rating?: number;
   cuisine?: string;
+  price_range?: ' | '$' | '$ | '$$';
   must_try_dishes?: string[];
-  price_range?: '$' | '$$' | '$$$' | '$$$$';
-  atmosphere?: string;
-  dietary_options?: string;
-  locations?: RestaurantAddress[]; // Multiple locations per restaurant
+  locations?: RestaurantAddress[];    // Multi-location support
 }
 
 interface RestaurantAddress {
-  id: string;
-  restaurant_id: string;
-  location_name: string; // e.g., "Canary Wharf", "Shoreditch"
+  location_name: string;              // e.g., "Shoreditch", "Canary Wharf"
   full_address: string;
   latitude?: number;
   longitude?: number;
-  phone?: string;
 }
 ```
 
 ### Design System
-- **Color Palette**: Earth tones with warm-stone, burnt-orange, deep-burgundy, olive-green, and charcoal
-- **Typography**: Space Grotesk for headings (font-geo), JetBrains Mono for monospace text
-- **Component Library**: shadcn/ui with custom brutalist and hero button variants
-- **Styling**: Tailwind CSS with custom design tokens
+- **Colors**: Earth tones (warm-stone, burnt-orange, deep-burgundy, olive-green, charcoal)
+- **Typography**: Space Grotesk (headings), JetBrains Mono (code)
+- **Style**: Brutalist aesthetic with strong visual hierarchy
 
-### State Management
-- React Query (TanStack Query) for server state management
-- Context-based authentication state (AuthContext)
-- Local component state for UI interactions
+## Key Files
 
-### Current Production Features
-- ✅ **Full CRUD Operations**: Complete restaurant management (create, read, update, delete)
-- ✅ **AI-Powered Extraction**: Claude 3.5 Sonnet integration for URL-based restaurant extraction
-- ✅ **Multi-Location Support**: Restaurant chains with individual location management
-- ✅ **Advanced Search**: Multi-location text search and GPS-based "Near Me" functionality
-- ✅ **Interactive Maps**: Mapbox integration with clustering and filtering
-- ✅ **Authentication**: Magic link system with admin-controlled interface
-- ✅ **Mobile Optimization**: Responsive design with mobile geolocation support
-- ✅ **Production Deployment**: Live on Cloudflare Workers with custom domain
+### Application
+- `src/App.tsx` - Main app with routing
+- `src/pages/Index.tsx` - Main restaurant list/map interface
+- `src/pages/About.tsx` - About page explaining appreciation system
+- `src/pages/RestaurantDetails.tsx` - Individual restaurant view
 
-### Recent Enhancements
-- ✅ **Multi-Location Display**: Restaurant cards show all locations for chains
-- ✅ **Enhanced Search**: Find restaurants by location names (e.g., "Canary Wharf" finds Dishoom)
-- ✅ **Map Counter**: Restaurant count display in map legend
-- ✅ **Admin Controls**: Hidden from unauthenticated users for clean public interface
-- ✅ **Production Logging**: Cloudflare Workers observability enabled
+### Components
+- `src/components/PlaceCard.tsx` - Restaurant cards with multi-location display
+- `src/components/AdminPanel.tsx` - AI extraction and restaurant management
+- `src/components/FilterBar.tsx` - Search and filtering
+- `src/components/InteractiveMap.tsx` - Mapbox map with clustering
 
-## Key Files to Understand
+### Services
+- `src/services/restaurants.ts` - Supabase CRUD operations
+- `src/services/claudeExtractor.ts` - AI restaurant extraction
+- `src/services/reviewEnrichmentService.ts` - Google Reviews + Claude summarization
+- `src/services/smartGeoSearch.ts` - Three-tier geo search
 
-**Core Application:**
-- `src/pages/Index.tsx` - Main interface with header "Curated Restaurant Hitlist" and view management
-- `src/components/PlaceCard.tsx` - Restaurant cards with multi-location display and admin controls
-- `src/components/AdminPanel.tsx` - AI-powered extraction interface with editable forms
-- `src/components/FilterBar.tsx` - Multi-criteria filtering with text search and GPS
-- `src/components/InteractiveMap.tsx` - Mapbox integration with clustering and popups
-- `src/App.tsx` - Main app with routing and authentication provider
+### Infrastructure
+- `server.cjs` - Local dev API server
+- `src/worker.js` - CloudFlare Workers production API
+- `src/config/claude.ts` - Centralized Claude model config
+- `wrangler.toml` - CloudFlare Workers config
 
-**Authentication & Data:**
-- `src/contexts/AuthContext.tsx` - Authentication context with magic link integration
-- `src/services/restaurants.ts` - Complete CRUD service for multi-location restaurant operations
-- `src/lib/supabase.ts` - Supabase client configuration
-- `src/types/place.ts` - TypeScript interfaces for Restaurant and RestaurantAddress
+## Important Notes
 
-**AI Extraction System:**
-- `src/services/claudeExtractor.ts` - Claude API integration with caching
-- `src/services/intelligentExtractor.ts` - Smart URL content analysis
-- `server.cjs` - Local development API server for extraction
-- `src/worker.js` - Cloudflare Workers API for production extraction
+### Claude Model Updates
 
-**Production Infrastructure:**
-- `wrangler.toml` - Cloudflare Workers configuration with custom domain
-- `tailwind.config.ts` - Custom earth-tone design system
-- `SPECIFICATIONS/` - Complete technical documentation
+**Current Model**: `claude-sonnet-4-20250514` (Sonnet 4.5)
 
-## Development Notes
+### Asset Reference Sync
+The build process auto-syncs Worker asset references via `scripts/update-worker-assets.js`. This prevents MIME type errors on deployment.
 
-- **Production-Ready**: Full application deployed to restaurants.hultberg.org with Cloudflare Workers
-- **Multi-Location Architecture**: Restaurant brands can have multiple individual locations
-- **AI Integration**: Claude 3.5 Sonnet powers intelligent restaurant extraction from URLs
-- **Interactive Maps**: Mapbox GL JS provides clustering, filtering, and mobile-optimized experience
-- **Search Enhancement**: Multi-location search finds restaurants by any location name or address
-- **Admin Security**: Edit and status buttons hidden from unauthenticated users
-- **Design System**: Earth-toned brutalist aesthetic with strong visual hierarchy
-- **Mobile Optimized**: GPS location services work across mobile browsers with enhanced error handling
-- **Logging Enabled**: Cloudflare Workers observability configured for production monitoring
+### Admin Authentication
+- Magic link auth via Supabase
+- Admin controls (edit/delete/rate) hidden from unauthenticated users
+- Authorized email: magnus.hultberg@gmail.com
+
+## Documentation
+
+- `SPECIFICATIONS/technical_specifications.md` - Technical architecture
+- `SPECIFICATIONS/claude_model_updates.md` - Claude model maintenance
+- `SPECIFICATIONS/PROJECT_HISTORY.md` - Project evolution and archived docs
+- `SPECIFICATIONS/DEVELOPMENT.md` - Full development guide

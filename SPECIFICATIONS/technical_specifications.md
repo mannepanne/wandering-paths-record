@@ -39,7 +39,7 @@ The application uses a sophisticated multi-location restaurant architecture:
 
 #### Database Schema
 
-**`restaurants` Table** - Main restaurant brands
+**`restaurants`**** Table** - Main restaurant brands
 ```sql
 - id (uuid, primary key)
 - name (text) - Restaurant brand name
@@ -59,7 +59,7 @@ The application uses a sophisticated multi-location restaurant architecture:
 - updated_at (timestamptz)
 ```
 
-**`restaurant_addresses` Table** - Individual locations
+**`restaurant_addresses`**** Table** - Individual locations
 ```sql
 - id (uuid, primary key)
 - restaurant_id (uuid, foreign key)
@@ -74,7 +74,7 @@ The application uses a sophisticated multi-location restaurant architecture:
 - updated_at (timestamptz)
 ```
 
-**`restaurants_with_locations` View** - Efficient joined queries
+**`restaurants_with_locations`**** View** - Efficient joined queries
 Provides flattened data for map display and location-based filtering.
 
 #### TypeScript Interfaces

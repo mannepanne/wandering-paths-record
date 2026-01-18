@@ -2,19 +2,28 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Filter, MapPin, Navigation, Search, X } from "lucide-react";
+import { MapPin, Navigation, Search, X, SlidersHorizontal } from "lucide-react";
+import { CuisinePrimary, RestaurantStyle, RestaurantVenue } from "@/types/place";
 
 interface FilterBarProps {
-  selectedCuisine: string;
+  // New facet props
+  selectedCuisinePrimary: string;
+  selectedStyle: string;
+  selectedVenue: string;
+  onCuisinePrimaryChange: (cuisine: string) => void;
+  onStyleChange: (style: string) => void;
+  onVenueChange: (venue: string) => void;
+  availableCuisinesPrimary?: CuisinePrimary[];
+  availableStyles?: RestaurantStyle[];
+  availableVenues?: RestaurantVenue[];
+
+  // Common props
   selectedStatus: string;
-  onCuisineChange: (cuisine: string) => void;
   onStatusChange: (status: string) => void;
   restaurantCount: number;
   onLocationSearch?: (location: string) => void;
   onNearMe?: () => void;
   searchLocation?: string;
-  availableCuisines?: string[];
   isNearMeActive?: boolean;
   isLoadingLocation?: boolean;
 }
@@ -26,30 +35,53 @@ const statusOptions = [
   { value: "visited", label: "Visited" },
 ];
 
-export const FilterBar = ({ 
-  selectedCuisine, 
-  selectedStatus, 
-  onCuisineChange, 
-  onStatusChange, 
+export const FilterBar = ({
+  selectedCuisinePrimary,
+  selectedStyle,
+  selectedVenue,
+  onCuisinePrimaryChange,
+  onStyleChange,
+  onVenueChange,
+  availableCuisinesPrimary = [],
+  availableStyles = [],
+  availableVenues = [],
+  selectedStatus,
+  onStatusChange,
   restaurantCount,
   onLocationSearch,
   onNearMe,
   searchLocation,
-  availableCuisines = [],
   isNearMeActive = false,
   isLoadingLocation: externalIsLoadingLocation = false
 }: FilterBarProps) => {
   const [locationInput, setLocationInput] = useState(searchLocation || "");
-  
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
+
   // Use external loading state when provided, fallback to internal state
   const isLoadingLocation = externalIsLoadingLocation;
 
-  // Create dynamic cuisine options based on available cuisines from database
-  const cuisineTypes = [
+  // Create dynamic options based on available values from database
+  const cuisineOptions = [
     { value: "all", label: "All Cuisines" },
-    ...availableCuisines.map(cuisine => ({
+    ...availableCuisinesPrimary.map(cuisine => ({
       value: cuisine,
       label: cuisine
+    }))
+  ];
+
+  const styleOptions = [
+    { value: "all", label: "All Styles" },
+    ...availableStyles.map(style => ({
+      value: style,
+      label: style
+    }))
+  ];
+
+  const venueOptions = [
+    { value: "all", label: "All Venues" },
+    ...availableVenues.map(venue => ({
+      value: venue,
+      label: venue
     }))
   ];
 
@@ -61,7 +93,7 @@ export const FilterBar = ({
 
   const handleNearMe = () => {
     if (!onNearMe) return;
-    
+
     // Just call the parent handler - all geolocation logic is handled in Index.tsx
     onNearMe();
   };
@@ -72,84 +104,72 @@ export const FilterBar = ({
       onLocationSearch("");
     }
   };
+
+  // Check if any non-default filters are active (for badge indicator)
+  const hasActiveFilters = selectedStyle !== "all" || selectedVenue !== "all";
+
   return (
     <div className="bg-card border-2 border-border p-4 rounded-sm card-shadow">
-      {/* Desktop Layout */}
+      {/* Desktop Layout - Filters only (search is in header) */}
       <div className="hidden md:flex flex-wrap gap-3 items-center justify-between">
-        {/* Location Search */}
-        <div className="flex items-center gap-2 min-w-0 flex-1 max-w-lg">
-          <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-          <div className="relative flex-1 min-w-0">
-            <Input
-              placeholder="Name, city, neighbourhood..."
-              value={locationInput}
-              onChange={(e) => setLocationInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleLocationSearch()}
-              className="border-charcoal pr-8"
-            />
-            {locationInput && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearLocationSearch}
-                className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 p-0 hover:bg-muted"
-              >
-                <X className="w-3 h-3" />
-              </Button>
-            )}
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleLocationSearch}
-            disabled={!locationInput.trim()}
-            className="gap-1"
-          >
-            <Search className="w-3 h-3" />
-            Search
-          </Button>
-          <Button
-            variant="brutalist"
-            size="sm"
-            onClick={handleNearMe}
-            disabled={isLoadingLocation}
-            className={`gap-1 text-white ${
-              isNearMeActive
-                ? 'bg-olive-green hover:bg-olive-green/90'
-                : 'bg-burnt-orange hover:bg-burnt-orange/90'
-            }`}
-          >
-            <Navigation className="w-3 h-3" />
-            {isLoadingLocation
-              ? 'Locating...'
-              : isNearMeActive
-                ? 'Show All'
-                : 'Near Me'}
-          </Button>
-        </div>
-
-        {/* Cuisine and Status Filters */}
+        {/* Facet Filters - grouped left */}
         <div className="flex flex-wrap gap-3 items-center">
+          {/* Cuisine Primary */}
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-muted-foreground">Cuisine:</span>
-            <Select value={selectedCuisine} onValueChange={onCuisineChange}>
-              <SelectTrigger className="w-40 border-charcoal">
+            <Select value={selectedCuisinePrimary} onValueChange={onCuisinePrimaryChange}>
+              <SelectTrigger className="w-36 border-charcoal">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {cuisineTypes.map((cuisine) => (
-                  <SelectItem key={cuisine.value} value={cuisine.value}>
-                    {cuisine.label}
+                {cuisineOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
+          {/* Style */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-muted-foreground">Style:</span>
+            <Select value={selectedStyle} onValueChange={onStyleChange}>
+              <SelectTrigger className="w-32 border-charcoal">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {styleOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Venue */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-muted-foreground">Venue:</span>
+            <Select value={selectedVenue} onValueChange={onVenueChange}>
+              <SelectTrigger className="w-32 border-charcoal">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {venueOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Status */}
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-muted-foreground">Status:</span>
             <Select value={selectedStatus} onValueChange={onStatusChange}>
-              <SelectTrigger className="w-32 border-charcoal">
+              <SelectTrigger className="w-28 border-charcoal">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -162,6 +182,26 @@ export const FilterBar = ({
             </Select>
           </div>
         </div>
+
+        {/* Near Me Button - aligned right, same width as Map View button */}
+        <Button
+          variant="brutalist"
+          size="sm"
+          onClick={handleNearMe}
+          disabled={isLoadingLocation}
+          className={`gap-2 w-[106px] justify-center text-white ${
+            isNearMeActive
+              ? 'bg-olive-green hover:bg-olive-green/90'
+              : 'bg-burnt-orange hover:bg-burnt-orange/90'
+          }`}
+        >
+          <Navigation className="w-4 h-4" />
+          {isLoadingLocation
+            ? 'Locating...'
+            : isNearMeActive
+              ? 'Show All'
+              : 'Near Me'}
+        </Button>
       </div>
 
       {/* Mobile Layout */}
@@ -221,36 +261,89 @@ export const FilterBar = ({
         {/* Row 3: Cuisine Filter */}
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-muted-foreground">Cuisine:</span>
-          <Select value={selectedCuisine} onValueChange={onCuisineChange}>
+          <Select value={selectedCuisinePrimary} onValueChange={onCuisinePrimaryChange}>
             <SelectTrigger className="w-[70%] border-charcoal">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {cuisineTypes.map((cuisine) => (
-                <SelectItem key={cuisine.value} value={cuisine.value}>
-                  {cuisine.label}
+              {cuisineOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
 
-        {/* Row 4: Status Filter */}
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-muted-foreground">Status:</span>
-          <Select value={selectedStatus} onValueChange={onStatusChange}>
-            <SelectTrigger className="w-[70%] border-charcoal">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {statusOptions.map((status) => (
-                <SelectItem key={status.value} value={status.value}>
-                  {status.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {/* Row 4: More Filters Toggle */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowMoreFilters(!showMoreFilters)}
+          className="w-full gap-2"
+        >
+          <SlidersHorizontal className="w-4 h-4" />
+          {showMoreFilters ? 'Hide Filters' : 'More Filters'}
+          {hasActiveFilters && !showMoreFilters && (
+            <span className="ml-1 w-2 h-2 bg-burnt-orange rounded-full" />
+          )}
+        </Button>
+
+        {/* Row 5+: Additional Filters (collapsible) */}
+        {showMoreFilters && (
+          <div className="space-y-3 pt-2 border-t border-border">
+            {/* Style Filter */}
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-muted-foreground">Style:</span>
+              <Select value={selectedStyle} onValueChange={onStyleChange}>
+                <SelectTrigger className="w-[70%] border-charcoal">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {styleOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Venue Filter */}
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-muted-foreground">Venue:</span>
+              <Select value={selectedVenue} onValueChange={onVenueChange}>
+                <SelectTrigger className="w-[70%] border-charcoal">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {venueOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Status Filter */}
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-muted-foreground">Status:</span>
+              <Select value={selectedStatus} onValueChange={onStatusChange}>
+                <SelectTrigger className="w-[70%] border-charcoal">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {statusOptions.map((status) => (
+                    <SelectItem key={status.value} value={status.value}>
+                      {status.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

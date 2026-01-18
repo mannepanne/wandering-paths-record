@@ -1,3 +1,41 @@
+// Category system facet types
+export type CuisinePrimary =
+  | 'British' | 'Nordic' | 'French' | 'Italian' | 'Spanish' | 'Portuguese' | 'Greek' | 'Balkan' | 'European'
+  | 'Japanese' | 'Chinese' | 'Korean' | 'Thai' | 'Vietnamese' | 'Malaysian'
+  | 'Indian' | 'Middle Eastern' | 'African' | 'Caribbean'
+  | 'Mexican' | 'South American' | 'American' | 'Australian' | 'Filipino'
+  | 'Martian'; // For the truly unclassifiable
+
+export type CuisineSecondary = CuisinePrimary; // Same values, used for fusion
+
+export type RestaurantStyle = 'Traditional' | 'Modern' | 'Fusion' | 'Casual' | 'Fine Dining' | 'Street Food';
+
+export type RestaurantVenue = 'Restaurant' | 'Cafe' | 'Pub' | 'Bar' | 'Bakery';
+
+export type RestaurantSpecialty =
+  | 'BBQ' | 'Seafood' | 'Steakhouse' | 'Ramen' | 'Pizza' | 'Sushi' | 'Tapas' | 'Tasting Menu' | 'Brunch' | 'Breakfast';
+
+// Category facet value lists for UI dropdowns
+export const CUISINE_OPTIONS: CuisinePrimary[] = [
+  'British', 'Nordic', 'French', 'Italian', 'Spanish', 'Portuguese', 'Greek', 'Balkan', 'European',
+  'Japanese', 'Chinese', 'Korean', 'Thai', 'Vietnamese', 'Malaysian',
+  'Indian', 'Middle Eastern', 'African', 'Caribbean',
+  'Mexican', 'South American', 'American', 'Australian', 'Filipino',
+  'Martian' // For the truly unclassifiable
+];
+
+export const STYLE_OPTIONS: RestaurantStyle[] = [
+  'Traditional', 'Modern', 'Fusion', 'Casual', 'Fine Dining', 'Street Food'
+];
+
+export const VENUE_OPTIONS: RestaurantVenue[] = [
+  'Restaurant', 'Cafe', 'Pub', 'Bar', 'Bakery'
+];
+
+export const SPECIALTY_OPTIONS: RestaurantSpecialty[] = [
+  'BBQ', 'Seafood', 'Steakhouse', 'Ramen', 'Pizza', 'Sushi', 'Tapas', 'Tasting Menu', 'Brunch', 'Breakfast'
+];
+
 export interface RestaurantAddress {
   id: string;
   restaurant_id: string;
@@ -23,7 +61,13 @@ export interface Restaurant {
   personal_appreciation: 'unknown' | 'avoid' | 'fine' | 'good' | 'great';
   description?: string;
   visit_count?: number;
-  cuisine?: string;
+  cuisine?: string; // Legacy field - kept during migration
+  // New category facets
+  cuisine_primary?: CuisinePrimary;
+  cuisine_secondary?: CuisineSecondary; // For fusion restaurants
+  style?: RestaurantStyle;
+  venue?: RestaurantVenue;
+  specialty?: RestaurantSpecialty[];
   must_try_dishes?: string[];
   price_range?: '$' | '$$' | '$$$' | '$$$$';
   atmosphere?: string;

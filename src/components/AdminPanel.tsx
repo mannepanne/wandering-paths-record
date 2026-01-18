@@ -18,7 +18,7 @@ import { ExtractedRestaurantData, ExtractedLocation, ExtractionCache } from "@/s
 import { restaurantService } from "@/services/restaurants";
 import { geocodingUtility, GeocodingProgress } from "@/services/geocodingUtility";
 import { ReviewEnrichmentService, ReviewEnrichmentProgress, EnrichmentResult } from "@/services/reviewEnrichmentService";
-import { Restaurant } from "@/types/place";
+import { Restaurant, CUISINE_OPTIONS, STYLE_OPTIONS, VENUE_OPTIONS } from "@/types/place";
 
 interface AdminPanelProps {
   onBack?: () => void;
@@ -119,6 +119,10 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
         publicRating: editingRestaurant.public_rating,
         description: editingRestaurant.description,
         cuisine: editingRestaurant.cuisine,
+        cuisinePrimary: editingRestaurant.cuisine_primary,
+        cuisineSecondary: editingRestaurant.cuisine_secondary,
+        style: editingRestaurant.style,
+        venue: editingRestaurant.venue,
         mustTryDishes: editingRestaurant.must_try_dishes,
         priceRange: editingRestaurant.price_range,
         atmosphere: editingRestaurant.atmosphere,
@@ -166,6 +170,10 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
         status: 'to-visit' as const,
         description: restaurantData.description,
         cuisine: restaurantData.cuisine,
+        cuisine_primary: restaurantData.cuisinePrimary,
+        cuisine_secondary: restaurantData.cuisineSecondary || undefined,
+        style: restaurantData.style || undefined,
+        venue: restaurantData.venue || undefined,
         must_try_dishes: restaurantData.mustTryDishes,
         price_range: restaurantData.priceRange,
         atmosphere: restaurantData.atmosphere,
@@ -212,7 +220,7 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
   const updateRestaurantMutation = useMutation({
     mutationFn: (restaurantData: Partial<ExtractedRestaurantData>) => {
       if (!editingRestaurant) throw new Error("No restaurant to update");
-      
+
       const updatedRestaurant = {
         id: editingRestaurant.id,
         name: restaurantData.name || editingRestaurant.name,
@@ -225,6 +233,10 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
         status: editingRestaurant.status, // Keep existing status
         description: restaurantData.description,
         cuisine: restaurantData.cuisine,
+        cuisine_primary: restaurantData.cuisinePrimary,
+        cuisine_secondary: restaurantData.cuisineSecondary || undefined,
+        style: restaurantData.style || undefined,
+        venue: restaurantData.venue || undefined,
         must_try_dishes: restaurantData.mustTryDishes,
         price_range: restaurantData.priceRange,
         atmosphere: restaurantData.atmosphere,
@@ -951,7 +963,8 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
           <CardContent className="space-y-4 pt-6">
             <form onSubmit={handleFormSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
+                {/* Restaurant Name - full width */}
+                <div className="md:col-span-2">
                   <label className="text-sm font-medium text-foreground">Restaurant Name *</label>
                   <Input
                     value={formData.name || ''}
@@ -961,15 +974,8 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
                     className="mt-1"
                   />
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-foreground">Cuisine Type</label>
-                  <Input
-                    value={formData.cuisine || ''}
-                    onChange={(e) => handleFormChange('cuisine', e.target.value)}
-                    placeholder="Italian, French, Modern British..."
-                    className="mt-1"
-                  />
-                </div>
+
+                {/* Address - full width */}
                 <div className="md:col-span-2">
                   <label className="text-sm font-medium text-foreground">Address</label>
                   <Input
@@ -980,8 +986,77 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
                   />
                 </div>
 
+                {/* Category Facets Row */}
+                <div>
+                  <label className="text-sm font-medium text-foreground">Primary Cuisine</label>
+                  <Select
+                    value={formData.cuisinePrimary || ''}
+                    onValueChange={(value) => handleFormChange('cuisinePrimary', value)}
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Select cuisine" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CUISINE_OPTIONS.map((cuisine) => (
+                        <SelectItem key={cuisine} value={cuisine}>{cuisine}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-foreground">Secondary Cuisine (for fusion)</label>
+                  <Select
+                    value={formData.cuisineSecondary || ''}
+                    onValueChange={(value) => handleFormChange('cuisineSecondary', value === 'none' ? '' : value)}
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Optional for fusion" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {CUISINE_OPTIONS.map((cuisine) => (
+                        <SelectItem key={cuisine} value={cuisine}>{cuisine}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-foreground">Style</label>
+                  <Select
+                    value={formData.style || ''}
+                    onValueChange={(value) => handleFormChange('style', value === 'none' ? '' : value)}
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Select style" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Not specified</SelectItem>
+                      {STYLE_OPTIONS.map((style) => (
+                        <SelectItem key={style} value={style}>{style}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-foreground">Venue Type</label>
+                  <Select
+                    value={formData.venue || ''}
+                    onValueChange={(value) => handleFormChange('venue', value === 'none' ? '' : value)}
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Select venue" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Not specified</SelectItem>
+                      {VENUE_OPTIONS.map((venue) => (
+                        <SelectItem key={venue} value={venue}>{venue}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 {/* Source Information Row */}
-                <div className="md:col-span-1">
+                <div>
                   <label className="text-sm font-medium text-foreground">Source</label>
                   <Input
                     value={formData.source || ''}
@@ -990,7 +1065,7 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
                     className="mt-1"
                   />
                 </div>
-                <div className="md:col-span-1">
+                <div>
                   <label className="text-sm font-medium text-foreground">Source URL</label>
                   <Input
                     value={formData.source_url || ''}

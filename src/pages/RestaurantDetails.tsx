@@ -389,10 +389,22 @@ const RestaurantDetails = () => {
                   {restaurant.name}
                 </CardTitle>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    {restaurant.cuisine && (
+                  <div className="flex items-center gap-3 flex-wrap">
+                    {/* Cuisine: prefer new facets, fallback to legacy */}
+                    {(restaurant.cuisine_primary || restaurant.cuisine) && (
                       <Badge className="bg-burnt-orange text-white font-mono text-sm">
-                        {restaurant.cuisine}
+                        {restaurant.cuisine_primary || restaurant.cuisine}
+                        {restaurant.cuisine_secondary && ` / ${restaurant.cuisine_secondary}`}
+                      </Badge>
+                    )}
+                    {restaurant.style && (
+                      <Badge className="bg-olive-green text-white font-mono text-sm">
+                        {restaurant.style}
+                      </Badge>
+                    )}
+                    {restaurant.venue && (
+                      <Badge className="bg-charcoal text-white font-mono text-sm">
+                        {restaurant.venue}
                       </Badge>
                     )}
                     {restaurant.price_range && (

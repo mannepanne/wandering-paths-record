@@ -116,9 +116,16 @@ export const PlaceCard = ({ place, onStatusChange, onAppreciationChange, onEdit 
                 {place.name}
               </CardTitle>
               <div className="flex items-center gap-2 flex-wrap">
-                {place.cuisine && (
+                {/* Cuisine: prefer new facets, fallback to legacy */}
+                {(place.cuisine_primary || place.cuisine) && (
                   <Badge className="bg-burnt-orange text-white font-mono text-xs">
-                    {place.cuisine}
+                    {place.cuisine_primary || place.cuisine}
+                    {place.cuisine_secondary && ` / ${place.cuisine_secondary}`}
+                  </Badge>
+                )}
+                {place.style && (
+                  <Badge className="bg-olive-green text-white font-mono text-xs">
+                    {place.style}
                   </Badge>
                 )}
                 {place.price_range && (

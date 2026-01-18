@@ -366,7 +366,7 @@ npm run preview    # Preview production build locally
 ### Production Deployment
 
 #### Automated Deployment (Recommended)
-**GitHub Actions automatically deploys when you push to `main` branch:**
+**GitHub Actions automatically deploys when you push to ****`main`**** branch:**
 ```bash
 git add .
 git commit -m "Your changes"
@@ -374,7 +374,7 @@ git push origin main
 # 🚀 Automatic deployment triggered!
 ```
 
-**Setup Required**: Configure GitHub secrets for automated deployment. See [`GITHUB-ACTIONS-SETUP.md`](GITHUB-ACTIONS-SETUP.md) for complete setup instructions.
+**Setup Required**: Configure GitHub secrets for automated deployment. See [GITHUB-ACTIONS-SETUP.md](./GITHUB-ACTIONS-SETUP.md) for complete setup instructions.
 
 **Required GitHub Secrets:**
 - `CLOUDFLARE_API_TOKEN`: CloudFlare Workers deployment access
@@ -400,7 +400,7 @@ npx wrangler deploy
 
 **⚠️ IMPORTANT: Asset Reference Automation**
 
-The build process includes automatic asset reference synchronization to prevent deployment issues. See [`DEPLOYMENT-NOTES.md`](DEPLOYMENT-NOTES.md) for complete details.
+The build process includes automatic asset reference synchronization to prevent deployment issues. See [DEPLOYMENT-NOTES.md](./DEPLOYMENT-NOTES.md) for complete details.
 
 **Key Points:**
 - `npm run build` automatically updates CloudFlare Worker with correct asset references
@@ -441,12 +441,12 @@ AUTHORIZED_ADMIN_EMAIL = "magnus.hultberg@gmail.com"
 ### Testing Restaurant Extraction
 1. **Navigate to Admin Panel**: Sign in with configured email
 2. **Test Restaurant URLs**:
-   - Fine dining: `https://noma.dk`
-   - Chain restaurants: `https://dishoom.com`
-   - Multi-location: `https://hawksmoor.com`
+  - Fine dining: `https://noma.dk`
+  - Chain restaurants: `https://dishoom.com`
+  - Multi-location: `https://hawksmoor.com`
 3. **Test Non-Restaurant Detection**:
-   - Art gallery: `https://tate.org.uk`
-   - Retail: `https://apple.com`
+  - Art gallery: `https://tate.org.uk`
+  - Retail: `https://apple.com`
 
 ### Development Testing
 ```bash

@@ -46,7 +46,7 @@ These changes should trigger documentation updates when convenient:
 ### 📊 **Sections to Update by Change Type**
 
 | Change Type | Update Sections |
-|-------------|----------------|
+| --- | --- |
 | **New API Integration** | Tech Stack, API Architecture, Environment Setup |
 | **Database Schema** | Database Setup, Core Components |
 | **Deployment Changes** | Deployment, Environment Configuration |

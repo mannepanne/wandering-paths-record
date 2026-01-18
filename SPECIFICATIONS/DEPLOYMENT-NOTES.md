@@ -11,23 +11,23 @@ The issue was in `src/worker.js` where the `indexHtmlContent` was hardcoded and 
 ### Solution
 **Automatic Asset Reference Updates**
 
-1. **Modified `src/worker.js`**: Replaced hardcoded asset references with placeholders:
-   ```javascript
+1. **Modified ****`src/worker.js`**: Replaced hardcoded asset references with placeholders:
+```javascript
    <!-- ASSET_PLACEHOLDER_SCRIPT -->
    <!-- ASSET_PLACEHOLDER_CSS -->
-   ```
+```
 
-2. **Created `scripts/update-worker-assets.js`**: Post-build script that:
-   - Reads the actual built `dist/client/index.html` file
-   - Extracts the real asset references (script and CSS)
-   - Updates the Worker file with correct asset tags
-   - Runs automatically after every build
+2. **Created ****`scripts/update-worker-assets.js`**: Post-build script that:
+  - Reads the actual built `dist/client/index.html` file
+  - Extracts the real asset references (script and CSS)
+  - Updates the Worker file with correct asset tags
+  - Runs automatically after every build
 
-3. **Updated `package.json`**: Modified build scripts to run the asset updater:
-   ```json
+3. **Updated ****`package.json`**: Modified build scripts to run the asset updater:
+```json
    "build": "vite build && node scripts/update-worker-assets.js",
    "build:dev": "vite build --mode development && node scripts/update-worker-assets.js"
-   ```
+```
 
 ### Prevention
 This solution **permanently prevents** the recurring asset reference issues because:
@@ -48,7 +48,7 @@ git push origin main
 # 🚀 Asset synchronization + deployment happens automatically!
 ```
 
-See [`GITHUB-ACTIONS-SETUP.md`](GITHUB-ACTIONS-SETUP.md) for setup instructions.
+See [GITHUB-ACTIONS-SETUP.md](./GITHUB-ACTIONS-SETUP.md) for setup instructions.
 
 #### Manual Deployment (Fallback)
 Run the normal build command - the asset update happens automatically:

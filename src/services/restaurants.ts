@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import { Restaurant, RestaurantAddress } from '@/types/place';
+import { Restaurant, RestaurantAddress, CuisinePrimary, RestaurantStyle, RestaurantVenue } from '@/types/place';
 
 // Haversine formula to calculate distance between two points on Earth
 function calculateHaversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -99,9 +99,12 @@ export const restaurantService = {
 
   // Get restaurants with filters (including text search and location-based filtering)
   async getFilteredRestaurants(filters: {
-    cuisine?: string;
+    cuisine?: string; // Legacy - kept for backwards compatibility
+    cuisine_primary?: string; // New facet
+    style?: string; // New facet
+    venue?: string; // New facet
     status?: string;
-    searchText?: string; // NEW: Text search across name, city, country, neighborhood
+    searchText?: string; // Text search across name, city, country, neighborhood
     location?: {
       lat: number;
       lng: number;
@@ -109,10 +112,10 @@ export const restaurantService = {
     };
   }): Promise<Restaurant[]> {
     console.log("🍽️ getFilteredRestaurants called with filters:", filters);
-    
+
     // Fetch restaurants with ALL their locations using proper joins
     console.log("📊 Fetching restaurants with all locations");
-    
+
     let query = supabase
       .from('restaurants')
       .select(`
@@ -120,7 +123,21 @@ export const restaurantService = {
         locations:restaurant_addresses(*)
       `);
 
-    if (filters.cuisine && filters.cuisine !== 'all') {
+    // New facet filters
+    if (filters.cuisine_primary && filters.cuisine_primary !== 'all') {
+      query = query.eq('cuisine_primary', filters.cuisine_primary);
+    }
+
+    if (filters.style && filters.style !== 'all') {
+      query = query.eq('style', filters.style);
+    }
+
+    if (filters.venue && filters.venue !== 'all') {
+      query = query.eq('venue', filters.venue);
+    }
+
+    // Legacy cuisine filter (fallback during migration)
+    if (filters.cuisine && filters.cuisine !== 'all' && !filters.cuisine_primary) {
       query = query.eq('cuisine', filters.cuisine);
     }
 
@@ -315,7 +332,7 @@ export const restaurantService = {
     return data;
   },
 
-  // Get distinct cuisines that exist in the database
+  // Get distinct cuisines that exist in the database (legacy field)
   async getDistinctCuisines(): Promise<string[]> {
     const { data, error } = await supabase
       .from('restaurants')
@@ -331,6 +348,54 @@ export const restaurantService = {
     // Extract unique cuisines, filter out nulls/empty, and sort
     const uniqueCuisines = [...new Set(data.map(row => row.cuisine).filter(Boolean))];
     return uniqueCuisines.sort();
+  },
+
+  // Get distinct primary cuisines that exist in the database (new facet system)
+  async getDistinctCuisinesPrimary(): Promise<CuisinePrimary[]> {
+    const { data, error } = await supabase
+      .from('restaurants')
+      .select('cuisine_primary')
+      .not('cuisine_primary', 'is', null);
+
+    if (error) {
+      console.error('Error fetching distinct primary cuisines:', error);
+      throw error;
+    }
+
+    const uniqueCuisines = [...new Set(data.map(row => row.cuisine_primary).filter(Boolean))] as CuisinePrimary[];
+    return uniqueCuisines.sort();
+  },
+
+  // Get distinct styles that exist in the database
+  async getDistinctStyles(): Promise<RestaurantStyle[]> {
+    const { data, error } = await supabase
+      .from('restaurants')
+      .select('style')
+      .not('style', 'is', null);
+
+    if (error) {
+      console.error('Error fetching distinct styles:', error);
+      throw error;
+    }
+
+    const uniqueStyles = [...new Set(data.map(row => row.style).filter(Boolean))] as RestaurantStyle[];
+    return uniqueStyles.sort();
+  },
+
+  // Get distinct venues that exist in the database
+  async getDistinctVenues(): Promise<RestaurantVenue[]> {
+    const { data, error } = await supabase
+      .from('restaurants')
+      .select('venue')
+      .not('venue', 'is', null);
+
+    if (error) {
+      console.error('Error fetching distinct venues:', error);
+      throw error;
+    }
+
+    const uniqueVenues = [...new Set(data.map(row => row.venue).filter(Boolean))] as RestaurantVenue[];
+    return uniqueVenues.sort();
   },
 
   // Create a new restaurant with addresses

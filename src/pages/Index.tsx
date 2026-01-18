@@ -25,10 +25,13 @@ import {
   Info,
   User,
   LogOut,
+  Search,
+  X,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { placesService, restaurantService } from "@/services/restaurants";
 import { smartGeoSearch, SearchResult } from "@/services/smartGeoSearch";
-import { Place, RestaurantStatus, PersonalAppreciation } from "@/types/place";
+import { Place, RestaurantStatus, PersonalAppreciation, CuisinePrimary, RestaurantStyle, RestaurantVenue } from "@/types/place";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
@@ -37,7 +40,10 @@ const Index = () => {
   const navigate = useNavigate();
   const [currentView, setCurrentView] = useState<"public" | "admin">("public");
   const [isMapView, setIsMapView] = useState(false);
-  const [selectedType, setSelectedType] = useState("all");
+  // New facet filter states
+  const [selectedCuisinePrimary, setSelectedCuisinePrimary] = useState("all");
+  const [selectedStyle, setSelectedStyle] = useState("all");
+  const [selectedVenue, setSelectedVenue] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [searchLocation, setSearchLocation] = useState("");
   const [searchText, setSearchText] = useState(""); // NEW: Text search state
@@ -70,14 +76,18 @@ const Index = () => {
   } = useQuery({
     queryKey: [
       "places",
-      selectedType,
+      selectedCuisinePrimary,
+      selectedStyle,
+      selectedVenue,
       selectedStatus,
       searchLocationCoords?.lat,
       searchLocationCoords?.lng,
     ],
     queryFn: () =>
       restaurantService.getFilteredRestaurants({
-        cuisine: selectedType,
+        cuisine_primary: selectedCuisinePrimary,
+        style: selectedStyle,
+        venue: selectedVenue,
         status: selectedStatus,
         location: searchLocationCoords || undefined,
       }),
@@ -143,10 +153,20 @@ const Index = () => {
     navigate({ search: searchParams.toString() }, { replace: true });
   };
 
-  // Fetch available cuisines for the filter dropdown
-  const { data: availableCuisines = [] } = useQuery({
-    queryKey: ["cuisines"],
-    queryFn: () => restaurantService.getDistinctCuisines(),
+  // Fetch available facet values for the filter dropdowns
+  const { data: availableCuisinesPrimary = [] } = useQuery({
+    queryKey: ["cuisines_primary"],
+    queryFn: () => restaurantService.getDistinctCuisinesPrimary(),
+  });
+
+  const { data: availableStyles = [] } = useQuery({
+    queryKey: ["styles"],
+    queryFn: () => restaurantService.getDistinctStyles(),
+  });
+
+  const { data: availableVenues = [] } = useQuery({
+    queryKey: ["venues"],
+    queryFn: () => restaurantService.getDistinctVenues(),
   });
 
   // Handle URL parameters for admin mode, editing, and view
@@ -471,10 +491,38 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       {/* Header Bar */}
       <nav className="border-b-2 border-border bg-card p-4">
-        <div className="container mx-auto flex justify-between items-center max-w-6xl">
-          <h1 className="text-xl font-geo font-bold text-foreground">
+        <div className="container mx-auto flex justify-between items-center gap-4 max-w-6xl">
+          <h1 className="text-xl font-geo font-bold text-foreground shrink-0">
             Curated
           </h1>
+
+          {/* Desktop Search - Hidden on mobile */}
+          <div className="hidden md:flex items-center gap-2 flex-1 max-w-md">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search name, city, neighbourhood..."
+                value={searchLocation}
+                onChange={(e) => setSearchLocation(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleLocationSearch(searchLocation)}
+                className="pl-9 pr-8 border-charcoal"
+              />
+              {searchLocation && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSearchLocation("");
+                    handleLocationSearch("");
+                  }}
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 p-0 hover:bg-muted"
+                >
+                  <X className="w-3 h-3" />
+                </Button>
+              )}
+            </div>
+          </div>
+
           <div className="flex gap-2">
             <Button
               variant="brutalist"
@@ -494,21 +542,33 @@ const Index = () => {
         <div className="space-y-4">
           {/* Filter Bar */}
           <FilterBar
-            selectedCuisine={selectedType}
+            selectedCuisinePrimary={selectedCuisinePrimary}
+            selectedStyle={selectedStyle}
+            selectedVenue={selectedVenue}
             selectedStatus={selectedStatus}
-            onCuisineChange={(cuisine) => {
-              setSelectedType(cuisine);
-              resetPagination(); // Reset to page 1 when changing cuisine filter
+            onCuisinePrimaryChange={(cuisine) => {
+              setSelectedCuisinePrimary(cuisine);
+              resetPagination();
+            }}
+            onStyleChange={(style) => {
+              setSelectedStyle(style);
+              resetPagination();
+            }}
+            onVenueChange={(venue) => {
+              setSelectedVenue(venue);
+              resetPagination();
             }}
             onStatusChange={(status) => {
               setSelectedStatus(status);
-              resetPagination(); // Reset to page 1 when changing status filter
+              resetPagination();
             }}
             restaurantCount={totalItems}
             onLocationSearch={handleLocationSearch}
             onNearMe={handleNearMe}
             searchLocation={searchLocation}
-            availableCuisines={availableCuisines}
+            availableCuisinesPrimary={availableCuisinesPrimary}
+            availableStyles={availableStyles}
+            availableVenues={availableVenues}
             isNearMeActive={!!searchLocationCoords}
             isLoadingLocation={isGettingLocation}
           />

@@ -32,7 +32,11 @@ export interface ExtractedRestaurantData {
   phone?: string; // Main/first phone if single location
   website: string;
   chefName?: string;
-  cuisine?: string;
+  cuisine?: string; // Legacy field
+  cuisinePrimary?: string; // New facet field
+  cuisineSecondary?: string; // New facet field for fusion
+  style?: string; // New facet field
+  venue?: string; // New facet field
   description?: string;
   dietaryOptions?: string;
   publicRating?: number;
@@ -41,6 +45,8 @@ export interface ExtractedRestaurantData {
   atmosphere?: string;
   mustTryDishes?: string[];
   locations: ExtractedLocation[]; // All specific locations
+  source?: string;
+  source_url?: string;
 }
 
 export interface CrawledContent {
@@ -248,7 +254,7 @@ FOOD SERVICE PRIORITY: If a business serves food for sit-in dining (even if they
 
   private async extractRestaurantData(content: CrawledContent, url: string): Promise<ExtractedRestaurantData> {
     const allContent = this.combineContent(content);
-    
+
     const prompt = `
 Analyze this restaurant website content and extract structured information:
 
@@ -259,29 +265,64 @@ EXTRACT THE FOLLOWING and return as JSON:
 {
   "name": "Official restaurant name",
   "addressSummary": "Brief address summary (e.g., 'Shoreditch, London' or 'Multiple locations in London & Edinburgh')",
-  "phone": "Phone number if found", 
+  "phone": "Phone number if found",
   "chefName": "Head chef name if mentioned",
-  "cuisine": "Standardized cuisine type (Italian/French/British/Modern European/Asian Fusion/etc)",
+  "cuisine": "Legacy field - keep for compatibility",
+  "cuisinePrimary": "Primary cuisine category from the allowed list below",
+  "cuisineSecondary": "Secondary cuisine for fusion restaurants (optional, use same values as cuisinePrimary)",
+  "style": "Restaurant style from the allowed list below",
+  "venue": "Venue type from the allowed list below",
   "description": "2-3 sentence summary of the restaurant's concept and appeal",
   "dietaryOptions": "1-2 sentences about cooking style, ingredients, dietary accommodations",
   "priceRange": "$|$$|$$$|$$$$",
-  "atmosphere": "1-2 sentences about ambiance and dining experience", 
+  "atmosphere": "1-2 sentences about ambiance and dining experience",
   "bookingRequired": true/false,
   "mustTryDishes": ["dish1", "dish2", "dish3"],
-  "publicRating": null, // We'll get this from Google Maps later
+  "publicRating": null,
   "locations": [
     {
       "locationName": "Area/neighborhood name (e.g., 'Shoreditch', 'King's Cross')",
       "fullAddress": "Complete street address with postcode",
       "city": "City name (e.g., 'London', 'Edinburgh')",
       "country": "Country name (e.g., 'United Kingdom', 'UK')",
-      "phone": "Location-specific phone if different from main",
+      "phone": "Location-specific phone if different from main"
     }
   ]
 }
 
+ALLOWED VALUES FOR CATEGORY FACETS:
+
+cuisinePrimary (REQUIRED - pick ONE that best matches):
+  British, Nordic, French, Italian, Spanish, Portuguese, Greek, Balkan, European,
+  Japanese, Chinese, Korean, Thai, Vietnamese, Malaysian,
+  Indian, Middle Eastern, African, Caribbean,
+  Mexican, South American, American, Australian, Filipino,
+  Martian (only if truly unclassifiable)
+
+cuisineSecondary (OPTIONAL - only for fusion restaurants, use same values as cuisinePrimary):
+  Use this when a restaurant clearly blends two distinct cuisines (e.g., Japanese-Peruvian fusion).
+  Leave null/empty if the restaurant has a single cuisine focus.
+
+style (REQUIRED - pick ONE):
+  Traditional - Classic, time-tested cooking and presentation
+  Modern - Contemporary techniques and presentation
+  Fusion - Deliberately blending multiple culinary traditions
+  Casual - Relaxed, everyday dining
+  Fine Dining - Formal, high-end experience
+  Street Food - Informal, quick-service style
+
+venue (REQUIRED - pick ONE):
+  Restaurant - Full-service dining establishment
+  Cafe - Coffee-focused with food service
+  Pub - British pub serving food
+  Bar - Drinks-focused with food service
+  Bakery - Bakery with seating/dining
+
 GUIDELINES:
-- Use standard cuisine categories, avoid made-up terms
+- cuisinePrimary: Choose the SINGLE best match from the allowed list. Use "European" for general Western cuisine that doesn't fit a specific country. Use "Martian" only as a last resort.
+- cuisineSecondary: Only use for true fusion restaurants (e.g., Nikkei = Japanese + South American). Do NOT use for restaurants that simply serve dishes from multiple cuisines.
+- style: Base this on the restaurant's overall approach and formality level
+- venue: Choose based on the primary function of the establishment
 - For price range: $ = casual/budget, $$ = mid-range, $$$ = upscale, $$$$ = fine dining
 - Must-try dishes should come from menus or reviews, not generic items
 - Be concise but descriptive

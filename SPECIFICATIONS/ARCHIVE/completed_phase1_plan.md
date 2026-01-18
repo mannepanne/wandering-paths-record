@@ -287,13 +287,13 @@ Replace the current map placeholder with a fully functional Mapbox-powered inter
 
 To enable the interactive map functionality, you'll need a free Mapbox account:
 
-1. **Sign up at [mapbox.com](https://mapbox.com)** (free tier includes 50,000 map loads/month)
+1. **Sign up at **[**mapbox.com**](https://mapbox.com) (free tier includes 50,000 map loads/month)
 2. **Get your access token** from your Mapbox dashboard
 3. **Add to environment file**:
-   ```bash
+```bash
    # Add to .env file
    VITE_MAPBOX_ACCESS_TOKEN=your_actual_mapbox_token_here
-   ```
+```
 4. **Restart development server** - `npm run dev`
 
 **Without API key:** Map shows friendly error message with setup instructions

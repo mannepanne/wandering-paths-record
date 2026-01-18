@@ -68,7 +68,7 @@
 
 ### Platform-Specific Preferences
 | Use Case | Preferred Technology | Reason |
-|----------|---------------------|---------|
+| --- | --- | --- |
 | CLI/Headless projects | Python | Simplicity and extensive libraries |
 | Web application projects | TypeScript (strict mode) | Industry standard type safety |
 | Web frontend framework | Next.js (React) with App Router | Server-side rendering and SEO |
@@ -94,10 +94,10 @@
 
 ### Code Standards and Comments
 - All code files should start with:
-  ```
+```
   // ABOUT: [Brief description of file purpose]
   // ABOUT: [Key functionality or responsibility]
-  ```
+```
 - Preserve existing meaningful comments unless proven incorrect.
 - When migrating to new comment standards, do so systematically across the entire file.
 - Use evergreen naming conventions (avoid "new", "improved", "enhanced").

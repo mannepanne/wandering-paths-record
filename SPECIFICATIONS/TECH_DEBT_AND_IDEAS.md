@@ -5,7 +5,7 @@ A living document for tracking technical debt, cleanup tasks, and potential futu
 ## Tech Debt
 
 ### Category System Migration (Phase 6 pending)
-- **Legacy ****`cuisine`**** column**: Still exists in database for backwards compatibility
+- **Legacy \****`cuisine`**\*\* column**: Still exists in database for backwards compatibility
 - **Cleanup task**: Once confident the new facet system works well, remove:
   - `cuisine` column from `restaurants` table
   - `cuisine` field from TypeScript types
@@ -16,12 +16,17 @@ A living document for tracking technical debt, cleanup tasks, and potential futu
 - Consider adding check constraints for `cuisine_primary`, `style`, `venue` to match TypeScript types
 - Review if `specialty[]` array field is being used (added but not yet implemented in UI)
 
+### Development Environment
+- **Vite 431 error on refresh**: The dev server occasionally returns HTTP 431 "Request Header Fields Too Large" when refreshing pages (especially `/restaurant/:id` routes). This is a known Vite issue caused by accumulated cookies/headers.
+- **Workaround**: Clear localhost cookies, hard refresh (Cmd+Shift+R), or restart dev server
+- **Not a production issue** - only affects local development
+
 ## Future Ideas
 
 ### Filtering & Discovery
 - Add specialty filter (BBQ, Seafood, Ramen, etc.) once specialty data is populated
 - Consider "surprise me" random restaurant picker
-- Saved filter presets (e.g., "Date night" = Fine Dining + $$+)
+- Saved filter presets (e.g., "Date night" = Fine Dining + $+)
 
 ### Data Quality
 - Bulk re-run AI extraction to populate facets for existing restaurants

@@ -13,6 +13,7 @@ import { Globe, Plus, Shield, Database, Search, AlertTriangle, CheckCircle, Load
 import { useAuth } from "@/contexts/AuthContext";
 import { LoginForm } from "@/components/LoginForm";
 import { PlacePreview } from "@/components/PlacePreview";
+import { CategoryCombobox } from "@/components/CategoryCombobox";
 import { useRestaurantExtraction } from "@/hooks/useRestaurantExtraction";
 import { ExtractedRestaurantData, ExtractedLocation, ExtractionCache } from "@/services/claudeExtractor";
 import { restaurantService } from "@/services/restaurants";
@@ -108,6 +109,30 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
     queryFn: () => restaurantService.getRestaurantAddresses(editingRestaurant!.id),
     enabled: !!editingRestaurant,
   });
+
+  // Query to fetch distinct category values for autocomplete
+  const { data: distinctCuisines = [] } = useQuery({
+    queryKey: ['distinct-cuisines-primary'],
+    queryFn: () => restaurantService.getDistinctCuisinesPrimary(),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  const { data: distinctStyles = [] } = useQuery({
+    queryKey: ['distinct-styles'],
+    queryFn: () => restaurantService.getDistinctStyles(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: distinctVenues = [] } = useQuery({
+    queryKey: ['distinct-venues'],
+    queryFn: () => restaurantService.getDistinctVenues(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Merge database values with predefined options for autocomplete
+  const cuisineOptions = Array.from(new Set([...CUISINE_OPTIONS, ...distinctCuisines])).sort();
+  const styleOptions = Array.from(new Set([...STYLE_OPTIONS, ...distinctStyles])).sort();
+  const venueOptions = Array.from(new Set([...VENUE_OPTIONS, ...distinctVenues])).sort();
 
   // Populate form when editing a restaurant
   useEffect(() => {
@@ -989,70 +1014,43 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
                 {/* Category Facets Row */}
                 <div>
                   <label className="text-sm font-medium text-foreground">Primary Cuisine</label>
-                  <Select
+                  <CategoryCombobox
                     value={formData.cuisinePrimary || ''}
                     onValueChange={(value) => handleFormChange('cuisinePrimary', value)}
-                  >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Select cuisine" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CUISINE_OPTIONS.map((cuisine) => (
-                        <SelectItem key={cuisine} value={cuisine}>{cuisine}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    options={cuisineOptions}
+                    placeholder="Select or type cuisine..."
+                    className="mt-1"
+                  />
                 </div>
                 <div>
                   <label className="text-sm font-medium text-foreground">Secondary Cuisine (for fusion)</label>
-                  <Select
+                  <CategoryCombobox
                     value={formData.cuisineSecondary || ''}
-                    onValueChange={(value) => handleFormChange('cuisineSecondary', value === 'none' ? '' : value)}
-                  >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Optional for fusion" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      {CUISINE_OPTIONS.map((cuisine) => (
-                        <SelectItem key={cuisine} value={cuisine}>{cuisine}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    onValueChange={(value) => handleFormChange('cuisineSecondary', value)}
+                    options={cuisineOptions}
+                    placeholder="Optional for fusion..."
+                    className="mt-1"
+                  />
                 </div>
                 <div>
                   <label className="text-sm font-medium text-foreground">Style</label>
-                  <Select
+                  <CategoryCombobox
                     value={formData.style || ''}
-                    onValueChange={(value) => handleFormChange('style', value === 'none' ? '' : value)}
-                  >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Select style" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Not specified</SelectItem>
-                      {STYLE_OPTIONS.map((style) => (
-                        <SelectItem key={style} value={style}>{style}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    onValueChange={(value) => handleFormChange('style', value)}
+                    options={styleOptions}
+                    placeholder="Select or type style..."
+                    className="mt-1"
+                  />
                 </div>
                 <div>
                   <label className="text-sm font-medium text-foreground">Venue Type</label>
-                  <Select
+                  <CategoryCombobox
                     value={formData.venue || ''}
-                    onValueChange={(value) => handleFormChange('venue', value === 'none' ? '' : value)}
-                  >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Select venue" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Not specified</SelectItem>
-                      {VENUE_OPTIONS.map((venue) => (
-                        <SelectItem key={venue} value={venue}>{venue}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    onValueChange={(value) => handleFormChange('venue', value)}
+                    options={venueOptions}
+                    placeholder="Select or type venue..."
+                    className="mt-1"
+                  />
                 </div>
 
                 {/* Source Information Row */}

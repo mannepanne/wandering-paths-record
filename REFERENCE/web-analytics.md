@@ -1,241 +1,268 @@
 # Web Analytics
 
-**Status:** Not yet implemented - planned for future phase
+**Status:** ✅ Implemented - Cloudflare Web Analytics active
 
-**Related:** See `REFERENCE/technical-debt.md` → TD-005
-
----
-
-The site is planned to use **two analytics solutions** for traffic monitoring, matching the setup from hultberg.org.
-
----
-
-## Google Analytics 4 (GA4)
-
-**Measurement ID:** To be configured
-
-### Features
-- Tracks pageviews, user journeys, and referral sources
-- Standard web analytics (users, sessions, bounce rate)
-- Custom event tracking for restaurant interactions
-
-### Implementation Plan
-
-**Snippet to add to all pages:**
-```html
-<!-- Google Analytics 4 -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-XXXXXXXXXX');
-</script>
-```
-
-**Implementation Locations:**
-- `index.html` - Main entry point for static page load
-- Worker-rendered pages (if any server-side HTML)
-
-**Custom Events to Track:**
-- Restaurant card clicks
-- Map marker interactions
-- Filter usage (cuisine, price, status)
-- AI extraction attempts
-- Admin login events
+**Related:** See `REFERENCE/technical-debt.md` → TD-005 (now resolved)
 
 ---
 
 ## Cloudflare Web Analytics
 
-**Token:** To be configured
+**Implementation:** Production (restaurants.hultberg.org)
+**Token:** `f71c3c28b82c4c6991ec3d41b7f1496f`
 
 ### Features
-- **Privacy-first, cookie-free** alternative to GA4
+
+- **Privacy-first, cookie-free** analytics
 - No invasive tracking or consent banners needed
 - Pageviews, referrers, visitor data without cookies
+- Fully GDPR compliant by design
 - Integrated with Cloudflare dashboard
+- Lightweight (~5KB beacon)
 
-### Implementation Plan
+### Current Implementation
 
-**Snippet to add to all pages:**
+**Script Location:** `index.html` in `<head>` section
+
 ```html
 <!-- Cloudflare Web Analytics -->
 <script defer src='https://static.cloudflareinsights.com/beacon.min.js'
-        data-cf-beacon='{"token": "YOUR_TOKEN_HERE"}'></script>
+        data-cf-beacon='{"token": "f71c3c28b82c4c6991ec3d41b7f1496f"}'></script>
+<!-- End Cloudflare Web Analytics -->
 ```
 
-**Implementation Locations:**
-- `index.html` - Main entry point
-- Worker-rendered pages (if any)
+**Loaded on:** All pages (single-page app, script loaded once)
 
-**Dashboard Access:**
-- Cloudflare Dashboard → Analytics & Logs → Web Analytics
-- Project: restaurants.hultberg.org
+### Dashboard Access
 
----
+**Location:** Cloudflare Dashboard → Analytics & Logs → Web Analytics
+**Site:** restaurants.hultberg.org
 
-## Implementation Strategy
+**Login:** https://dash.cloudflare.com/
 
-### Phase 1: Setup Both Analytics
+### Available Metrics
 
-1. **Get GA4 Measurement ID:**
-   - Create property at https://analytics.google.com/
-   - Get measurement ID (format: G-XXXXXXXXXX)
-
-2. **Get Cloudflare Web Analytics Token:**
-   - Cloudflare Dashboard → Analytics & Logs → Web Analytics
-   - Add site: restaurants.hultberg.org
-   - Copy beacon token
-
-3. **Add Scripts to index.html:**
-   - Insert both snippets in `<head>` section
-   - Test on localhost (check Network tab for beacons)
-
-4. **Deploy and Verify:**
-   - Deploy to production
-   - Verify both analytics are receiving data (usually 24-48hr delay)
-
-### Phase 2: Evaluate and Consolidate (3-6 months later)
-
-- Review both platforms for insights quality
-- Compare data accuracy and usefulness
-- **Consider consolidating to Cloudflare only** to reduce script overhead
-- Decision criteria:
-  - Which provides better insights for this use case?
-  - Is GA4's extra detail worth the privacy/performance trade-off?
-  - Does Cloudflare analytics cover our needs?
+- **Visitors:** Unique visitors over time
+- **Page Views:** Most viewed pages/routes
+- **Referrers:** Traffic sources (direct, social, search, etc.)
+- **Countries:** Geographic distribution of visitors
+- **Browsers:** Browser usage statistics
+- **Operating Systems:** OS distribution
+- **Device Types:** Desktop vs mobile vs tablet
+- **Core Web Vitals:** Performance metrics (LCP, FID, CLS)
 
 ---
 
-## Custom Event Tracking (Optional - Future Enhancement)
+## Why Cloudflare Only?
 
-### GA4 Custom Events
+**Decision:** Skip Google Analytics 4 entirely, use only Cloudflare Web Analytics
 
-Track specific user interactions:
+**Rationale:**
+1. **Privacy**: No cookies, no consent banners, fully GDPR compliant
+2. **Performance**: Lightweight (~5KB vs GA4's ~20-30KB)
+3. **Stack Alignment**: Already using Cloudflare Workers for hosting
+4. **Simplicity**: One analytics platform, one dashboard
+5. **Sufficient Data**: Provides all needed insights for this use case
 
-```javascript
-// Restaurant card click
-gtag('event', 'restaurant_view', {
-  restaurant_name: 'Dishoom',
-  cuisine: 'Indian',
-  status: 'to-visit'
-});
+**What We Get:**
+- Visitor counts and trends
+- Popular pages/routes
+- Traffic sources (where visitors come from)
+- Geographic distribution
+- Performance metrics
 
-// Filter applied
-gtag('event', 'filter_applied', {
-  filter_type: 'cuisine',
-  filter_value: 'Italian'
-});
-
-// AI extraction started
-gtag('event', 'ai_extraction', {
-  source: 'url_input',
-  success: true
-});
-
-// Map interaction
-gtag('event', 'map_marker_click', {
-  restaurant_name: 'Dishoom',
-  location: 'Shoreditch'
-});
-```
-
-### Implementation Locations
-
-- `src/components/PlaceCard.tsx` - Card click events
-- `src/components/FilterBar.tsx` - Filter change events
-- `src/components/AdminPanel.tsx` - AI extraction events
-- `src/components/InteractiveMap.tsx` - Map interaction events
+**What We Skip:**
+- Detailed user journey tracking (don't need)
+- Custom event funnels (overkill for this project)
+- Session recordings (privacy concern)
+- Complex conversion tracking (not e-commerce)
 
 ---
 
-## Privacy Considerations
+## Monitoring Analytics
+
+### Initial Setup Verification
+
+After deployment, verify analytics are working:
+
+1. **Visit the site:** https://restaurants.hultberg.org
+2. **Check Network tab:** Look for `beacon.min.js` loaded successfully
+3. **Wait 24-48 hours:** Cloudflare analytics have a delay
+4. **Check dashboard:** Cloudflare → Analytics & Logs → Web Analytics
+
+### Regular Checks
+
+**Suggested frequency:** Monthly review
+
+**What to monitor:**
+- **Traffic trends:** Growing, stable, or declining?
+- **Popular pages:** Which restaurant details pages get most views?
+- **Referrers:** Where are visitors discovering the site?
+- **Geographic data:** Where are visitors located?
+- **Performance:** Are Core Web Vitals healthy?
+
+### Key Questions Analytics Will Answer
+
+1. **How many people use the site?** (Unique visitors)
+2. **What are they looking at?** (Page views by route)
+3. **Where do they come from?** (Referrers - social, direct, search)
+4. **Where are they located?** (Geographic distribution)
+5. **How fast is the site?** (Core Web Vitals)
+
+---
+
+## Privacy & Compliance
 
 ### GDPR Compliance
 
-**Google Analytics 4:**
-- May require cookie consent banner (depending on interpretation)
-- Consider IP anonymization:
-  ```javascript
-  gtag('config', 'G-XXXXXXXXXX', {
-    'anonymize_ip': true
-  });
-  ```
-
-**Cloudflare Web Analytics:**
-- No cookies, no consent banner needed
-- Fully GDPR compliant by design
+✅ **Fully compliant** - Cloudflare Web Analytics is designed for privacy:
+- No cookies set
 - No personal data collected
+- No consent banner required
+- No tracking across sites
+- Aggregated data only
+
+### What Data Is Collected?
+
+**Collected (anonymously):**
+- Page URL visited
+- Referrer URL
+- Browser type and version
+- Operating system
+- Device type (desktop/mobile/tablet)
+- Country (based on IP, but IP not stored)
+
+**NOT collected:**
+- Individual user identification
+- IP addresses (used for geolocation, then discarded)
+- Personal information
+- Cross-site tracking
+- User-specific behavior
 
 ### Privacy Policy
 
-Update privacy policy to disclose analytics usage:
-- Which services are used
-- What data is collected
-- How users can opt out
-- Data retention policies
+**Current status:** No privacy policy yet (should add)
 
----
+**Recommended addition:**
 
-## Analytics Dashboards
+> **Analytics**
+>
+> This site uses Cloudflare Web Analytics to understand visitor traffic. This is a privacy-first analytics service that:
+> - Does not use cookies
+> - Does not collect personal data
+> - Does not track you across websites
+> - Only collects anonymous, aggregated data
+>
+> Learn more: [Cloudflare Web Analytics Privacy](https://www.cloudflare.com/web-analytics/)
 
-### GA4 Useful Reports
-
-- **Realtime:** Live visitor tracking
-- **Acquisition:** How users find the site (referrals, direct, search)
-- **Engagement:** Pageviews, time on site, popular restaurants
-- **Custom reports:** Build restaurant-specific insights
-
-### Cloudflare Web Analytics Useful Metrics
-
-- **Visitors:** Unique visitors over time
-- **Page Views:** Most viewed pages
-- **Referrers:** Traffic sources
-- **Countries:** Geographic distribution
+**Where to add:** Footer link or About page
 
 ---
 
 ## Performance Impact
 
-### Script Load Times
+### Measurement
 
-- **GA4:** ~20-30KB, loads asynchronously
-- **Cloudflare:** ~5-10KB, lightweight beacon
+**Script size:** ~5KB (minified, compressed)
+**Load time:** < 50ms (loaded with `defer`)
+**Impact:** Negligible (loaded after page interactive)
 
-### Recommendations
+### Optimization
 
-- Load both scripts `async` or `defer`
-- Consider loading only on production (exclude localhost)
-- Monitor Lighthouse performance score after adding
+**Already optimized:**
+- Script loaded with `defer` attribute (non-blocking)
+- Cloudflare CDN delivers script from edge (fast)
+- Minimal JavaScript execution
 
-```javascript
-// Conditional loading (production only)
-if (import.meta.env.PROD) {
-  // Load analytics scripts
-}
+**No further optimization needed.**
+
+---
+
+## Troubleshooting
+
+### Analytics not showing data
+
+**Symptom:** Dashboard shows zero visitors despite site traffic
+
+**Causes & solutions:**
+1. **24-48 hour delay:** Analytics data isn't real-time, wait a day
+2. **Script blocked:** Check browser console for errors
+3. **Ad blocker:** Some ad blockers block analytics scripts
+4. **Incorrect token:** Verify token matches dashboard
+
+**Verification steps:**
+```bash
+# Check script loads
+curl -I https://static.cloudflareinsights.com/beacon.min.js
+# Should return 200 OK
+
+# Check token in HTML
+curl https://restaurants.hultberg.org | grep "data-cf-beacon"
+# Should show: {"token": "f71c3c28b82c4c6991ec3d41b7f1496f"}
 ```
+
+### Script not loading in development
+
+**Expected behavior:** Script loads in both dev and production
+
+**If blocked locally:**
+- Some browser extensions block analytics scripts
+- Disable extensions or whitelist localhost
+- Check browser DevTools → Network tab for blocked requests
+
+### Performance concerns
+
+**Symptom:** Worried about script impacting performance
+
+**Reality check:**
+- Cloudflare beacon is ~5KB (very lightweight)
+- Loads with `defer` (doesn't block page rendering)
+- Cloudflare CDN ensures fast delivery
+- Negligible impact on Lighthouse score
+
+**Verify:** Run Lighthouse audit before/after implementation
+
+---
+
+## Future Enhancements (Optional)
+
+### Custom Event Tracking
+
+**Not currently implemented** (and probably not needed)
+
+If you ever want to track specific user actions, Cloudflare Web Analytics doesn't support custom events. For that, you'd need:
+- Google Analytics 4 (adds privacy concerns)
+- Plausible Analytics (paid, privacy-friendly)
+- Simple Analytics (paid, privacy-friendly)
+
+**Recommendation:** Current setup is sufficient for this project's needs.
+
+### Enhanced Privacy Policy
+
+**Current:** No privacy policy page
+
+**Future:** Consider adding a `/privacy` page explaining:
+- What data is collected
+- How it's used
+- User rights under GDPR
+- Link to Cloudflare's privacy practices
+
+**Not urgent** given the minimal data collection.
 
 ---
 
 ## Implementation Checklist
 
-- [ ] Create GA4 property and get Measurement ID
-- [ ] Get Cloudflare Web Analytics token
-- [ ] Add both scripts to `index.html`
-- [ ] Test locally (check Network tab)
-- [ ] Deploy to production
-- [ ] Verify data collection (24-48hrs)
-- [ ] Add custom event tracking (optional)
-- [ ] Update privacy policy
-- [ ] Set calendar reminder for 3-6 month evaluation
+- [x] Get Cloudflare Web Analytics token
+- [x] Add script to `index.html`
+- [x] Deploy to production
+- [ ] Verify data collection (24-48hrs after deploy)
+- [ ] Set calendar reminder for monthly analytics review
+- [ ] Consider adding privacy policy page (optional)
 
 ---
 
-**Next Steps:**
-1. Decide if/when to implement analytics
-2. Follow setup guide above when ready
-3. Evaluate after 3-6 months and consider consolidation
-
 **Related Documentation:**
-- `REFERENCE/technical-debt.md` → TD-005 (tracks analytics as future work)
+- `REFERENCE/technical-debt.md` → TD-005 (analytics implementation)
+- Cloudflare Dashboard: https://dash.cloudflare.com/
+- Cloudflare Web Analytics docs: https://developers.cloudflare.com/analytics/web-analytics/

@@ -43,15 +43,6 @@ Items here are accepted risks or pragmatic choices made during development, not 
 - **Future fix:** Add specialty filter UI and populate data via AI extraction
 - **Introduced:** Category system planning
 
-### TD-005: Web analytics not yet implemented
-- **Location:** Frontend pages and Worker routes
-- **Issue:** No analytics tracking implemented yet (plan is to use Google Analytics 4 + Cloudflare Web Analytics)
-- **Why accepted:** Focus on core features first; analytics can be added later without affecting functionality
-- **Risk:** Low - missing usage insights, but doesn't affect user experience
-- **Future fix:** Implement dual analytics setup as documented in `REFERENCE/web-analytics.md`
-- **Introduced:** Project inception
-- **Related:** See `REFERENCE/web-analytics.md` for planned implementation
-
 ---
 
 ## Future Enhancement Ideas

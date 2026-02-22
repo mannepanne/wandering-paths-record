@@ -9,7 +9,11 @@
     "build:dev": "vite build --mode development && node scripts/update-worker-assets.js",
     "lint": "eslint .",
     "preview": "vite preview",
-    "api": "node server.cjs"
+    "api": "node server.cjs",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "test:watch": "vitest --watch"
   },
   "dependencies": {
     "@cablate/mcp-google-map": "^0.0.14",
@@ -70,10 +74,15 @@
     "@cloudflare/vite-plugin": "^1.12.3",
     "@eslint/js": "^9.32.0",
     "@tailwindcss/typography": "^0.5.16",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^22.16.5",
     "@types/react": "^18.3.23",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react-swc": "^3.11.0",
+    "@vitest/coverage-v8": "^4.0.18",
+    "@vitest/ui": "^4.0.18",
     "autoprefixer": "^10.4.21",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
@@ -82,11 +91,13 @@
     "eslint-plugin-react-refresh": "^0.4.20",
     "express": "^5.1.0",
     "globals": "^15.15.0",
+    "jsdom": "^28.1.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.38.0",
     "vite": "^6.3.5",
+    "vitest": "^4.0.18",
     "wrangler": "^4.34.0"
   }
 }

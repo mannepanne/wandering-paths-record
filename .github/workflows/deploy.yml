@@ -27,6 +27,14 @@ jobs:
       - name: Run linter
         run: npm run lint
 
+      - name: Run tests
+        run: npm test
+        env:
+          VITE_SUPABASE_URL: https://drtjfbvudzacixvqkzav.supabase.co
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          VITE_MAPBOX_ACCESS_TOKEN: test-token
+          VITE_GOOGLE_MAPS_API_KEY: test-key
+
       - name: Build application
         run: npm run build
         env:

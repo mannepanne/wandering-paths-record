@@ -121,7 +121,25 @@ The build process auto-syncs Worker asset references via `scripts/update-worker-
 
 ## Documentation
 
-- `SPECIFICATIONS/technical_specifications.md` - Technical architecture
-- `SPECIFICATIONS/claude_model_updates.md` - Claude model maintenance
-- `SPECIFICATIONS/PROJECT_HISTORY.md` - Project evolution and archived docs
-- `SPECIFICATIONS/DEVELOPMENT.md` - Full development guide
+### Implementation Reference (REFERENCE/)
+
+**Essential guides** - Read these when working on specific systems:
+
+- `REFERENCE/DEVELOPMENT.md` - **Full development workflow** (setup, commands, deployment)
+- `REFERENCE/environment-setup.md` - Secrets and API key configuration
+- `REFERENCE/supabase-setup.md` - Database schema, auth, RLS policies
+- `REFERENCE/ai-extraction-guide.md` - How Claude extraction works
+- `REFERENCE/geo-services-guide.md` - Maps, geocoding, location search
+- `REFERENCE/troubleshooting.md` - Common issues and solutions
+- `REFERENCE/technical-debt.md` - Known limitations and future work
+- `REFERENCE/testing-strategy.md` - Testing approach (not yet implemented)
+- `REFERENCE/web-analytics.md` - Analytics setup (planned)
+
+### Technical Specifications (SPECIFICATIONS/)
+
+**Planning docs** - Active work and project history:
+
+- `SPECIFICATIONS/technical_specifications.md` - Overall architecture
+- `SPECIFICATIONS/claude_model_updates.md` - Model update process
+- `SPECIFICATIONS/PROJECT_HISTORY.md` - Project evolution
+- `SPECIFICATIONS/ARCHIVE/` - Completed specifications

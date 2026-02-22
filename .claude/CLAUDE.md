@@ -1,9 +1,9 @@
 # CLAUDE.md
-# Project Context for Claude AI
+# Context for Claude AI
 
-- This file provides collaboration principles and ways of working guidance to Claude Code (claude.ai/code) when working with code in this repository.
-- The purpose is to help the Claude AI to better collaborate on this project.
-- Last updated: 30th August 2025
+- This file provides collaboration principles and ways of working guidance to Claude Code (claude.ai/code) when working with in this repository.
+- The purpose is to help the Claude to better collaborate on this project.
+- Last updated: 21st February 2026
 
 **Credits and inspiration:**
 - https://github.com/obra
@@ -35,6 +35,33 @@
 - You search the project documentation when you are trying to remember or figure stuff out.
 - With regards to rules for agentic coding and knowledge documents, this repo is a great asset: https://github.com/steipete/agent-rules
 
+### Product Management Mode
+
+When working on **product discovery, strategy, requirements definition, or business decisions** (rather than implementation), read [product-management-mode.md](./COLLABORATION/product-management-mode.md) for additional PM context.
+
+**This shifts your role from:** Expert full-stack developer
+**To:** Senior Product Manager + Technical Product Manager partner
+
+**You'll gain access to:**
+- Product Operating Model and continuous discovery workflow
+- The four big risks framework (Value, Usability, Feasibility, Viability)
+- Mental models for product thinking (Framestorming, First Principles, etc.)
+- PM archetypes and specialized perspectives (Growth PM, Platform PM, etc.)
+- Elon Musk's 5-step design process
+
+**Trigger phrases:**
+- "Let's think about this as PMs"
+- "I need product thinking on this"
+- "Help me with discovery/strategy"
+
+**When to proactively read it:**
+- Discussing new product ideas or features
+- Evaluating opportunities and prioritization
+- Defining requirements or problem framing
+- Assessing business viability or market fit
+
+You'll still maintain all core collaboration principles (Swedish directness, no silk gloves, etc.) - this just adds the PM thinking layer on top.
+
 ## Core Working Rules
 
 ### The First Rule
@@ -47,7 +74,7 @@
 - **Don't rewrite working code** - Make the smallest reasonable changes to get to the desired outcome. Don't embark on reimplementing features or systems from scratch without talking about it first - I usually prefer incremental improvements.
 - **Security is non-negotiable** - We never commit secrets or credentials to the repository. Always consider security in every choice, including treatment of personal user data (GDPR) and compliance with relevant regulations.
 - **Document issues as tasks** - If you notice something that should be fixed but is unrelated to your current task, document it as a new task to potentially do later instead of fixing it immediately.
-- **Keep documentation current** - When making significant changes to architecture, APIs, or core functionality, proactively update @SPECIFICATIONS/DEVELOPMENT.md to reflect the new reality. This documentation is critical for future development work.
+- **Keep documentation current** - When making significant changes to architecture, APIs, or core functionality, proactively update project documentation to reflect the new reality. Use SPECIFICATIONS/ for active work, REFERENCE/ for implementation details.
 - **Don't waste tokens** - Be succinct and concise.
 
 ### Decision Making Process
@@ -55,32 +82,54 @@
 2. **Scope Control**: Ask permission before major rewrites or scope changes
 3. **Technology Choices**: Justify new technology suggestions with clear benefits
 
-**Project documentation** refers to @README.md and @SPECIFICATIONS/OnePagerRequirements.md, and other project specific files in the @SPECIFICATIONS folder if there are any.
+**Project documentation** refers to project-specific CLAUDE.md, README.md, and organized files in SPECIFICATIONS/ (active work), SPECIFICATIONS/ARCHIVE/ (completed specs), and REFERENCE/ (implementation guides).
+
+## Documentation Organization Pattern
+
+Projects use a **lifecycle-based documentation structure** to minimize context usage while maintaining comprehensive documentation:
+
+### The Two CLAUDE.md Files
+- **`.claude/CLAUDE.md`** (this file) - General collaboration principles, technology preferences, and ways of working. Applies across all projects.
+- **`CLAUDE.md`** (project root) - **Navigation index only**. Lean, scannable quick reference with links to detailed docs. Project-specific context.
+
+Both files are loaded as system context with every request, so keeping them minimal saves tokens.
+
+### Documentation Folders
+
+**SPECIFICATIONS/** - Forward-looking plans for features being built
+- Active specs remain here during planning and implementation
+- Completed specs move to `SPECIFICATIONS/ARCHIVE/` when done
+- This folder should always be lean - only active/upcoming work
+
+**REFERENCE/** - How-it-works documentation for implemented features
+- Implementation guides, troubleshooting, technical debt tracking
+- Living documentation that evolves with the codebase
+- Loaded on-demand when needed for specific tasks
+
+### The Pattern
+1. **Planning** → Create spec in `SPECIFICATIONS/`
+2. **Building** → Spec stays active in `SPECIFICATIONS/`, implementation docs added to `REFERENCE/`
+3. **Completion** → Spec moves to `SPECIFICATIONS/ARCHIVE/`, implementation docs remain in `REFERENCE/`
+
+This creates clear separation between "what we're building" (SPECIFICATIONS) and "how it works" (REFERENCE).
+
+### Keeping CLAUDE.md Lean
+The project root `CLAUDE.md` should be a navigation index:
+- Quick project overview (what/why)
+- Essential architecture patterns
+- Key file locations
+- Clear headings with summaries
+- Links to detailed docs in `REFERENCE/` and `SPECIFICATIONS/`
+
+Extract detailed content into separate files: troubleshooting guides, setup instructions, testing strategies, etc. Reference them by link rather than including inline.
 
 ## Technology Stack and Choices
 
-### General Preferences
-- Free or low cost solutions are always preferred.
-- We prefer state-of-the-art solutions, but avoid experimental code or beta versions (unless nothing else is available).
-- Never use outdated or deprecated solutions.
-- If a suitable technology doesn't seem to be available, recommend running a deep research task first to understand the topic better and find potential alternatives.
-- For any selected framework, library, third party component, API or other service, read the manual to ensure you use the latest stable version and follow best practice usage and patterns.
+We prefer free/low-cost, state-of-the-art solutions. Always use latest stable versions and follow best practices.
 
-### Platform-Specific Preferences
-| Use Case | Preferred Technology | Reason |
-| --- | --- | --- |
-| CLI/Headless projects | Python | Simplicity and extensive libraries |
-| Web application projects | TypeScript (strict mode) | Industry standard type safety |
-| Web frontend framework | Next.js (React) with App Router | Server-side rendering and SEO |
-| Web frontend design | TailWind CSS for styling with shadcn/ui as component library | Great starting point |
-| Hosting of simple websites | CloudFlare | I already have an account |
-| Hosting of Next.js applications | Netlify | I already have an account |
-| Database and authentication | Supabase | I already have an account |
-| CDN / DNS / Basic data storage | Cloudflare KV | Key-value storage, then other CF options |
-| Email communication | Resend.com | I already have an account |
-| Authentication | Magic link systems | Simple and secure |
-| Payment processing | Stripe | Industry leader |
-| Web analytics | Vercel Analytics | Privacy focused alternative to Google Analytics |
+**Key preferences:** TypeScript for web apps, Next.js for frontend, Cloudflare for hosting, Supabase for database, Python for CLI tools.
+
+**Complete technology preferences:** [technology-preferences.md](./COLLABORATION/technology-preferences.md)
 
 ## Development Standards
 
@@ -103,24 +152,45 @@
 - Use evergreen naming conventions (avoid "new", "improved", "enhanced").
 
 ### Testing Strategy
+
 I believe in testing, but let's keep it practical and valuable rather than dogmatic.
 
-**For new features**, I prefer test-driven development when it makes sense:
-- Write a simple test that shows what we want to accomplish
-- Build just enough code to make it pass
-- Clean up the code while keeping tests green
-- This helps us think through the problem and catches issues early
+**Tests as Development Guardrails (inspired by **[**OpenAI's Harness Engineering**](https://openai.com/index/harness-engineering/)**):**
 
-**Test coverage should be comprehensive but thoughtful:**
-- **Unit tests**: Do individual functions work correctly?
-- **Integration tests**: Do the pieces work together properly?
-- **End-to-end tests**: Does the whole user workflow actually work?
+Tests serve dual purposes:
+1. **Validation** - Verify code works correctly
+2. **Directional Context** - Guide AI agents on what to build and how to build it
 
-**Practical testing guidelines:**
-- Pay attention to test output - failing tests are trying to tell us something important
-- In end-to-end tests, prefer real data over mocks when possible (but don't break the bank on API calls)
-- When working on existing code, make sure we don't break the existing test coverage
-- If you're unsure about what to test, ask - I'd rather discuss testing strategy than have you guess
+When you make changes, tests should immediately signal if you're breaking existing functionality and provide clear context about what each component should do.
+
+**Test-Driven Development workflow:**
+1. Write tests first that describe expected behavior
+2. Implement minimum code to make tests pass
+3. Refactor while keeping tests green
+4. Aim for 100% coverage of new code (every line should have clear purpose)
+
+**Coverage philosophy:**
+- Untested code is unclear about its purpose and constraints
+- If we can't write a test for it, maybe we don't need it
+- Coverage gaps indicate missing specifications
+- Target high coverage (95%+ lines/functions/statements, 90%+ branches)
+
+**Test organization:**
+- **Unit tests**: Individual functions work correctly
+- **Integration tests**: Components work together properly
+- **End-to-end tests**: Complete user workflows actually work
+- Test files mirror source structure for easy navigation
+
+**Practical guidelines:**
+- Pay attention to test output - failing tests are trying to tell you something important
+- Prefer real data over mocks when possible (but be pragmatic about API costs)
+- When working on existing code, maintain or improve test coverage
+- If unsure what to test, ask - I'd rather discuss strategy than have you guess
+
+**Pre-commit validation:**
+- Run tests before committing
+- Type-check before committing
+- Catch issues early, before they hit CI/CD
 
 Remember: tests should give us confidence to make changes, not slow us down with bureaucracy.
 
@@ -211,37 +281,14 @@ The goal is sustainable progress, not perfect process.
 
 ## Documentation Standards
 
-### Project Knowledge Documentation
-- We value documentation. The main purpose of documentation is to be able to pick up a project later and quickly understand how everything hangs together and how to use it and / or extend it.
-- We also value documentation as a way to communicate our knowledge and expertise to others. This helps to ensure that our work is not lost when we move on to other projects.
-- Preferred output format for general documentation is Markdown (.md).
-- Place any documentation files you create except README.md in the SPECIFICATIONS folder.
-- Always maintain a README.md in the project root folder.
-- To maintain high level project documentation about desired outcome, project phasing, requirements etc always use the PRD SPECIFICATIONS/OnePagerRequirements.md unless something else is explicitly defined.
+We value documentation - it enables picking up projects later and communicating knowledge to others.
 
-### Documentation Process
-These are the most important areas of analysis when creating documentation:
-1. Code structure and purpose
-2. Inputs, outputs, and behavior
-3. User interaction flows
-4. Edge cases and error handling
-5. Integration points with other components/systems
+**Key principles:**
+- Documentation should explain how everything works and how to use/extend it
+- Preferred format: Markdown (.md)
+- Always maintain README.md in project root
+- Use lifecycle-based structure: SPECIFICATIONS/ (active), ARCHIVE/ (completed), REFERENCE/ (implementation)
+- Keep documentation current alongside code changes
+- Focus on clarity, completeness, and actionability
 
-Process for creating documentation:
-1. Analyze the target code thoroughly
-2. Identify all public interfaces
-3. Document expected behaviors
-4. Include code examples
-5. Add diagrams where helpful
-6. Follow project documentation standards
-7. Ensure clarity, completeness, and actionability
-
-### Documentation Template
-Essential headings for technical documentation:
-- **Overview**: Brief 1-2 paragraph overview explaining purpose and value
-- **Usage**: How to use this component/feature with examples
-- **API/Parameters**: Detailed specification of interfaces
-- **Behavior**: Expected behavior in different scenarios
-- **Error Handling**: How errors are caught, handled, and reported
-- **Testing**: How to test this component/feature
-- **Related Components**: Links to related documentation
+**Detailed templates and process:** [documentation-standards.md](./COLLABORATION/documentation-standards.md)

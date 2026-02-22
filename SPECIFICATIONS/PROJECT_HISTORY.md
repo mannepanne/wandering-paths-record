@@ -95,6 +95,10 @@ The following planning and specification documents have been moved to `SPECIFICA
 | `phase5_professional_staging_setup.md` | Staging environment plan (not implemented - preserved for future reference) |
 | `geocoding_api_setup.md` | Short reference for Google Geocoding API configuration |
 | `DOCUMENTATION_MAINTENANCE.md` | Guidelines for keeping documentation current |
+| `category_system_plan.md` | Complete implementation plan for faceted category system (cuisine, style, venue) |
+| `extraction_system_requirements.md` | AI-powered restaurant extraction system with Claude API (fully implemented) |
+| `DEPLOYMENT-NOTES.md` | Asset reference synchronization and GitHub Actions deployment automation |
+| `GITHUB-ACTIONS-SETUP.md` | Setup guide for automated CloudFlare Workers deployment via GitHub Actions |
 
 ### Accessing Archived Documents
 

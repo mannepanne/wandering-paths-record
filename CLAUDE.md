@@ -28,7 +28,7 @@ npx wrangler deploy   # Deploy to CloudFlare Workers
 
 ## Deployment
 
-Model versions are centralized in `src/config/claude.ts`. When Anthropic deprecates models, update there first. See `SPECIFICATIONS/claude_model_updates.md` for instructions.
+Model versions are centralized in `src/config/claude.ts`. When Anthropic deprecates models, update there first. See `REFERENCE/claude_model_updates.md` for instructions.
 - **Platform**: CloudFlare Workers (NOT Pages)
 - **Custom Domain**: restaurants.hultberg.org
 - **CI/CD**: GitHub Actions auto-deploys on push to `main`
@@ -130,6 +130,7 @@ The build process auto-syncs Worker asset references via `scripts/update-worker-
 - `REFERENCE/supabase-setup.md` - Database schema, auth, RLS policies
 - `REFERENCE/ai-extraction-guide.md` - How Claude extraction works
 - `REFERENCE/geo-services-guide.md` - Maps, geocoding, location search
+- `REFERENCE/claude_model_updates.md` - Updating Claude API model versions
 - `REFERENCE/troubleshooting.md` - Common issues and solutions
 - `REFERENCE/technical-debt.md` - Known limitations and future work
 - `REFERENCE/testing-strategy.md` - Testing approach (not yet implemented)
@@ -140,6 +141,5 @@ The build process auto-syncs Worker asset references via `scripts/update-worker-
 **Planning docs** - Active work and project history:
 
 - `SPECIFICATIONS/technical_specifications.md` - Overall architecture
-- `SPECIFICATIONS/claude_model_updates.md` - Model update process
 - `SPECIFICATIONS/PROJECT_HISTORY.md` - Project evolution
 - `SPECIFICATIONS/ARCHIVE/` - Completed specifications

@@ -73,6 +73,7 @@ You'll still maintain all core collaboration principles (Swedish directness, no 
 - **Keep it simple** - We prefer simple, clean, maintainable solutions over clever or complex ones. Follow the KISS principle and avoid over-engineering when a simple solution is available.
 - **Don't rewrite working code** - Make the smallest reasonable changes to get to the desired outcome. Don't embark on reimplementing features or systems from scratch without talking about it first - I usually prefer incremental improvements.
 - **Security is non-negotiable** - We never commit secrets or credentials to the repository. Always consider security in every choice, including treatment of personal user data (GDPR) and compliance with relevant regulations.
+- **Tests are not optional** - All new features and bug fixes require tests before the work is considered complete. Write tests alongside implementation (TDD when practical), not as an afterthought. Tests serve dual purposes: validation and directional context for future work.
 - **Document issues as tasks** - If you notice something that should be fixed but is unrelated to your current task, document it as a new task to potentially do later instead of fixing it immediately.
 - **Keep documentation current** - When making significant changes to architecture, APIs, or core functionality, proactively update project documentation to reflect the new reality. Use SPECIFICATIONS/ for active work, REFERENCE/ for implementation details.
 - **Don't waste tokens** - Be succinct and concise.
@@ -135,11 +136,32 @@ We prefer free/low-cost, state-of-the-art solutions. Always use latest stable ve
 
 ### Writing Code
 - **Follow the rules**: When submitting work, verify that your work is compliant with all our rules. (See also The First Rule!)
+- **Write tests with code**: For any new feature or significant change, write tests alongside implementation. Tests are part of the definition of "done", not a follow-up task.
 - **Only build what is required**: Follow the YAGNI principle (You Aren't Gonna Need It).
 - **Prepare for the future**: While we want simple solutions that are fit for purpose and not more, design with flexibility and extensibility in mind. Remember that it's usually possible to add more extensibility later, but you can never take it away without introducing breaking changes.
 - **Use consistent style, always**: When modifying code, match the style and formatting of surrounding code, even if it differs from standard style guides. Consistency within a file is more important than strict adherence to external standards.
 - **Stay focused**: Don't make code changes that aren't directly related to the task you're currently assigned.
 - **Stay relevant**: When writing comments, avoid referring to temporal context about refactors or recent changes. Comments should be evergreen and describe the code as it is, not how it evolved or was recently changed.
+
+### Feature Development Checklist
+
+Before marking any feature or fix as complete:
+- [ ] Create feature branch (not working on main)
+- [ ] Implementation code written and working
+- [ ] Tests written (unit, integration, or e2e as appropriate)
+- [ ] Tests passing locally
+- [ ] Type checking passes
+- [ ] Documentation updated (if architecture/API changes)
+- [ ] Code committed with descriptive message
+- [ ] Changes pushed to remote branch
+- [ ] Pull request created for review
+- [ ] PR approved and merged to main
+
+**Stop and ask for clarification if:**
+- You're unsure what level of testing is needed
+- Tests would be difficult to write (might indicate design issue)
+- Feature seems complete but tests haven't been written
+- Unsure whether to merge directly or wait for approval
 
 ### Code Standards and Comments
 - All code files should start with:
@@ -153,7 +175,7 @@ We prefer free/low-cost, state-of-the-art solutions. Always use latest stable ve
 
 ### Testing Strategy
 
-I believe in testing, but let's keep it practical and valuable rather than dogmatic.
+Testing is mandatory for all production code. We aim for practical, high-value test coverage that provides both validation and directional context.
 
 **Tests as Development Guardrails (inspired by **[**OpenAI's Harness Engineering**](https://openai.com/index/harness-engineering/)**):**
 

@@ -2,6 +2,18 @@
 
 This directory contains SQL migration files for the Wandering Paths restaurant database.
 
+## Migration History
+
+**Required migrations (must exist before running 003):**
+- `001_add_public_review_fields.sql` - Public review enrichment fields
+- `002_remove_category_check_constraints.sql` - Category flexibility
+- `phase4_1_personal_appreciation_and_status_rename.sql` - Appreciation scale
+
+**Visit Logging Feature (Phase 1):**
+- `003_create_restaurant_visits_table.sql` - Table, RLS, indexes, trigger
+- `004_migrate_existing_ratings.sql` - Data migration from existing ratings
+- `005_rollback_visit_logging.sql` - Rollback script
+
 ## Migration Files
 
 ### Visit Logging Feature (Phase 1)

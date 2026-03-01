@@ -52,10 +52,10 @@ DROP TABLE IF EXISTS restaurant_visits CASCADE;
 --   WHERE table_name = 'restaurant_visits'
 -- ) AS table_exists;
 
--- Verify trigger is gone
+-- Verify trigger is gone (check by trigger name instead of table)
 -- SELECT COUNT(*) AS trigger_count
--- FROM information_schema.triggers
--- WHERE event_object_table = 'restaurant_visits';
+-- FROM pg_trigger
+-- WHERE tgname = 'trigger_update_cached_rating';
 
 -- Verify function is gone
 -- SELECT COUNT(*) AS function_count

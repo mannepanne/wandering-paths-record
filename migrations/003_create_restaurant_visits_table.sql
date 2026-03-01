@@ -7,7 +7,7 @@
 -- 1. Create ENUM type for rating (reuse if exists)
 -- ============================================================================
 DO $$ BEGIN
-  CREATE TYPE personal_appreciation AS ENUM ('avoid', 'fine', 'good', 'great');
+  CREATE TYPE personal_appreciation AS ENUM ('unknown', 'avoid', 'fine', 'good', 'great');
 EXCEPTION
   WHEN duplicate_object THEN null;
 END $$;
@@ -26,10 +26,6 @@ CREATE TABLE restaurant_visits (
   is_migrated_placeholder BOOLEAN DEFAULT FALSE, -- True for migrated historical data
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-
-  -- Foreign key constraints
-  CONSTRAINT fk_restaurant FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE,
-  CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE,
 
   -- Input validation constraints
   CONSTRAINT experience_notes_length CHECK (char_length(experience_notes) <= 2000),
@@ -82,19 +78,28 @@ CREATE POLICY "Users can delete own visits"
 -- ============================================================================
 -- This trigger keeps restaurants.personal_appreciation in sync with latest visit
 -- Prevents N+1 query problem by maintaining cached rating field
+--
+-- NOTE: Single-user architecture assumption
+-- This trigger updates the SINGLE restaurants.personal_appreciation field
+-- In a multi-user system, each user would need their own cached rating
+-- (e.g., separate user_restaurant_ratings table or JSONB column with user_id keys)
 
 CREATE OR REPLACE FUNCTION update_restaurant_cached_rating()
 RETURNS TRIGGER AS $$
 BEGIN
   -- Update the restaurant's cached personal_appreciation to latest visit rating
+  -- Falls back to 'unknown' when no visits exist (e.g., after deleting last visit)
   UPDATE restaurants
-  SET personal_appreciation = (
-    SELECT rating
-    FROM restaurant_visits
-    WHERE restaurant_id = COALESCE(NEW.restaurant_id, OLD.restaurant_id)
-      AND user_id = COALESCE(NEW.user_id, OLD.user_id)
-    ORDER BY visit_date DESC, created_at DESC
-    LIMIT 1
+  SET personal_appreciation = COALESCE(
+    (
+      SELECT rating
+      FROM restaurant_visits
+      WHERE restaurant_id = COALESCE(NEW.restaurant_id, OLD.restaurant_id)
+        AND user_id = COALESCE(NEW.user_id, OLD.user_id)
+      ORDER BY visit_date DESC, created_at DESC
+      LIMIT 1
+    ),
+    'unknown'::personal_appreciation  -- Fallback when no visits exist
   ),
   updated_at = NOW()
   WHERE id = COALESCE(NEW.restaurant_id, OLD.restaurant_id);

@@ -57,7 +57,9 @@ BEGIN
     NULL AS experience_notes,
     NULL AS company_notes,
     TRUE AS is_migrated_placeholder,
-    r.updated_at AS created_at,  -- Use restaurant's updated_at as visit creation time
+    -- NOTE: Using restaurant.updated_at as best approximation of when rating was set
+    -- This may not reflect actual rating timestamp if restaurant was edited after rating
+    r.updated_at AS created_at,
     r.updated_at AS updated_at
   FROM restaurants r
   WHERE

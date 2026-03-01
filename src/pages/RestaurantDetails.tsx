@@ -446,79 +446,123 @@ const RestaurantDetails = () => {
             {restaurant.locations && restaurant.locations.length === 1 ? (
               /* Single Location Layout */
               <>
-                {/* 3-Column Grid: Description/Smart Review (2/3 when logged in, full width when logged out) + Visit History (1/3, only when logged in) */}
-                <div className={`grid grid-cols-1 ${user ? 'lg:grid-cols-3' : ''} gap-6`}>
-                  {/* Left: Description + Smart Review Summary (stacked, 2/3 width when logged in, full width when logged out) */}
-                  <div className={`${user ? 'lg:col-span-2' : ''} space-y-6`}>
-                    {/* Description */}
-                    {restaurant.description && (
-                      <div>
-                        <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Description</h3>
-                        <p className="text-muted-foreground leading-relaxed">{restaurant.description}</p>
-                      </div>
-                    )}
+                {/* 3-Column Grid with Source field */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Description - Always spans 2 columns */}
+                  {restaurant.description && (
+                    <div className="lg:col-span-2">
+                      <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Description</h3>
+                      <p className="text-muted-foreground leading-relaxed">{restaurant.description}</p>
+                    </div>
+                  )}
 
-                    {/* Smart Review Summary */}
-                    {restaurant.public_review_summary && (
-                      <div>
-                        <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Smart Review Summary</h3>
-                        <p className="text-muted-foreground leading-relaxed mb-4">{restaurant.public_review_summary}</p>
-                        {/* Personal and Public Ratings row */}
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-2 text-sm mb-4">
-                          {shouldShowAppreciationBadge ? (
-                            <div className="flex items-center gap-2">
-                              <Tooltip delayDuration={300}>
-                                <TooltipTrigger asChild>
-                                  <Badge className={`${appreciationLevel.badgeStyle} font-mono text-xs border cursor-help`}>
-                                    <span className="mr-1">{appreciationLevel.icon}</span>
-                                    {appreciationLevel.label}
-                                  </Badge>
-                                </TooltipTrigger>
-                                <TooltipContent side="top">
-                                  <p>{getTooltipText(restaurant?.personal_appreciation)}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                              <span className="text-muted-foreground text-xs">(says me)</span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <Tooltip delayDuration={300}>
-                                <TooltipTrigger asChild>
-                                  <Badge className="bg-gray-100 text-gray-600 border-gray-200 font-mono text-xs border cursor-help">
-                                    <span className="mr-1">?</span>
-                                    Schrödinger's cat...
-                                  </Badge>
-                                </TooltipTrigger>
-                                <TooltipContent side="top">
-                                  <p>{getTooltipText(restaurant?.personal_appreciation)}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </div>
-                          )}
-                          {restaurant.public_rating && (
-                            <div
-                              className="flex items-center gap-1 cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
-                              onClick={() => window.open(getGoogleMapsUrl(restaurant, restaurant.locations?.[0]), '_blank')}
-                            >
-                              <span className="font-mono">Public:</span>
-                              <Star className="w-4 h-4 fill-burnt-orange text-burnt-orange" />
-                              <span className="font-mono">
-                                {restaurant.public_rating}/5
-                                {restaurant.public_rating_count && (
-                                  <span className="ml-1">based on {restaurant.public_rating_count} ratings</span>
-                                )}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Right: Visit History (1/3 width, spans height of Description + Smart Review) - Only when logged in */}
-                  {user && (
-                    <div className="lg:col-span-1">
+                  {/* Source OR Visit History Row 1 - Right column */}
+                  {user ? (
+                    /* When logged in: Visit History starts here (spans 2 rows) */
+                    <div className="lg:row-span-2">
                       <VisitHistory restaurantId={restaurant.id} />
+                    </div>
+                  ) : (
+                    /* When logged out: Source field */
+                    restaurant.source && (
+                      <div>
+                        <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Source</h3>
+                        <p className="text-muted-foreground leading-relaxed">
+                          {restaurant.source}
+                          {restaurant.source_url && (
+                            <>
+                              {' '}
+                              <a
+                                href={restaurant.source_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-burnt-orange hover:text-burnt-orange/80 hover:underline transition-colors"
+                              >
+                                (more...)
+                              </a>
+                            </>
+                          )}
+                        </p>
+                      </div>
+                    )
+                  )}
+
+                  {/* Smart Review Summary - 1 column when logged in, 3 columns when logged out */}
+                  {restaurant.public_review_summary && (
+                    <div className={user ? 'lg:col-span-1' : 'lg:col-span-3'}>
+                      <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Smart Review Summary</h3>
+                      <p className="text-muted-foreground leading-relaxed mb-4">{restaurant.public_review_summary}</p>
+                      {/* Personal and Public Ratings row */}
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-2 text-sm mb-4">
+                        {shouldShowAppreciationBadge ? (
+                          <div className="flex items-center gap-2">
+                            <Tooltip delayDuration={300}>
+                              <TooltipTrigger asChild>
+                                <Badge className={`${appreciationLevel.badgeStyle} font-mono text-xs border cursor-help`}>
+                                  <span className="mr-1">{appreciationLevel.icon}</span>
+                                  {appreciationLevel.label}
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent side="top">
+                                <p>{getTooltipText(restaurant?.personal_appreciation)}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <span className="text-muted-foreground text-xs">(says me)</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <Tooltip delayDuration={300}>
+                              <TooltipTrigger asChild>
+                                <Badge className="bg-gray-100 text-gray-600 border-gray-200 font-mono text-xs border cursor-help">
+                                  <span className="mr-1">?</span>
+                                  Schrödinger's cat...
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent side="top">
+                                <p>{getTooltipText(restaurant?.personal_appreciation)}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
+                        )}
+                        {restaurant.public_rating && (
+                          <div
+                            className="flex items-center gap-1 cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
+                            onClick={() => window.open(getGoogleMapsUrl(restaurant, restaurant.locations?.[0]), '_blank')}
+                          >
+                            <span className="font-mono">Public:</span>
+                            <Star className="w-4 h-4 fill-burnt-orange text-burnt-orange" />
+                            <span className="font-mono">
+                              {restaurant.public_rating}/5
+                              {restaurant.public_rating_count && (
+                                <span className="ml-1">based on {restaurant.public_rating_count} ratings</span>
+                              )}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Source - Only when logged in (appears next to Smart Review) */}
+                  {user && restaurant.source && (
+                    <div className="lg:col-span-1">
+                      <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Source</h3>
+                      <p className="text-muted-foreground leading-relaxed">
+                        {restaurant.source}
+                        {restaurant.source_url && (
+                          <>
+                            {' '}
+                            <a
+                              href={restaurant.source_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-burnt-orange hover:text-burnt-orange/80 hover:underline transition-colors"
+                            >
+                              (more...)
+                            </a>
+                          </>
+                        )}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -588,88 +632,25 @@ const RestaurantDetails = () => {
             ) : (
               /* Multi-Location Layout */
               <>
-                {/* 3-Column Grid: Description/Smart Review (2/3 when logged in, full width when logged out) + Visit History (1/3, only when logged in) */}
-                <div className={`grid grid-cols-1 ${user ? 'lg:grid-cols-3' : ''} gap-6`}>
-                  {/* Left: Description + Smart Review Summary (stacked, 2/3 width when logged in, full width when logged out) */}
-                  <div className={`${user ? 'lg:col-span-2' : ''} space-y-6`}>
-                    {/* Description */}
-                    {restaurant.description && (
-                      <div>
-                        <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Description</h3>
-                        <p className="text-muted-foreground leading-relaxed">{restaurant.description}</p>
-                      </div>
-                    )}
-
-                    {/* Smart Review Summary */}
-                    {restaurant.public_review_summary && (
-                      <div>
-                        <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Smart Review Summary</h3>
-                        <p className="text-muted-foreground leading-relaxed mb-4">{restaurant.public_review_summary}</p>
-                        {/* Personal and Public Ratings row */}
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-2 text-sm mb-4">
-                          {shouldShowAppreciationBadge ? (
-                            <div className="flex items-center gap-2">
-                              <Tooltip delayDuration={300}>
-                                <TooltipTrigger asChild>
-                                  <Badge className={`${appreciationLevel.badgeStyle} font-mono text-xs border cursor-help`}>
-                                    <span className="mr-1">{appreciationLevel.icon}</span>
-                                    {appreciationLevel.label}
-                                  </Badge>
-                                </TooltipTrigger>
-                                <TooltipContent side="top">
-                                  <p>{getTooltipText(restaurant?.personal_appreciation)}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                              <span className="text-muted-foreground text-xs">(says me)</span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <Tooltip delayDuration={300}>
-                                <TooltipTrigger asChild>
-                                  <Badge className="bg-gray-100 text-gray-600 border-gray-200 font-mono text-xs border cursor-help">
-                                    <span className="mr-1">?</span>
-                                    Schrödinger's cat...
-                                  </Badge>
-                                </TooltipTrigger>
-                                <TooltipContent side="top">
-                                  <p>{getTooltipText(restaurant?.personal_appreciation)}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </div>
-                          )}
-                          {restaurant.public_rating && (
-                            <div
-                              className="flex items-center gap-1 cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
-                              onClick={() => window.open(getGoogleMapsUrl(restaurant, restaurant.locations?.[0]), '_blank')}
-                            >
-                              <span className="font-mono">Public:</span>
-                              <Star className="w-4 h-4 fill-burnt-orange text-burnt-orange" />
-                              <span className="font-mono">
-                                {restaurant.public_rating}/5
-                                {restaurant.public_rating_count && (
-                                  <span className="ml-1">based on {restaurant.public_rating_count} ratings</span>
-                                )}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Right: Visit History (1/3 width, spans height of Description + Smart Review) - Only when logged in */}
-                  {user && (
-                    <div className="lg:col-span-1">
-                      <VisitHistory restaurantId={restaurant.id} />
+                {/* 3-Column Grid with Source field */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Description - Always spans 2 columns */}
+                  {restaurant.description && (
+                    <div className="lg:col-span-2">
+                      <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Description</h3>
+                      <p className="text-muted-foreground leading-relaxed">{restaurant.description}</p>
                     </div>
                   )}
-                </div>
 
-                {/* Three Column Layout: Source + Atmosphere + Dietary */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {/* Column 1: Source */}
-                  <div>
-                    {restaurant.source && (
+                  {/* Source OR Visit History Row 1 - Right column */}
+                  {user ? (
+                    /* When logged in: Visit History starts here (spans 2 rows) */
+                    <div className="lg:row-span-2">
+                      <VisitHistory restaurantId={restaurant.id} />
+                    </div>
+                  ) : (
+                    /* When logged out: Source field */
+                    restaurant.source && (
                       <div>
                         <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Source</h3>
                         <p className="text-muted-foreground leading-relaxed">
@@ -689,10 +670,92 @@ const RestaurantDetails = () => {
                           )}
                         </p>
                       </div>
-                    )}
-                  </div>
+                    )
+                  )}
 
-                  {/* Column 2: Atmosphere */}
+                  {/* Smart Review Summary - 1 column when logged in, 3 columns when logged out */}
+                  {restaurant.public_review_summary && (
+                    <div className={user ? 'lg:col-span-1' : 'lg:col-span-3'}>
+                      <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Smart Review Summary</h3>
+                      <p className="text-muted-foreground leading-relaxed mb-4">{restaurant.public_review_summary}</p>
+                      {/* Personal and Public Ratings row */}
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-2 text-sm mb-4">
+                        {shouldShowAppreciationBadge ? (
+                          <div className="flex items-center gap-2">
+                            <Tooltip delayDuration={300}>
+                              <TooltipTrigger asChild>
+                                <Badge className={`${appreciationLevel.badgeStyle} font-mono text-xs border cursor-help`}>
+                                  <span className="mr-1">{appreciationLevel.icon}</span>
+                                  {appreciationLevel.label}
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent side="top">
+                                <p>{getTooltipText(restaurant?.personal_appreciation)}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <span className="text-muted-foreground text-xs">(says me)</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <Tooltip delayDuration={300}>
+                              <TooltipTrigger asChild>
+                                <Badge className="bg-gray-100 text-gray-600 border-gray-200 font-mono text-xs border cursor-help">
+                                  <span className="mr-1">?</span>
+                                  Schrödinger's cat...
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent side="top">
+                                <p>{getTooltipText(restaurant?.personal_appreciation)}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
+                        )}
+                        {restaurant.public_rating && (
+                          <div
+                            className="flex items-center gap-1 cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
+                            onClick={() => window.open(getGoogleMapsUrl(restaurant, restaurant.locations?.[0]), '_blank')}
+                          >
+                            <span className="font-mono">Public:</span>
+                            <Star className="w-4 h-4 fill-burnt-orange text-burnt-orange" />
+                            <span className="font-mono">
+                              {restaurant.public_rating}/5
+                              {restaurant.public_rating_count && (
+                                <span className="ml-1">based on {restaurant.public_rating_count} ratings</span>
+                              )}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Source - Only when logged in (appears next to Smart Review) */}
+                  {user && restaurant.source && (
+                    <div className="lg:col-span-1">
+                      <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Source</h3>
+                      <p className="text-muted-foreground leading-relaxed">
+                        {restaurant.source}
+                        {restaurant.source_url && (
+                          <>
+                            {' '}
+                            <a
+                              href={restaurant.source_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-burnt-orange hover:text-burnt-orange/80 hover:underline transition-colors"
+                            >
+                              (more...)
+                            </a>
+                          </>
+                        )}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Two Column Layout: Atmosphere + Dietary (Source moved up) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Column 1: Atmosphere */}
                   <div>
                     {restaurant.atmosphere && (
                       <div>
@@ -709,7 +772,7 @@ const RestaurantDetails = () => {
                     )}
                   </div>
 
-                  {/* Column 3: Dietary */}
+                  {/* Column 2: Dietary */}
                   <div>
                     {restaurant.dietary_options && (
                       <div>

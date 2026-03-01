@@ -12,14 +12,18 @@ import { Restaurant, RestaurantAddress, APPRECIATION_LEVELS, PersonalAppreciatio
 import { useAuth } from "@/contexts/AuthContext";
 import { AppreciationPicker } from "@/components/AppreciationPicker";
 import { VisitHistory } from "@/components/VisitHistory";
+import { VisitModal } from "@/components/VisitModal";
+import { useToast } from "@/hooks/use-toast";
 
 const RestaurantDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [showAllDishes, setShowAllDishes] = useState(false);
   const [showAppreciationPicker, setShowAppreciationPicker] = useState(false);
+  const [showVisitModal, setShowVisitModal] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<RestaurantStatus | null>(null);
 
   // Fetch restaurant with all location details
@@ -135,10 +139,10 @@ const RestaurantDetails = () => {
 
     const newStatus: RestaurantStatus = restaurant.status === 'visited' ? 'to-visit' : 'visited';
 
-    // Smart behavior: When marking as visited, show appreciation picker
+    // Smart behavior: When marking as visited, show visit modal to log the visit
     if (newStatus === 'visited') {
       setPendingStatus(newStatus);
-      setShowAppreciationPicker(true);
+      setShowVisitModal(true);
     } else {
       // When toggling back to to-visit, reset appreciation to unknown
       updateStatusMutation.mutate({
@@ -146,9 +150,46 @@ const RestaurantDetails = () => {
         status: newStatus,
         personal_appreciation: 'unknown'
       });
+      toast({
+        title: "Status updated",
+        description: `${restaurant.name} marked as "To Visit"`,
+      });
     }
   };
 
+  // Handle quick rate button - opens visit modal
+  const handleQuickRate = () => {
+    setShowVisitModal(true);
+  };
+
+  // Handle successful visit creation
+  const handleVisitSuccess = () => {
+    // If there was a pending status change (marking as visited), apply it
+    if (pendingStatus && restaurant) {
+      updateStatusMutation.mutate({
+        id: restaurant.id,
+        status: pendingStatus,
+      });
+      setPendingStatus(null);
+    }
+
+    // Refresh restaurant data and visit history
+    queryClient.invalidateQueries({ queryKey: ["restaurant", id] });
+    queryClient.invalidateQueries({ queryKey: ["restaurants"] });
+
+    toast({
+      title: "Visit logged!",
+      description: "Your visit has been saved successfully.",
+    });
+  };
+
+  // Handle visit modal close
+  const handleVisitModalClose = () => {
+    setShowVisitModal(false);
+    setPendingStatus(null);
+  };
+
+  // Keep old AppreciationPicker handlers for backward compatibility (may remove in future)
   // Handle appreciation selection from modal
   const handleAppreciationSelect = (appreciation: PersonalAppreciation) => {
     if (!restaurant) return;
@@ -173,11 +214,6 @@ const RestaurantDetails = () => {
       updateStatusMutation.mutate({ id: restaurant.id, status: pendingStatus }); // No appreciation provided
     }
     setPendingStatus(null);
-  };
-
-  // Handle quick rate button
-  const handleQuickRate = () => {
-    setShowAppreciationPicker(true);
   };
 
   // Handle appreciation picker close
@@ -799,7 +835,7 @@ const RestaurantDetails = () => {
         </Card>
       </div>
 
-      {/* AppreciationPicker Modal */}
+      {/* AppreciationPicker Modal - Legacy, keeping for backward compatibility */}
       <AppreciationPicker
         isOpen={showAppreciationPicker}
         onClose={handleAppreciationClose}
@@ -808,6 +844,17 @@ const RestaurantDetails = () => {
         restaurantName={restaurant?.name || 'Restaurant'}
         title={pendingStatus === 'visited' ? "How was your experience?" : "How would you rate this restaurant?"}
       />
+
+      {/* Visit Modal - Add/Edit Visits */}
+      {restaurant && (
+        <VisitModal
+          isOpen={showVisitModal}
+          onClose={handleVisitModalClose}
+          onSuccess={handleVisitSuccess}
+          restaurantId={restaurant.id}
+          restaurantName={restaurant.name}
+        />
+      )}
     </div>
   );
 };

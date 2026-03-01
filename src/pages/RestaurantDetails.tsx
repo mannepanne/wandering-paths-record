@@ -383,62 +383,68 @@ const RestaurantDetails = () => {
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         <Card className="border-2 border-border bg-card">
           <CardHeader className="pb-4">
-            {/* Restaurant Header - Full Width */}
-            <div className="flex items-start justify-between">
-              <div className="flex-1 space-y-3">
-                <CardTitle className="text-2xl font-geo font-semibold text-foreground">
-                  {restaurant.name}
-                </CardTitle>
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <div className="flex items-center gap-3 flex-wrap">
-                    {/* Cuisine: prefer new facets, fallback to legacy */}
-                    {(restaurant.cuisine_primary || restaurant.cuisine) && (
-                      <Badge className="bg-burnt-orange text-white font-mono text-sm">
-                        {restaurant.cuisine_primary || restaurant.cuisine}
-                        {restaurant.cuisine_secondary && ` / ${restaurant.cuisine_secondary}`}
-                      </Badge>
-                    )}
-                    {restaurant.style && (
-                      <Badge className="bg-olive-green text-white font-mono text-sm">
-                        {restaurant.style}
-                      </Badge>
-                    )}
-                    {restaurant.venue && (
-                      <Badge className="bg-charcoal text-white font-mono text-sm">
-                        {restaurant.venue}
-                      </Badge>
-                    )}
-                    {restaurant.price_range && (
-                      <Badge className={`${getPriceColor(restaurant.price_range)} font-mono text-sm`}>
-                        {restaurant.price_range}
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-6">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <MapPin className="w-4 h-4" />
-                      <a
-                        href={getGoogleMapsUrl(restaurant, restaurant.locations?.[0], true)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:text-foreground transition-colors"
-                      >
-                        {getHeaderLocationDisplay(restaurant)}
-                      </a>
-                    </div>
-                    {restaurant.website && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => window.open(restaurant.website, '_blank')}
-                        className="gap-2 text-sm"
-                      >
-                        <Globe className="w-4 h-4" />
-                        Website
-                      </Button>
-                    )}
-                  </div>
+            {/* Row 1: Restaurant Name + Location/Website */}
+            <div className="flex items-start justify-between gap-4 mb-3">
+              <CardTitle className="text-2xl font-geo font-semibold text-foreground">
+                {restaurant.name}
+              </CardTitle>
+              <div className="flex items-center gap-6 flex-shrink-0">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <MapPin className="w-4 h-4" />
+                  <a
+                    href={getGoogleMapsUrl(restaurant, restaurant.locations?.[0], true)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-foreground transition-colors"
+                  >
+                    {getHeaderLocationDisplay(restaurant)}
+                  </a>
                 </div>
+                {restaurant.website && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => window.open(restaurant.website, '_blank')}
+                    className="gap-2 text-sm"
+                  >
+                    <Globe className="w-4 h-4" />
+                    Website
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* Row 2: Badges + Visit History */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Left: Badges */}
+              <div className="lg:col-span-2 flex items-start gap-3 flex-wrap">
+                {/* Cuisine: prefer new facets, fallback to legacy */}
+                {(restaurant.cuisine_primary || restaurant.cuisine) && (
+                  <Badge className="bg-burnt-orange text-white font-mono text-sm">
+                    {restaurant.cuisine_primary || restaurant.cuisine}
+                    {restaurant.cuisine_secondary && ` / ${restaurant.cuisine_secondary}`}
+                  </Badge>
+                )}
+                {restaurant.style && (
+                  <Badge className="bg-olive-green text-white font-mono text-sm">
+                    {restaurant.style}
+                  </Badge>
+                )}
+                {restaurant.venue && (
+                  <Badge className="bg-charcoal text-white font-mono text-sm">
+                    {restaurant.venue}
+                  </Badge>
+                )}
+                {restaurant.price_range && (
+                  <Badge className={`${getPriceColor(restaurant.price_range)} font-mono text-sm`}>
+                    {restaurant.price_range}
+                  </Badge>
+                )}
+              </div>
+
+              {/* Right: Visit History */}
+              <div className="lg:col-span-1">
+                <VisitHistory restaurantId={restaurant.id} />
               </div>
             </div>
           </CardHeader>
@@ -448,102 +454,95 @@ const RestaurantDetails = () => {
             {restaurant.locations && restaurant.locations.length === 1 ? (
               /* Single Location Layout: Description full-width top, then 3 columns with Location + Dietary/Must Try + Atmosphere */
               <div className="space-y-8">
-                {/* Two Column Layout: Description/Review Summary (2/3) + Visit History (1/3) */}
+                {/* Description and Source - Responsive Layout */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Left Column: Description, Source, and Smart Review Summary */}
-                  <div className="lg:col-span-2 space-y-6">
-                    {/* Description and Source */}
-                    {restaurant.description && (
-                      <div>
-                        <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Description</h3>
-                        <p className="text-muted-foreground leading-relaxed">{restaurant.description}</p>
-                      </div>
-                    )}
+                  {/* Description - conditional width based on source presence */}
+                  {restaurant.description && (
+                    <div className={restaurant.source ? "lg:col-span-2" : "lg:col-span-3"}>
+                      <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Description</h3>
+                      <p className="text-muted-foreground leading-relaxed">{restaurant.description}</p>
+                    </div>
+                  )}
 
-                    {restaurant.source && (
-                      <div>
-                        <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Source</h3>
-                        <p className="text-muted-foreground leading-relaxed">
-                          {restaurant.source}
-                          {restaurant.source_url && (
-                            <>
-                              {' '}
-                              <a
-                                href={restaurant.source_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-burnt-orange hover:text-burnt-orange/80 hover:underline transition-colors"
-                              >
-                                (more...)
-                              </a>
-                            </>
-                          )}
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Smart Review Summary */}
-                    {restaurant.public_review_summary && (
-                      <div>
-                        <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Smart Review Summary</h3>
-                        <p className="text-muted-foreground leading-relaxed mb-4">{restaurant.public_review_summary}</p>
-                        {/* Personal and Public Ratings row */}
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-2 text-sm mb-4">
-                          {shouldShowAppreciationBadge ? (
-                            <div className="flex items-center gap-2">
-                              <Tooltip delayDuration={300}>
-                                <TooltipTrigger asChild>
-                                  <Badge className={`${appreciationLevel.badgeStyle} font-mono text-xs border cursor-help`}>
-                                    <span className="mr-1">{appreciationLevel.icon}</span>
-                                    {appreciationLevel.label}
-                                  </Badge>
-                                </TooltipTrigger>
-                                <TooltipContent side="top">
-                                  <p>{getTooltipText(restaurant?.personal_appreciation)}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                              <span className="text-muted-foreground text-xs">(says me)</span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <Tooltip delayDuration={300}>
-                                <TooltipTrigger asChild>
-                                  <Badge className="bg-gray-100 text-gray-600 border-gray-200 font-mono text-xs border cursor-help">
-                                    <span className="mr-1">?</span>
-                                    Schrödinger's cat...
-                                  </Badge>
-                                </TooltipTrigger>
-                                <TooltipContent side="top">
-                                  <p>{getTooltipText(restaurant?.personal_appreciation)}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </div>
-                          )}
-                          {restaurant.public_rating && (
-                            <div
-                              className="flex items-center gap-1 cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
-                              onClick={() => window.open(getGoogleMapsUrl(restaurant, restaurant.locations?.[0]), '_blank')}
+                  {/* Source - 1 column on desktop */}
+                  {restaurant.source && (
+                    <div className="lg:col-span-1">
+                      <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Source</h3>
+                      <p className="text-muted-foreground leading-relaxed">
+                        {restaurant.source}
+                        {restaurant.source_url && (
+                          <>
+                            {' '}
+                            <a
+                              href={restaurant.source_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-burnt-orange hover:text-burnt-orange/80 hover:underline transition-colors"
                             >
-                              <span className="font-mono">Public:</span>
-                              <Star className="w-4 h-4 fill-burnt-orange text-burnt-orange" />
-                              <span className="font-mono">
-                                {restaurant.public_rating}/5
-                                {restaurant.public_rating_count && (
-                                  <span className="ml-1">based on {restaurant.public_rating_count} ratings</span>
-                                )}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Right Column: Visit History */}
-                  <div className="lg:col-span-1">
-                    <VisitHistory restaurantId={restaurant.id} />
-                  </div>
+                              (more...)
+                            </a>
+                          </>
+                        )}
+                      </p>
+                    </div>
+                  )}
                 </div>
+
+                {/* Smart Review Summary - Full Width */}
+                {restaurant.public_review_summary && (
+                  <div>
+                    <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Smart Review Summary</h3>
+                    <p className="text-muted-foreground leading-relaxed mb-4">{restaurant.public_review_summary}</p>
+                    {/* Personal and Public Ratings row */}
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-2 text-sm mb-4">
+                      {shouldShowAppreciationBadge ? (
+                        <div className="flex items-center gap-2">
+                          <Tooltip delayDuration={300}>
+                            <TooltipTrigger asChild>
+                              <Badge className={`${appreciationLevel.badgeStyle} font-mono text-xs border cursor-help`}>
+                                <span className="mr-1">{appreciationLevel.icon}</span>
+                                {appreciationLevel.label}
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              <p>{getTooltipText(restaurant?.personal_appreciation)}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          <span className="text-muted-foreground text-xs">(says me)</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <Tooltip delayDuration={300}>
+                            <TooltipTrigger asChild>
+                              <Badge className="bg-gray-100 text-gray-600 border-gray-200 font-mono text-xs border cursor-help">
+                                <span className="mr-1">?</span>
+                                Schrödinger's cat...
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              <p>{getTooltipText(restaurant?.personal_appreciation)}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                      )}
+                      {restaurant.public_rating && (
+                        <div
+                          className="flex items-center gap-1 cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
+                          onClick={() => window.open(getGoogleMapsUrl(restaurant, restaurant.locations?.[0]), '_blank')}
+                        >
+                          <span className="font-mono">Public:</span>
+                          <Star className="w-4 h-4 fill-burnt-orange text-burnt-orange" />
+                          <span className="font-mono">
+                            {restaurant.public_rating}/5
+                            {restaurant.public_rating_count && (
+                              <span className="ml-1">based on {restaurant.public_rating_count} ratings</span>
+                            )}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Three Column Layout: Location + Dietary/Must Try + Atmosphere */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -617,103 +616,96 @@ const RestaurantDetails = () => {
                 </div>
               </div>
             ) : (
-              /* Multi-Location Layout: Description/Review Summary + Visit History, then three columns with Atmosphere + Dietary/Must Try */
+              /* Multi-Location Layout: Smart Review Summary full-width, then three columns with Description + Atmosphere + Dietary/Must Try */
               <div className="space-y-8">
-                {/* Two Column Layout: Description/Review Summary (2/3) + Visit History (1/3) */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Left Column: Smart Review Summary, Description, and Source */}
-                  <div className="lg:col-span-2 space-y-6">
-                    {/* Smart Review Summary */}
-                    {restaurant.public_review_summary && (
-                      <div>
-                        <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Smart Review Summary</h3>
-                        <p className="text-muted-foreground leading-relaxed mb-4">{restaurant.public_review_summary}</p>
-                        {/* Personal and Public Ratings row */}
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-2 text-sm mb-4">
-                          {shouldShowAppreciationBadge ? (
-                            <div className="flex items-center gap-2">
-                              <Tooltip delayDuration={300}>
-                                <TooltipTrigger asChild>
-                                  <Badge className={`${appreciationLevel.badgeStyle} font-mono text-xs border cursor-help`}>
-                                    <span className="mr-1">{appreciationLevel.icon}</span>
-                                    {appreciationLevel.label}
-                                  </Badge>
-                                </TooltipTrigger>
-                                <TooltipContent side="top">
-                                  <p>{getTooltipText(restaurant?.personal_appreciation)}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                              <span className="text-muted-foreground text-xs">(says me)</span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <Tooltip delayDuration={300}>
-                                <TooltipTrigger asChild>
-                                  <Badge className="bg-gray-100 text-gray-600 border-gray-200 font-mono text-xs border cursor-help">
-                                    <span className="mr-1">?</span>
-                                    Schrödinger's cat...
-                                  </Badge>
-                                </TooltipTrigger>
-                                <TooltipContent side="top">
-                                  <p>{getTooltipText(restaurant?.personal_appreciation)}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </div>
-                          )}
-                          {restaurant.public_rating && (
-                            <div
-                              className="flex items-center gap-1 cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
-                              onClick={() => window.open(getGoogleMapsUrl(restaurant, restaurant.locations?.[0]), '_blank')}
-                            >
-                              <span className="font-mono">Public:</span>
-                              <Star className="w-4 h-4 fill-burnt-orange text-burnt-orange" />
-                              <span className="font-mono">
-                                {restaurant.public_rating}/5
-                                {restaurant.public_rating_count && (
-                                  <span className="ml-1">based on {restaurant.public_rating_count} ratings</span>
-                                )}
-                              </span>
-                            </div>
-                          )}
+                {/* Smart Review Summary - Full Width */}
+                {restaurant.public_review_summary && (
+                  <div>
+                    <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Smart Review Summary</h3>
+                    <p className="text-muted-foreground leading-relaxed mb-4">{restaurant.public_review_summary}</p>
+                    {/* Personal and Public Ratings row */}
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-2 text-sm mb-4">
+                      {shouldShowAppreciationBadge ? (
+                        <div className="flex items-center gap-2">
+                          <Tooltip delayDuration={300}>
+                            <TooltipTrigger asChild>
+                              <Badge className={`${appreciationLevel.badgeStyle} font-mono text-xs border cursor-help`}>
+                                <span className="mr-1">{appreciationLevel.icon}</span>
+                                {appreciationLevel.label}
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              <p>{getTooltipText(restaurant?.personal_appreciation)}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          <span className="text-muted-foreground text-xs">(says me)</span>
                         </div>
-                      </div>
-                    )}
-
-                    {/* Description and Source */}
-                    {restaurant.description && (
-                      <div>
-                        <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Description</h3>
-                        <p className="text-muted-foreground leading-relaxed">{restaurant.description}</p>
-                      </div>
-                    )}
-
-                    {restaurant.source && (
-                      <div>
-                        <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Source</h3>
-                        <p className="text-muted-foreground leading-relaxed">
-                          {restaurant.source}
-                          {restaurant.source_url && (
-                            <>
-                              {' '}
-                              <a
-                                href={restaurant.source_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-burnt-orange hover:text-burnt-orange/80 hover:underline transition-colors"
-                              >
-                                (more...)
-                              </a>
-                            </>
-                          )}
-                        </p>
-                      </div>
-                    )}
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <Tooltip delayDuration={300}>
+                            <TooltipTrigger asChild>
+                              <Badge className="bg-gray-100 text-gray-600 border-gray-200 font-mono text-xs border cursor-help">
+                                <span className="mr-1">?</span>
+                                Schrödinger's cat...
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              <p>{getTooltipText(restaurant?.personal_appreciation)}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                      )}
+                      {restaurant.public_rating && (
+                        <div
+                          className="flex items-center gap-1 cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
+                          onClick={() => window.open(getGoogleMapsUrl(restaurant, restaurant.locations?.[0]), '_blank')}
+                        >
+                          <span className="font-mono">Public:</span>
+                          <Star className="w-4 h-4 fill-burnt-orange text-burnt-orange" />
+                          <span className="font-mono">
+                            {restaurant.public_rating}/5
+                            {restaurant.public_rating_count && (
+                              <span className="ml-1">based on {restaurant.public_rating_count} ratings</span>
+                            )}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
+                )}
 
-                  {/* Right Column: Visit History */}
-                  <div className="lg:col-span-1">
-                    <VisitHistory restaurantId={restaurant.id} />
-                  </div>
+                {/* Description and Source - Responsive Layout */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Description - conditional width based on source presence */}
+                  {restaurant.description && (
+                    <div className={restaurant.source ? "lg:col-span-2" : "lg:col-span-3"}>
+                      <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Description</h3>
+                      <p className="text-muted-foreground leading-relaxed">{restaurant.description}</p>
+                    </div>
+                  )}
+
+                  {/* Source - 1 column on desktop */}
+                  {restaurant.source && (
+                    <div className="lg:col-span-1">
+                      <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Source</h3>
+                      <p className="text-muted-foreground leading-relaxed">
+                        {restaurant.source}
+                        {restaurant.source_url && (
+                          <>
+                            {' '}
+                            <a
+                              href={restaurant.source_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-burnt-orange hover:text-burnt-orange/80 hover:underline transition-colors"
+                            >
+                              (more...)
+                            </a>
+                          </>
+                        )}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Three Column Layout: Atmosphere + Dietary + Must Try */}

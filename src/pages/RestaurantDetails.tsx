@@ -448,9 +448,9 @@ const RestaurantDetails = () => {
               <>
                 {/* 3-Column Grid with Source field */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Description - Always spans 2 columns */}
+                  {/* Description - 2 columns when Source exists, 3 columns (full width) when Source is empty and logged out */}
                   {restaurant.description && (
-                    <div className="lg:col-span-2">
+                    <div className={user ? 'lg:col-span-2' : (restaurant.source ? 'lg:col-span-2' : 'lg:col-span-3')}>
                       <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Description</h3>
                       <p className="text-muted-foreground leading-relaxed">{restaurant.description}</p>
                     </div>
@@ -487,9 +487,9 @@ const RestaurantDetails = () => {
                     )
                   )}
 
-                  {/* Smart Review Summary - 1 column when logged in, 3 columns when logged out */}
+                  {/* Smart Review Summary - 1 column when logged in with Source, 2 columns when logged in without Source, 3 columns when logged out */}
                   {restaurant.public_review_summary && (
-                    <div className={user ? 'lg:col-span-1' : 'lg:col-span-3'}>
+                    <div className={user ? (restaurant.source ? 'lg:col-span-1' : 'lg:col-span-2') : 'lg:col-span-3'}>
                       <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Smart Review Summary</h3>
                       <p className="text-muted-foreground leading-relaxed mb-4">{restaurant.public_review_summary}</p>
                       {/* Personal and Public Ratings row */}
@@ -634,9 +634,9 @@ const RestaurantDetails = () => {
               <>
                 {/* 3-Column Grid with Source field */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Description - Always spans 2 columns */}
+                  {/* Description - 2 columns when Source exists, 3 columns (full width) when Source is empty and logged out */}
                   {restaurant.description && (
-                    <div className="lg:col-span-2">
+                    <div className={user ? 'lg:col-span-2' : (restaurant.source ? 'lg:col-span-2' : 'lg:col-span-3')}>
                       <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Description</h3>
                       <p className="text-muted-foreground leading-relaxed">{restaurant.description}</p>
                     </div>
@@ -673,9 +673,9 @@ const RestaurantDetails = () => {
                     )
                   )}
 
-                  {/* Smart Review Summary - 1 column when logged in, 3 columns when logged out */}
+                  {/* Smart Review Summary - 1 column when logged in with Source, 2 columns when logged in without Source, 3 columns when logged out */}
                   {restaurant.public_review_summary && (
-                    <div className={user ? 'lg:col-span-1' : 'lg:col-span-3'}>
+                    <div className={user ? (restaurant.source ? 'lg:col-span-1' : 'lg:col-span-2') : 'lg:col-span-3'}>
                       <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Smart Review Summary</h3>
                       <p className="text-muted-foreground leading-relaxed mb-4">{restaurant.public_review_summary}</p>
                       {/* Personal and Public Ratings row */}

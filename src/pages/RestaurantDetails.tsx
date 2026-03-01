@@ -414,82 +414,78 @@ const RestaurantDetails = () => {
               </div>
             </div>
 
-            {/* Row 2: Badges + Visit History */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Left: Badges */}
-              <div className="lg:col-span-2 flex items-start gap-3 flex-wrap">
-                {/* Cuisine: prefer new facets, fallback to legacy */}
-                {(restaurant.cuisine_primary || restaurant.cuisine) && (
-                  <Badge className="bg-burnt-orange text-white font-mono text-sm">
-                    {restaurant.cuisine_primary || restaurant.cuisine}
-                    {restaurant.cuisine_secondary && ` / ${restaurant.cuisine_secondary}`}
-                  </Badge>
-                )}
-                {restaurant.style && (
-                  <Badge className="bg-olive-green text-white font-mono text-sm">
-                    {restaurant.style}
-                  </Badge>
-                )}
-                {restaurant.venue && (
-                  <Badge className="bg-charcoal text-white font-mono text-sm">
-                    {restaurant.venue}
-                  </Badge>
-                )}
-                {restaurant.price_range && (
-                  <Badge className={`${getPriceColor(restaurant.price_range)} font-mono text-sm`}>
-                    {restaurant.price_range}
-                  </Badge>
-                )}
-              </div>
-
-              {/* Right: Visit History */}
-              <div className="lg:col-span-1">
-                <VisitHistory restaurantId={restaurant.id} />
-              </div>
+            {/* Row 2: Badges */}
+            <div className="flex items-center gap-3 flex-wrap">
+              {/* Cuisine: prefer new facets, fallback to legacy */}
+              {(restaurant.cuisine_primary || restaurant.cuisine) && (
+                <Badge className="bg-burnt-orange text-white font-mono text-sm">
+                  {restaurant.cuisine_primary || restaurant.cuisine}
+                  {restaurant.cuisine_secondary && ` / ${restaurant.cuisine_secondary}`}
+                </Badge>
+              )}
+              {restaurant.style && (
+                <Badge className="bg-olive-green text-white font-mono text-sm">
+                  {restaurant.style}
+                </Badge>
+              )}
+              {restaurant.venue && (
+                <Badge className="bg-charcoal text-white font-mono text-sm">
+                  {restaurant.venue}
+                </Badge>
+              )}
+              {restaurant.price_range && (
+                <Badge className={`${getPriceColor(restaurant.price_range)} font-mono text-sm`}>
+                  {restaurant.price_range}
+                </Badge>
+              )}
             </div>
           </CardHeader>
           
           <CardContent className="space-y-8">
-            {/* Dynamic Layout Based on Location Count */}
-            {restaurant.locations && restaurant.locations.length === 1 ? (
-              /* Single Location Layout: Description full-width top, then 3 columns with Location + Dietary/Must Try + Atmosphere */
-              <div className="space-y-8">
-                {/* Description and Source - Responsive Layout */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Description - conditional width based on source presence */}
-                  {restaurant.description && (
-                    <div className={restaurant.source ? "lg:col-span-2" : "lg:col-span-3"}>
-                      <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Description</h3>
-                      <p className="text-muted-foreground leading-relaxed">{restaurant.description}</p>
-                    </div>
-                  )}
+            {/* Two Column Layout: Main Content (2/3) + Visit History Sidebar (1/3) */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Left Column: Main Content */}
+              <div className="lg:col-span-2 space-y-8">
+                {/* Dynamic Layout Based on Location Count */}
+                {restaurant.locations && restaurant.locations.length === 1 ? (
+                  /* Single Location Layout */
+                  <div className="space-y-8">
+                    {/* Description and Source - Responsive Layout */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                      {/* Description - conditional width based on source presence */}
+                      {restaurant.description && (
+                        <div className={restaurant.source ? "lg:col-span-2" : "lg:col-span-3"}>
+                          <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Description</h3>
+                          <p className="text-muted-foreground leading-relaxed">{restaurant.description}</p>
+                        </div>
+                      )}
 
-                  {/* Source - 1 column on desktop */}
-                  {restaurant.source && (
-                    <div className="lg:col-span-1">
-                      <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Source</h3>
-                      <p className="text-muted-foreground leading-relaxed">
-                        {restaurant.source}
-                        {restaurant.source_url && (
-                          <>
-                            {' '}
-                            <a
-                              href={restaurant.source_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-burnt-orange hover:text-burnt-orange/80 hover:underline transition-colors"
-                            >
-                              (more...)
-                            </a>
-                          </>
-                        )}
-                      </p>
+                      {/* Source - 1 column on desktop */}
+                      {restaurant.source && (
+                        <div className="lg:col-span-1">
+                          <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Source</h3>
+                          <p className="text-muted-foreground leading-relaxed">
+                            {restaurant.source}
+                            {restaurant.source_url && (
+                              <>
+                                {' '}
+                                <a
+                                  href={restaurant.source_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-burnt-orange hover:text-burnt-orange/80 hover:underline transition-colors"
+                                >
+                                  (more...)
+                                </a>
+                              </>
+                            )}
+                          </p>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
 
-                {/* Smart Review Summary - Full Width */}
-                {restaurant.public_review_summary && (
+                    {/* Smart Review Summary - Full Width */}
+                    {restaurant.public_review_summary && (
                   <div>
                     <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Smart Review Summary</h3>
                     <p className="text-muted-foreground leading-relaxed mb-4">{restaurant.public_review_summary}</p>
@@ -751,6 +747,13 @@ const RestaurantDetails = () => {
                 </div>
               </div>
             )}
+              </div>
+
+              {/* Right Column: Visit History Sidebar */}
+              <div className="lg:col-span-1">
+                <VisitHistory restaurantId={restaurant.id} />
+              </div>
+            </div>
 
             {/* Locations List - Only show for multi-location restaurants */}
             {restaurant.locations && restaurant.locations.length > 1 && (

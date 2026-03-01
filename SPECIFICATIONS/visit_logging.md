@@ -1,8 +1,37 @@
 # Visit Logging System - Implementation Plan
 
-**Status:** Planning phase - ready for implementation
-**Date:** February 2026
+**Status:** Phase 2 Complete - Read-only display live
+**Date:** February 2026 - March 2026
 **Feature:** Track multiple restaurant visits with ratings, dates, and notes
+
+---
+
+## Implementation Progress
+
+**Phase 1: Database Foundation** ✅ COMPLETE (PR #2, merged 2026-03-01)
+- Database schema, migrations, RLS policies
+- Data migration of existing ratings
+- Cached rating trigger system
+
+**Phase 2: Visit History Display** ✅ COMPLETE (PR #3, merged 2026-03-01)
+- Read-only service layer (`visits.ts`)
+- Visit history component
+- Layout updates with auth-conditional display
+
+**Phase 3: Add Visit Modal** 🔄 NEXT
+- Write operations (add visits)
+- Modal form for logging visits
+- Input validation and sanitization
+
+**Phase 4: Edit/Delete Visits** ⏳ UPCOMING
+- Edit existing visits
+- Delete visits with confirmation
+- Fix placeholder dates
+
+**Phase 5: Verification & Documentation** ⏳ UPCOMING
+- End-to-end testing
+- Performance verification
+- Security verification
 
 ---
 
@@ -47,27 +76,28 @@ Enable users to log multiple visits to restaurants over time, capturing:
 
 ### 3. UI Layout Changes (Logged In Only)
 
-**Current Single-Location Layout:**
+**Logged Out Layout:**
 ```
-Description (2 cols) | Source (1 col)
-Smart Review Summary (full width)
-Location | Dietary | Atmosphere
-```
-
-**New Single-Location Layout:**
-```
-Description (2 cols if Source exists, 3 cols if not)
-Source (full width below Description, if exists)
-Smart Review Summary (2 cols) | Visit History (1 col)
-Location | Dietary | Atmosphere
+Row 1: Description (2 cols) | Source (1 col)
+       [If no Source: Description takes full 3 cols]
+Row 2: Smart Review Summary (full 3 cols)
+Row 3: Location | Dietary | Atmosphere
 ```
 
-**Visit History Section (Right Column):**
-- Sits alongside Smart Review Summary
-- Shows chronological list of visits (newest first)
-- Each entry shows: date (or "Before 2026" for migrated data), rating badge, experience note, company note
-- Each entry has edit icon/link (opens same modal pre-populated with that visit's data)
-- Only visible when logged in
+**Logged In Layout:**
+```
+Row 1: Description (1 col) | Source (1 col) | Visit History (1 col, spans 2 rows)
+       [If no Source: Description takes 2 cols]
+Row 2: Smart Review Summary (2 cols)     | Visit History (continues)
+Row 3: Location | Dietary | Atmosphere
+```
+
+**Visit History Section (Right Column, Logged In Only):**
+- Displays latest 5 visits chronologically (newest first)
+- Each entry shows: date (or "Before 2026" for migrated data), rating badge, experience notes, company notes
+- Height spans Description + Smart Review rows for better space usage
+- Edit icon/link present but non-functional until Phase 4 (edit functionality)
+- Component completely hidden when logged out (not just empty)
 
 ### 4. Adding & Editing Visits
 **Interaction:** Modal form (same for both add and edit)
@@ -449,173 +479,158 @@ async function checkRateLimit(userId: string, operation: string): Promise<boolea
 
 ## Implementation Phases (PRs)
 
-### Phase 1: Database Foundation
+### Phase 1: Database Foundation ✅ COMPLETE
 **Branch:** `feature/visit-logging-database`
+**PR:** #2 - Merged to main on 2026-03-01
 **Goal:** Set up database schema, migration, RLS policies
 
-**Tasks:**
-1. Create Supabase migration file for `restaurant_visits` table
-2. Add indexes for query performance
-3. Set up RLS policies
-4. Create data migration script for existing `personal_appreciation` values
-5. Test migration in local Supabase instance
-6. Document rollback strategy
+**Completed Tasks:**
+1. ✅ Created migration `001_create_restaurant_visits_table.sql`
+   - Created `personal_appreciation` ENUM type
+   - Created `restaurant_visits` table with all fields
+   - Added performance indexes
+   - Created trigger for cached rating updates
+2. ✅ Created migration `002_create_rls_policies.sql`
+   - Enabled RLS on `restaurant_visits`
+   - Created policies for SELECT, INSERT, UPDATE, DELETE
+   - Policies enforce user can only access their own visits
+3. ✅ Created migration `003_enable_rls.sql`
+   - Enabled RLS enforcement
+4. ✅ Created migration `004_migrate_existing_ratings.sql`
+   - Migrated all existing `personal_appreciation` values to visits
+   - Used placeholder date 2025-01-01 with `is_migrated_placeholder = TRUE`
+   - Idempotent migration (can run multiple times safely)
+   - Successfully migrated all rated restaurants
 
 **Testing:**
-- Manual: Run migration, verify table exists, check RLS policies
-- Integration: Test that existing restaurants work unchanged
-- No UI changes in this PR
-
-**Acceptance Criteria:**
-- ✅ Migration runs successfully
-- ✅ RLS policies prevent unauthorized access
-- ✅ Existing ratings migrated to visits with 2025-01-01 date
-- ✅ No breaking changes to existing API
-
----
-
-### Phase 2: Service Layer & API
-**Branch:** `feature/visit-logging-service`
-**Goal:** Create service layer for CRUD operations on visits
-
-**Tasks:**
-1. Create `src/services/visitService.ts`
-2. Implement `getVisitsForRestaurant()` with pagination support (latest 5 by default)
-3. Implement `addVisit()` with input validation and sanitization
-4. Implement `updateVisit()` with validation
-5. Implement `deleteVisit()`
-6. Add input validation helpers (strip HTML, validate dates, check lengths)
-7. Add rate limiting middleware (Cloudflare Workers KV)
-8. Update `restaurantService.getRestaurantByIdWithLocations()` to:
-  - Join with `restaurant_visits`
-  - Return `personal_appreciation` from cached field (no computation needed)
-  - Return visits array when authenticated
-
-**Testing:**
-- Unit tests for `visitService.ts` (following existing test patterns)
-- Mock Supabase client responses
-- Test all CRUD operations with validation
-- Test input sanitization (HTML stripping)
-- Test date validation edge cases
-- Test authentication context
-- Test rate limiting logic
-
-**Acceptance Criteria:**
-- ✅ All service methods work with mocked data
-- ✅ Input validation prevents XSS and DoS attacks
-- ✅ Rate limiting prevents abuse
-- ✅ Tests pass (12+ tests covering CRUD, validation, and rate limiting)
+- ✅ Manual: Ran migrations, verified table structure
+- ✅ RLS: Verified policies prevent unauthorized access
+- ✅ Integration: Confirmed existing restaurants unchanged
 - ✅ No UI changes in this PR
-- ✅ API is ready for UI consumption
+
+**Result:**
+- Database foundation complete and production-ready
+- All existing ratings preserved as historical visits
+- No breaking changes to existing functionality
 
 ---
 
-### Phase 3: Visit History Display (Read-Only)
-**Branch:** `feature/visit-history-display`
+### Phase 2: Visit History Display (Read-Only UI) ✅ COMPLETE
+**Branch:** `feature/visit-history-ui`
+**PR:** #3 - Merged to main on 2026-03-01
 **Goal:** Show visit history in restaurant details (logged in users only)
 
-**Tasks:**
-1. Create `VisitCard.tsx` component
-  - Display visit date with `is_migrated_placeholder` logic:
-    - If `is_migrated_placeholder === true`, show "Before 2026"
-    - Else show formatted date (e.g., "15 Feb 2026")
-  - Display rating badge, experience notes, company notes
-  - Include edit icon/button (non-functional in this phase, styled only)
-  - Styled to match design system
-2. Create `VisitHistorySection.tsx` component
-  - Fetch visits using `visitService.getVisitsForRestaurant()`
-  - Display latest 5 visits by default
-  - If more than 5 visits, show "Show all X visits" expand button
-  - Render list of `VisitCard` components
-  - Show empty state if no visits
-  - Only render when user is authenticated
-3. Update `RestaurantDetails.tsx` layout:
-  - Add Visit History to right column (1/3 width)
-  - Move Source below Description (if present)
-  - Adjust grid to accommodate new section
-  - Ensure layout unchanged when not logged in
+**Completed Tasks:**
+1. ✅ Created `src/services/visits.ts` with read-only operations:
+   - `getLatestVisits(restaurantId, limit)` - Fetch latest N visits
+   - `getVisitsByRestaurant(restaurantId)` - Fetch all visits for restaurant
+   - `getVisitCount(restaurantId)` - Count visits
+   - `getVisitById(visitId)` - Fetch single visit
+   - All methods use Supabase RLS for security
+   - Ordered by visit_date DESC, created_at DESC
+2. ✅ Created `src/components/VisitHistory.tsx` component:
+   - Displays latest 5 visits chronologically (newest first)
+   - Shows visit date with placeholder handling:
+     - `is_migrated_placeholder === true` → displays "Before 2026"
+     - `is_migrated_placeholder === false` → displays formatted date (e.g., "Jan 15, 2026")
+   - Shows rating badge with appreciation level styling
+   - Shows experience notes and company notes (if present)
+   - Loading state, error state, empty state
+   - Only renders when user authenticated
+3. ✅ Updated `src/pages/RestaurantDetails.tsx` layout:
+   - **Logged in:** Description (1 col) | Source (1 col) | Visit History (1 col, row-span-2)
+     - If no Source: Description expands to 2 columns
+     - Row 2: Smart Review (2 cols) | Visit History continues
+   - **Logged out:** Description (2 cols) | Source (1 col), Smart Review (full 3 cols)
+     - If no Source: Description expands to full 3 columns
+   - Visit History widget completely hidden when logged out (not just empty)
+   - Smart Review gets 2 columns when logged in (prevents rating/stars compression)
+   - Source paired with Description for better text amount matching
+4. ✅ Added TypeScript types to `src/types/place.ts`:
+   - `RestaurantVisit` interface matching database schema
 
 **Testing:**
-- Component tests for `VisitCard.tsx`:
-  - Test `is_migrated_placeholder === true` shows "Before 2026"
-  - Test `is_migrated_placeholder === false` shows formatted date
-  - Test rendering with/without notes
-- Component tests for `VisitHistorySection.tsx`:
-  - Test latest 5 visits display
-  - Test expand button appears when >5 visits
-  - Test expand button shows all visits
-- Visual testing: logged in vs logged out
-- Responsive testing: mobile, tablet, desktop
+- ✅ Manual testing: logged in vs logged out states
+- ✅ Verified placeholder visit dates show "Before 2026"
+- ✅ Verified layout adjusts correctly with/without Source field
+- ✅ Tested responsive behavior on different screen sizes
+- ✅ Confirmed Visit History hidden when logged out
 
-**Acceptance Criteria:**
-- ✅ Visit history displays correctly for logged-in users
-- ✅ Layout matches design spec
-- ✅ Not visible when logged out
-- ✅ Empty state handled gracefully
-- ✅ Placeholder visits (is_migrated_placeholder=true) show "Before 2026"
-- ✅ Real visits show formatted dates
-- ✅ Only latest 5 visits shown by default (scalability)
-- ✅ Expand button works for 6+ visits
-- ✅ Edit button visible but non-functional (Phase 5 will wire it up)
+**Result:**
+- Visit history now visible to logged-in users
+- Shows migrated historical data with placeholder dates
+- Layout optimized for space usage and readability
+- No impact on logged-out user experience
+- Ready for Phase 3: write operations (add/edit/delete visits)
 
 ---
 
-### Phase 4: Add Visit Modal (Write)
+### Phase 3: Add Visit Modal (Write) - NEXT
 **Branch:** `feature/add-visit-modal`
 **Goal:** Enable users to log new visits via modal form
 
 **Tasks:**
-1. Create `VisitModal.tsx` component (designed to handle both add/edit, but only add implemented this phase)
-  - Date picker (defaults to today)
-  - Rating picker (reuse `AppreciationPicker` or create variant)
-  - Experience notes textarea
-  - Company notes text field
-  - Form validation
-  - Submit handler using `visitService.addVisit()`
-  - Accept optional `visitToEdit` prop (for Phase 5, unused in Phase 4)
-2. Update `RestaurantDetails.tsx`:
-  - "Rate" button opens `VisitModal` (add mode)
-  - "Mark as Visited" opens modal (add mode)
-  - Handle successful submission (refresh data)
-  - Show success/error toasts
-3. Update visit history to show new entry immediately
+1. Create `visitService.ts` write operations:
+   - `addVisit()` with input validation and sanitization
+   - Input validation helpers (strip HTML, validate dates, check lengths)
+   - Add rate limiting middleware (Cloudflare Workers KV) if needed
+2. Create `VisitModal.tsx` component (designed to handle both add/edit, but only add implemented this phase)
+   - Date picker (defaults to today)
+   - Rating picker (reuse `AppreciationPicker` or create variant)
+   - Experience notes textarea
+   - Company notes text field
+   - Form validation
+   - Submit handler using `visitService.addVisit()`
+   - Accept optional `visitToEdit` prop (for Phase 4, unused in Phase 3)
+3. Update `RestaurantDetails.tsx`:
+   - "Rate" button opens `VisitModal` (add mode)
+   - "Mark as Visited" opens modal (add mode)
+   - Handle successful submission (refresh data)
+   - Show success/error toasts
+4. Update visit history to show new entry immediately
 
 **Testing:**
+- Unit tests for `visitService.addVisit()` with validation
 - Component tests for `VisitModal.tsx`
 - Test form validation
 - Test date picker behavior
 - Test integration with service layer
+- Test input sanitization (HTML stripping)
 - E2E test: Add visit flow
 
 **Acceptance Criteria:**
-- ✅ Modal opens from "Rate" button
-- ✅ Modal opens from "Mark as Visited" button
-- ✅ Form validates required fields
-- ✅ Visit saves to database
-- ✅ UI updates to show new visit
-- ✅ Toast notifications work
-- ✅ Modal designed for future edit mode (but edit not wired up yet)
+- Modal opens from "Rate" button
+- Modal opens from "Mark as Visited" button
+- Form validates required fields
+- Visit saves to database
+- UI updates to show new visit
+- Toast notifications work
+- Input sanitization prevents XSS
+- Modal designed for future edit mode (but edit not wired up yet)
 
 ---
 
-### Phase 5: Edit/Delete Visits
+### Phase 4: Edit/Delete Visits
 **Branch:** `feature/edit-delete-visits`
 **Goal:** Allow users to edit or delete existing visits
 
 **Tasks:**
-1. Wire up edit button in `VisitCard.tsx` (already present from Phase 3)
-  - On click, opens `VisitModal` with `visitToEdit` prop populated
-  - Modal pre-fills form with existing visit data
-2. Update `VisitModal.tsx`:
-  - Detect edit mode (when `visitToEdit` prop is present)
-  - Use `visitService.updateVisit()` instead of `addVisit()` when editing
-  - Update modal title: "Add Visit" vs "Edit Visit"
-  - When user edits date on migrated visit, set `is_migrated_placeholder = FALSE`
-3. Add delete button to `VisitCard.tsx`
-  - Shows confirmation dialog before deleting
-  - Calls `visitService.deleteVisit()`
-4. Handle optimistic updates for better UX
-5. Database trigger auto-updates cached rating after edit/delete (no manual refresh needed)
+1. Add `visitService.ts` edit/delete operations:
+   - `updateVisit()` with validation
+   - `deleteVisit()`
+2. Add edit button to `VisitHistory.tsx` component
+   - On click, opens `VisitModal` with `visitToEdit` prop populated
+   - Modal pre-fills form with existing visit data
+3. Update `VisitModal.tsx`:
+   - Detect edit mode (when `visitToEdit` prop is present)
+   - Use `visitService.updateVisit()` instead of `addVisit()` when editing
+   - Update modal title: "Add Visit" vs "Edit Visit"
+   - When user edits date on migrated visit, set `is_migrated_placeholder = FALSE`
+4. Add delete button to visit entries
+   - Shows confirmation dialog before deleting
+   - Calls `visitService.deleteVisit()`
+5. Handle optimistic updates for better UX
+6. Database trigger auto-updates cached rating after edit/delete (no manual refresh needed)
 
 **Key user flow:** Users can fix placeholder "Before 2026" dates by:
 1. Click edit on migrated visit
@@ -643,7 +658,7 @@ async function checkRateLimit(userId: string, operation: string): Promise<boolea
 
 ---
 
-### Phase 6: Verification & Documentation
+### Phase 5: Verification & Documentation
 **Branch:** `feature/visit-logging-finalization`
 **Goal:** Verify cached rating system works correctly, finalize documentation
 
@@ -724,23 +739,26 @@ Following established testing patterns from `REFERENCE/testing-strategy.md`:
 
 Each phase is independently deployable and can be rolled back:
 
-**Phase 1 (Database):**
-- Rollback migration file
+**Phase 1 (Database) - COMPLETE:**
+- Rollback migration files if needed
 - Restore from backup if data corruption
 
-**Phase 2 (Service):**
-- Deploy previous version
-- No database changes to rollback
+**Phase 2 (Display) - COMPLETE:**
+- Deploy previous UI version
+- No data loss, read-only operations
 
-**Phase 3 (Display):**
-- Hide feature flag
-- Or deploy previous UI version
-- No data loss
-
-**Phase 4-6 (Write operations):**
+**Phase 3 (Add Visits):**
 - Disable write endpoints
 - Keep read operations working
 - Data remains in database (can be cleaned up later if needed)
+
+**Phase 4 (Edit/Delete):**
+- Disable edit/delete endpoints
+- Add operations continue working
+- Data remains in database
+
+**Phase 5 (Verification):**
+- Document-only phase, no rollback needed
 
 ---
 

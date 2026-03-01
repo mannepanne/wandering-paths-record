@@ -448,48 +448,50 @@ const RestaurantDetails = () => {
               <>
                 {/* 3-Column Grid with Source field */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Description - 2 columns when Source exists, 3 columns (full width) when Source is empty and logged out */}
+                  {/* Row 1: Description - conditional width based on Source presence */}
                   {restaurant.description && (
-                    <div className={user ? 'lg:col-span-2' : (restaurant.source ? 'lg:col-span-2' : 'lg:col-span-3')}>
+                    <div className={user
+                      ? (restaurant.source ? 'lg:col-span-1' : 'lg:col-span-2')
+                      : (restaurant.source ? 'lg:col-span-2' : 'lg:col-span-3')
+                    }>
                       <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Description</h3>
                       <p className="text-muted-foreground leading-relaxed">{restaurant.description}</p>
                     </div>
                   )}
 
-                  {/* Source OR Visit History Row 1 - Right column */}
-                  {user ? (
-                    /* When logged in: Visit History starts here (spans 2 rows) */
+                  {/* Row 1: Source - appears on same row as Description when it exists */}
+                  {restaurant.source && (
+                    <div className="lg:col-span-1">
+                      <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Source</h3>
+                      <p className="text-muted-foreground leading-relaxed">
+                        {restaurant.source}
+                        {restaurant.source_url && (
+                          <>
+                            {' '}
+                            <a
+                              href={restaurant.source_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-burnt-orange hover:text-burnt-orange/80 hover:underline transition-colors"
+                            >
+                              (more...)
+                            </a>
+                          </>
+                        )}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Row 1: Visit History (logged in only) - spans 2 rows */}
+                  {user && (
                     <div className="lg:row-span-2">
                       <VisitHistory restaurantId={restaurant.id} />
                     </div>
-                  ) : (
-                    /* When logged out: Source field */
-                    restaurant.source && (
-                      <div>
-                        <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Source</h3>
-                        <p className="text-muted-foreground leading-relaxed">
-                          {restaurant.source}
-                          {restaurant.source_url && (
-                            <>
-                              {' '}
-                              <a
-                                href={restaurant.source_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-burnt-orange hover:text-burnt-orange/80 hover:underline transition-colors"
-                              >
-                                (more...)
-                              </a>
-                            </>
-                          )}
-                        </p>
-                      </div>
-                    )
                   )}
 
-                  {/* Smart Review Summary - 1 column when logged in with Source, 2 columns when logged in without Source, 3 columns when logged out */}
+                  {/* Row 2: Smart Review Summary - spans 2 columns when logged in, full width when logged out */}
                   {restaurant.public_review_summary && (
-                    <div className={user ? (restaurant.source ? 'lg:col-span-1' : 'lg:col-span-2') : 'lg:col-span-3'}>
+                    <div className={user ? 'lg:col-span-2' : 'lg:col-span-3'}>
                       <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Smart Review Summary</h3>
                       <p className="text-muted-foreground leading-relaxed mb-4">{restaurant.public_review_summary}</p>
                       {/* Personal and Public Ratings row */}
@@ -540,29 +542,6 @@ const RestaurantDetails = () => {
                           </div>
                         )}
                       </div>
-                    </div>
-                  )}
-
-                  {/* Source - Only when logged in (appears next to Smart Review) */}
-                  {user && restaurant.source && (
-                    <div className="lg:col-span-1">
-                      <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Source</h3>
-                      <p className="text-muted-foreground leading-relaxed">
-                        {restaurant.source}
-                        {restaurant.source_url && (
-                          <>
-                            {' '}
-                            <a
-                              href={restaurant.source_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-burnt-orange hover:text-burnt-orange/80 hover:underline transition-colors"
-                            >
-                              (more...)
-                            </a>
-                          </>
-                        )}
-                      </p>
                     </div>
                   )}
                 </div>
@@ -634,48 +613,50 @@ const RestaurantDetails = () => {
               <>
                 {/* 3-Column Grid with Source field */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Description - 2 columns when Source exists, 3 columns (full width) when Source is empty and logged out */}
+                  {/* Row 1: Description - conditional width based on Source presence */}
                   {restaurant.description && (
-                    <div className={user ? 'lg:col-span-2' : (restaurant.source ? 'lg:col-span-2' : 'lg:col-span-3')}>
+                    <div className={user
+                      ? (restaurant.source ? 'lg:col-span-1' : 'lg:col-span-2')
+                      : (restaurant.source ? 'lg:col-span-2' : 'lg:col-span-3')
+                    }>
                       <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Description</h3>
                       <p className="text-muted-foreground leading-relaxed">{restaurant.description}</p>
                     </div>
                   )}
 
-                  {/* Source OR Visit History Row 1 - Right column */}
-                  {user ? (
-                    /* When logged in: Visit History starts here (spans 2 rows) */
+                  {/* Row 1: Source - appears on same row as Description when it exists */}
+                  {restaurant.source && (
+                    <div className="lg:col-span-1">
+                      <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Source</h3>
+                      <p className="text-muted-foreground leading-relaxed">
+                        {restaurant.source}
+                        {restaurant.source_url && (
+                          <>
+                            {' '}
+                            <a
+                              href={restaurant.source_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-burnt-orange hover:text-burnt-orange/80 hover:underline transition-colors"
+                            >
+                              (more...)
+                            </a>
+                          </>
+                        )}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Row 1: Visit History (logged in only) - spans 2 rows */}
+                  {user && (
                     <div className="lg:row-span-2">
                       <VisitHistory restaurantId={restaurant.id} />
                     </div>
-                  ) : (
-                    /* When logged out: Source field */
-                    restaurant.source && (
-                      <div>
-                        <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Source</h3>
-                        <p className="text-muted-foreground leading-relaxed">
-                          {restaurant.source}
-                          {restaurant.source_url && (
-                            <>
-                              {' '}
-                              <a
-                                href={restaurant.source_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-burnt-orange hover:text-burnt-orange/80 hover:underline transition-colors"
-                              >
-                                (more...)
-                              </a>
-                            </>
-                          )}
-                        </p>
-                      </div>
-                    )
                   )}
 
-                  {/* Smart Review Summary - 1 column when logged in with Source, 2 columns when logged in without Source, 3 columns when logged out */}
+                  {/* Row 2: Smart Review Summary - spans 2 columns when logged in, full width when logged out */}
                   {restaurant.public_review_summary && (
-                    <div className={user ? (restaurant.source ? 'lg:col-span-1' : 'lg:col-span-2') : 'lg:col-span-3'}>
+                    <div className={user ? 'lg:col-span-2' : 'lg:col-span-3'}>
                       <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Smart Review Summary</h3>
                       <p className="text-muted-foreground leading-relaxed mb-4">{restaurant.public_review_summary}</p>
                       {/* Personal and Public Ratings row */}
@@ -726,29 +707,6 @@ const RestaurantDetails = () => {
                           </div>
                         )}
                       </div>
-                    </div>
-                  )}
-
-                  {/* Source - Only when logged in (appears next to Smart Review) */}
-                  {user && restaurant.source && (
-                    <div className="lg:col-span-1">
-                      <h3 className="font-semibold text-foreground font-geo text-lg mb-2">Source</h3>
-                      <p className="text-muted-foreground leading-relaxed">
-                        {restaurant.source}
-                        {restaurant.source_url && (
-                          <>
-                            {' '}
-                            <a
-                              href={restaurant.source_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-burnt-orange hover:text-burnt-orange/80 hover:underline transition-colors"
-                            >
-                              (more...)
-                            </a>
-                          </>
-                        )}
-                      </p>
                     </div>
                   )}
                 </div>

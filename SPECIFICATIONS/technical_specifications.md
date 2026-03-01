@@ -74,21 +74,27 @@ The application uses a sophisticated multi-location restaurant architecture:
 - updated_at (timestamptz)
 ```
 
-**`restaurant_visits`**** Table** - Visit history tracking (Phase 2 complete: Read-only display)
+**`restaurant_visits`**** Table** - Visit history tracking (Phase 3 complete: Full create functionality)
 ```sql
 - id (uuid, primary key)
 - restaurant_id (uuid, foreign key)
 - user_id (uuid, foreign key to auth.users)
 - visit_date (date) - When the restaurant was visited
 - rating (personal_appreciation enum) - 'avoid' | 'fine' | 'good' | 'great'
-- experience_notes (text) - Optional notes about dishes, experience
-- company_notes (text) - Optional notes about who you dined with
+- experience_notes (text) - Optional notes about dishes, experience (max 2000 chars)
+- company_notes (text) - Optional notes about who you dined with (max 500 chars)
 - is_migrated_placeholder (boolean) - True for historical pre-2026 data
 - created_at (timestamptz)
 - updated_at (timestamptz)
 ```
 
 **Row Level Security:** Visit data protected by RLS policies - users can only view/edit their own visits.
+
+**Security Features (Phase 3):**
+- XSS prevention: Strict HTML character rejection (`<`, `>`, `&`)
+- Rating validation: Runtime checks prevent 'unknown' and invalid values
+- Timezone-safe date validation: String comparison prevents edge cases
+- Duplicate prevention: Unique constraint on (user_id, restaurant_id, visit_date)
 
 **Cached Rating System:** The `restaurants.personal_appreciation` field is automatically updated by database trigger when visits are added/edited/deleted. This caching strategy prevents N+1 query problems and keeps restaurant list queries fast.
 

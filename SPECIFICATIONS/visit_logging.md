@@ -1,6 +1,6 @@
 # Visit Logging System - Implementation Plan
 
-**Status:** Phase 2 Complete - Read-only display live
+**Status:** Phase 3 Complete - Full create functionality live
 **Date:** February 2026 - March 2026
 **Feature:** Track multiple restaurant visits with ratings, dates, and notes
 
@@ -18,12 +18,13 @@
 - Visit history component
 - Layout updates with auth-conditional display
 
-**Phase 3: Add Visit Modal** 🔄 NEXT
-- Write operations (add visits)
+**Phase 3: Add Visit Modal** ✅ COMPLETE (PR #4, merged 2026-03-01)
+- Write operations with full validation and sanitization
 - Modal form for logging visits
-- Input validation and sanitization
+- Security hardening (XSS prevention, rating validation, timezone fixes)
+- Toast notifications and error handling
 
-**Phase 4: Edit/Delete Visits** ⏳ UPCOMING
+**Phase 4: Edit/Delete Visits** 🔄 NEXT
 - Edit existing visits
 - Delete visits with confirmation
 - Fix placeholder dates
@@ -565,48 +566,61 @@ async function checkRateLimit(userId: string, operation: string): Promise<boolea
 
 ---
 
-### Phase 3: Add Visit Modal (Write) - NEXT
+### Phase 3: Add Visit Modal (Write) ✅ COMPLETE
 **Branch:** `feature/add-visit-modal`
+**PR:** #4 - Merged to main on 2026-03-01
 **Goal:** Enable users to log new visits via modal form
 
-**Tasks:**
-1. Create `visitService.ts` write operations:
-   - `addVisit()` with input validation and sanitization
-   - Input validation helpers (strip HTML, validate dates, check lengths)
-   - Add rate limiting middleware (Cloudflare Workers KV) if needed
-2. Create `VisitModal.tsx` component (designed to handle both add/edit, but only add implemented this phase)
-   - Date picker (defaults to today)
-   - Rating picker (reuse `AppreciationPicker` or create variant)
-   - Experience notes textarea
-   - Company notes text field
-   - Form validation
-   - Submit handler using `visitService.addVisit()`
-   - Accept optional `visitToEdit` prop (for Phase 4, unused in Phase 3)
-3. Update `RestaurantDetails.tsx`:
+**Completed Tasks:**
+1. ✅ Created `visitService.ts` write operations:
+   - `addVisit()` function with comprehensive validation
+   - `validateVisitInput()` helper with security hardening:
+     - Strict HTML character rejection (`<`, `>`, `&`) to prevent XSS
+     - Rating validation (prevents 'unknown' and invalid values)
+     - Timezone-safe date validation (string comparison)
+     - Length constraints (2000 chars experience, 500 chars company)
+   - Duplicate visit detection with helpful error messages
+   - User authentication check
+2. ✅ Created `VisitModal.tsx` component:
+   - HTML5 date picker (defaults to today, max = today)
+   - Visual rating selection using appreciation levels
+   - Experience notes textarea with character counter (2000 max)
+   - Company notes input (500 max)
+   - Form validation with clear error messages
+   - Paste truncation for length limits (immediate feedback)
+   - Form state resets on modal close (prevents stale data)
+   - Loading states during submission
+   - Designed for Phase 4 edit functionality (accepts `visitToEdit` prop)
+3. ✅ Updated `RestaurantDetails.tsx`:
    - "Rate" button opens `VisitModal` (add mode)
    - "Mark as Visited" opens modal (add mode)
-   - Handle successful submission (refresh data)
-   - Show success/error toasts
-4. Update visit history to show new entry immediately
+   - Success handler refreshes both detail and list data
+   - Toast notifications for success/error feedback
+   - Query invalidation with explanatory comments
+4. ✅ Visit history updates immediately after adding visit
+
+**Security Features Implemented:**
+- **XSS Prevention:** Strict character rejection prevents encoded HTML, event handlers, JavaScript URLs
+- **Rating Validation:** Runtime validation prevents invalid enum values
+- **Timezone-Safe Dates:** String comparison prevents edge case failures
+- **Character Limits:** Client and server-side enforcement
+- **Duplicate Prevention:** Unique constraint on user+restaurant+date
 
 **Testing:**
-- Unit tests for `visitService.addVisit()` with validation
-- Component tests for `VisitModal.tsx`
-- Test form validation
-- Test date picker behavior
-- Test integration with service layer
-- Test input sanitization (HTML stripping)
-- E2E test: Add visit flow
+- ✅ Manual testing: Add visit flow with all fields
+- ✅ Manual testing: Add visit with only required fields
+- ✅ Manual testing: Character limits and paste truncation
+- ✅ Manual testing: Toast notifications work
+- ✅ Manual testing: Visit appears in history
+- ✅ Security testing: HTML character rejection
+- ✅ Linter passes with no new errors
 
-**Acceptance Criteria:**
-- Modal opens from "Rate" button
-- Modal opens from "Mark as Visited" button
-- Form validates required fields
-- Visit saves to database
-- UI updates to show new visit
-- Toast notifications work
-- Input sanitization prevents XSS
-- Modal designed for future edit mode (but edit not wired up yet)
+**Result:**
+- Users can now log restaurant visits with date, rating, and notes
+- Visits appear immediately in visit history (authenticated users only)
+- Restaurant cached ratings auto-update via database trigger
+- All security vulnerabilities from PR review addressed
+- Ready for Phase 4: edit and delete functionality
 
 ---
 

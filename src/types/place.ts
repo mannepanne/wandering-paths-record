@@ -139,5 +139,19 @@ export const APPRECIATION_LEVELS: Record<PersonalAppreciation, AppreciationLevel
   }
 };
 
+// Visit logging system types
+export interface RestaurantVisit {
+  id: string;
+  restaurant_id: string;
+  user_id: string;
+  visit_date: string; // ISO date string (YYYY-MM-DD)
+  rating: PersonalAppreciation;
+  experience_notes?: string;
+  company_notes?: string;
+  is_migrated_placeholder: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 // For backward compatibility during transition
 export type Place = Restaurant;

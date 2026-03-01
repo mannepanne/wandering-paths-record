@@ -446,10 +446,10 @@ const RestaurantDetails = () => {
             {restaurant.locations && restaurant.locations.length === 1 ? (
               /* Single Location Layout */
               <>
-                {/* 3-Column Grid: Description/Smart Review (2/3) + Visit History (1/3) */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Left: Description + Smart Review Summary (stacked, 2/3 width) */}
-                  <div className="lg:col-span-2 space-y-6">
+                {/* 3-Column Grid: Description/Smart Review (2/3 when logged in, full width when logged out) + Visit History (1/3, only when logged in) */}
+                <div className={`grid grid-cols-1 ${user ? 'lg:grid-cols-3' : ''} gap-6`}>
+                  {/* Left: Description + Smart Review Summary (stacked, 2/3 width when logged in, full width when logged out) */}
+                  <div className={`${user ? 'lg:col-span-2' : ''} space-y-6`}>
                     {/* Description */}
                     {restaurant.description && (
                       <div>
@@ -515,10 +515,12 @@ const RestaurantDetails = () => {
                     )}
                   </div>
 
-                  {/* Right: Visit History (1/3 width, spans height of Description + Smart Review) */}
-                  <div className="lg:col-span-1">
-                    <VisitHistory restaurantId={restaurant.id} />
-                  </div>
+                  {/* Right: Visit History (1/3 width, spans height of Description + Smart Review) - Only when logged in */}
+                  {user && (
+                    <div className="lg:col-span-1">
+                      <VisitHistory restaurantId={restaurant.id} />
+                    </div>
+                  )}
                 </div>
 
                 {/* Three Column Layout: Location + Dietary + Atmosphere */}
@@ -586,10 +588,10 @@ const RestaurantDetails = () => {
             ) : (
               /* Multi-Location Layout */
               <>
-                {/* 3-Column Grid: Description/Smart Review (2/3) + Visit History (1/3) */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Left: Description + Smart Review Summary (stacked, 2/3 width) */}
-                  <div className="lg:col-span-2 space-y-6">
+                {/* 3-Column Grid: Description/Smart Review (2/3 when logged in, full width when logged out) + Visit History (1/3, only when logged in) */}
+                <div className={`grid grid-cols-1 ${user ? 'lg:grid-cols-3' : ''} gap-6`}>
+                  {/* Left: Description + Smart Review Summary (stacked, 2/3 width when logged in, full width when logged out) */}
+                  <div className={`${user ? 'lg:col-span-2' : ''} space-y-6`}>
                     {/* Description */}
                     {restaurant.description && (
                       <div>
@@ -655,10 +657,12 @@ const RestaurantDetails = () => {
                     )}
                   </div>
 
-                  {/* Right: Visit History (1/3 width, spans height of Description + Smart Review) */}
-                  <div className="lg:col-span-1">
-                    <VisitHistory restaurantId={restaurant.id} />
-                  </div>
+                  {/* Right: Visit History (1/3 width, spans height of Description + Smart Review) - Only when logged in */}
+                  {user && (
+                    <div className="lg:col-span-1">
+                      <VisitHistory restaurantId={restaurant.id} />
+                    </div>
+                  )}
                 </div>
 
                 {/* Three Column Layout: Source + Atmosphere + Dietary */}

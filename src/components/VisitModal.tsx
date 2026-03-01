@@ -100,7 +100,19 @@ export const VisitModal = ({
       onClose();
     } catch (err) {
       console.error('Error saving visit:', err);
-      setError(err instanceof Error ? err.message : 'Failed to save visit');
+
+      // Provide helpful error messages
+      let errorMessage = 'Failed to save visit';
+
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      } else {
+        errorMessage = 'Network error. Please check your connection and try again.';
+      }
+
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -108,6 +120,11 @@ export const VisitModal = ({
 
   const handleClose = () => {
     if (!isSubmitting) {
+      // Reset form state on close to prevent stale data
+      setRating(null);
+      setExperienceNotes('');
+      setCompanyNotes('');
+      setError(null);
       onClose();
     }
   };
@@ -187,7 +204,11 @@ export const VisitModal = ({
               id="experience-notes"
               placeholder="What did you have? How was it? Any memorable details?"
               value={experienceNotes}
-              onChange={(e) => setExperienceNotes(e.target.value)}
+              onChange={(e) => {
+                // Truncate on paste to prevent exceeding maxLength
+                const value = e.target.value;
+                setExperienceNotes(value.slice(0, 2000));
+              }}
               maxLength={2000}
               rows={4}
               className="resize-none"
@@ -208,7 +229,11 @@ export const VisitModal = ({
               type="text"
               placeholder="e.g., Sarah and Tom"
               value={companyNotes}
-              onChange={(e) => setCompanyNotes(e.target.value)}
+              onChange={(e) => {
+                // Truncate on paste to prevent exceeding maxLength
+                const value = e.target.value;
+                setCompanyNotes(value.slice(0, 500));
+              }}
               maxLength={500}
             />
           </div>

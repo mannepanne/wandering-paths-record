@@ -174,7 +174,9 @@ const RestaurantDetails = () => {
     }
 
     // Refresh restaurant data and visit history
+    // Invalidate restaurant detail (shows new visit in history)
     queryClient.invalidateQueries({ queryKey: ["restaurant", id] });
+    // Invalidate restaurant list (appreciation badge updates via database trigger)
     queryClient.invalidateQueries({ queryKey: ["restaurants"] });
 
     toast({

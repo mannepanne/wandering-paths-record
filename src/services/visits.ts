@@ -22,29 +22,42 @@ interface CreateVisitInput {
  * @throws Error if validation fails
  */
 const validateVisitInput = (input: CreateVisitInput): CreateVisitInput => {
+  // Validate rating - prevent 'unknown' and invalid values
+  const validRatings: PersonalAppreciation[] = ['avoid', 'fine', 'good', 'great'];
+  if (!validRatings.includes(input.rating)) {
+    throw new Error('Rating must be a valid appreciation level (avoid, fine, good, or great)');
+  }
+
   // Validate date format (YYYY-MM-DD)
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.visit_date)) {
     throw new Error('Invalid date format. Expected YYYY-MM-DD');
   }
 
   // Validate date range (not in future, not before 1900)
-  const visitDate = new Date(input.visit_date);
-  const minDate = new Date('1900-01-01');
-  const today = new Date();
-  today.setHours(23, 59, 59, 999); // Allow today's date
+  // Use string comparison to avoid timezone issues with YYYY-MM-DD format
+  const visitDateStr = input.visit_date;
+  const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD in UTC
+  const minDateStr = '1900-01-01';
 
-  if (isNaN(visitDate.getTime())) {
-    throw new Error('Invalid date');
-  }
-
-  if (visitDate < minDate || visitDate > today) {
+  if (visitDateStr < minDateStr || visitDateStr > todayStr) {
     throw new Error('Visit date must be between 1900-01-01 and today');
   }
 
-  // Sanitize text fields: strip HTML tags, trim whitespace
+  // Sanitize text fields: reject HTML-like characters, trim whitespace
+  // Using strict rejection approach to prevent XSS (encoded HTML, event handlers, etc.)
   const stripHtml = (text?: string): string | undefined => {
     if (!text) return undefined;
-    return text.replace(/<[^>]*>/g, '').trim() || undefined;
+
+    const trimmed = text.trim();
+    if (!trimmed) return undefined;
+
+    // Reject any HTML-like characters to prevent XSS attacks
+    // This prevents: <script>, encoded HTML entities (&lt;), event handlers, etc.
+    if (/<|>|&/.test(trimmed)) {
+      throw new Error('HTML and special characters are not allowed in notes');
+    }
+
+    return trimmed;
   };
 
   const sanitizedExperienceNotes = stripHtml(input.experience_notes);
@@ -189,7 +202,10 @@ export const visitService = {
 
       // Check for duplicate visit on same date
       if (error.code === '23505') { // Unique constraint violation
-        throw new Error('You already logged a visit to this restaurant on this date');
+        throw new Error(
+          `You already logged a visit to this restaurant on ${validatedInput.visit_date}. ` +
+          'You can edit the existing visit or choose a different date.'
+        );
       }
 
       throw error;

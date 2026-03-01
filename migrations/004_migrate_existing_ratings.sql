@@ -53,7 +53,7 @@ BEGIN
     r.id AS restaurant_id,
     admin_user_id AS user_id,
     placeholder_date AS visit_date,
-    r.personal_appreciation AS rating,
+    r.personal_appreciation::personal_appreciation AS rating,  -- Cast text to ENUM type
     NULL AS experience_notes,
     NULL AS company_notes,
     TRUE AS is_migrated_placeholder,

@@ -10,6 +10,7 @@ import { visitService } from '@/services/visits';
 vi.mock('@/services/visits', () => ({
   visitService: {
     addVisit: vi.fn(),
+    updateVisit: vi.fn(),
   },
 }));
 
@@ -350,6 +351,66 @@ describe('VisitModal', () => {
 
       expect(screen.getByText('Update Visit')).toBeInTheDocument();
       expect(screen.queryByText('Add Visit')).not.toBeInTheDocument();
+    });
+
+    it('should call updateVisit when editing a visit', async () => {
+      const mockUpdateVisit = vi.spyOn(visitService, 'updateVisit').mockResolvedValueOnce({
+        id: 'visit-1',
+        restaurant_id: 'test-restaurant',
+        user_id: 'user-1',
+        visit_date: '2026-02-20',
+        rating: 'great',
+        experience_notes: 'Even better this time',
+        company_notes: 'With family',
+        is_migrated_placeholder: false,
+        created_at: '2026-02-15T12:00:00Z',
+        updated_at: '2026-03-01T12:00:00Z',
+      });
+
+      const visitToEdit = {
+        id: 'visit-1',
+        restaurant_id: 'test-restaurant',
+        user_id: 'user-1',
+        visit_date: '2026-02-15',
+        rating: 'good' as const,
+        experience_notes: 'Great meal',
+        company_notes: 'With friends',
+        is_migrated_placeholder: false,
+        created_at: '2026-02-15T12:00:00Z',
+        updated_at: '2026-02-15T12:00:00Z',
+      };
+
+      render(<VisitModal {...defaultProps} visitToEdit={visitToEdit} />);
+
+      // Change the date
+      const dateInput = screen.getByLabelText(/visit date/i);
+      fireEvent.change(dateInput, { target: { value: '2026-02-20' } });
+
+      // Change rating
+      const greatButton = screen.getByText('Must visit!');
+      fireEvent.click(greatButton);
+
+      // Change notes
+      const experienceTextarea = screen.getByPlaceholderText(/What did you have/i);
+      fireEvent.change(experienceTextarea, { target: { value: 'Even better this time' } });
+
+      const companyInput = screen.getByPlaceholderText(/Sarah and Tom/i);
+      fireEvent.change(companyInput, { target: { value: 'With family' } });
+
+      // Submit
+      const submitButton = screen.getByRole('button', { name: /Update Visit/i });
+      fireEvent.click(submitButton);
+
+      await waitFor(() => {
+        expect(mockUpdateVisit).toHaveBeenCalledWith('visit-1', {
+          visit_date: '2026-02-20',
+          rating: 'great',
+          experience_notes: 'Even better this time',
+          company_notes: 'With family',
+        });
+        expect(defaultProps.onSuccess).toHaveBeenCalled();
+        expect(defaultProps.onClose).toHaveBeenCalled();
+      });
     });
   });
 });

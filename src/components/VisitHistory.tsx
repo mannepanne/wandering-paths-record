@@ -1,19 +1,22 @@
 // ABOUT: Component to display visit history for a restaurant
-// ABOUT: Shows list of visits with dates, ratings, and notes (read-only)
+// ABOUT: Shows list of visits with dates, ratings, notes, and edit/delete actions
 
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, User } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Calendar, User, Edit2, Trash2 } from 'lucide-react';
 import { RestaurantVisit } from '@/types/place';
 import { APPRECIATION_LEVELS } from '@/types/place';
 import { visitService } from '@/services/visits';
 
 interface VisitHistoryProps {
   restaurantId: string;
+  onEdit?: (visit: RestaurantVisit) => void;
+  onDelete?: (visit: RestaurantVisit) => void;
 }
 
-export const VisitHistory = ({ restaurantId }: VisitHistoryProps) => {
+export const VisitHistory = ({ restaurantId, onEdit, onDelete }: VisitHistoryProps) => {
   const [visits, setVisits] = useState<RestaurantVisit[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -106,12 +109,42 @@ export const VisitHistory = ({ restaurantId }: VisitHistoryProps) => {
               key={visit.id}
               className="pb-4 border-b last:border-b-0 last:pb-0"
             >
-              {/* Visit Date */}
-              <div className="flex items-center gap-2 mb-2">
-                <Calendar className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm font-medium">
-                  {formatVisitDate(visit)}
-                </span>
+              {/* Visit Date and Actions */}
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">
+                    {formatVisitDate(visit)}
+                  </span>
+                </div>
+
+                {/* Edit/Delete Actions */}
+                {(onEdit || onDelete) && (
+                  <div className="flex items-center gap-1">
+                    {onEdit && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onEdit(visit)}
+                        className="h-7 px-2 text-muted-foreground hover:text-foreground"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                        <span className="sr-only">Edit visit</span>
+                      </Button>
+                    )}
+                    {onDelete && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onDelete(visit)}
+                        className="h-7 px-2 text-muted-foreground hover:text-destructive"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        <span className="sr-only">Delete visit</span>
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Rating Badge */}

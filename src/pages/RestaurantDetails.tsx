@@ -5,14 +5,25 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { MapPin, Star, Globe, ArrowLeft, Phone, Clock, Heart, Plus, Shield } from "lucide-react";
 import { InteractiveMap } from "@/components/InteractiveMap";
 import { restaurantService } from "@/services/restaurants";
-import { Restaurant, RestaurantAddress, APPRECIATION_LEVELS, PersonalAppreciation, RestaurantStatus } from "@/types/place";
+import { Restaurant, RestaurantAddress, RestaurantVisit, APPRECIATION_LEVELS, PersonalAppreciation, RestaurantStatus } from "@/types/place";
 import { useAuth } from "@/contexts/AuthContext";
 import { AppreciationPicker } from "@/components/AppreciationPicker";
 import { VisitHistory } from "@/components/VisitHistory";
 import { VisitModal } from "@/components/VisitModal";
+import { visitService } from "@/services/visits";
 import { useToast } from "@/hooks/use-toast";
 
 const RestaurantDetails = () => {
@@ -24,6 +35,8 @@ const RestaurantDetails = () => {
   const [showAllDishes, setShowAllDishes] = useState(false);
   const [showAppreciationPicker, setShowAppreciationPicker] = useState(false);
   const [showVisitModal, setShowVisitModal] = useState(false);
+  const [visitToEdit, setVisitToEdit] = useState<RestaurantVisit | undefined>(undefined);
+  const [visitToDelete, setVisitToDelete] = useState<RestaurantVisit | null>(null);
   const [pendingStatus, setPendingStatus] = useState<RestaurantStatus | null>(null);
 
   // Fetch restaurant with all location details
@@ -188,7 +201,49 @@ const RestaurantDetails = () => {
   // Handle visit modal close
   const handleVisitModalClose = () => {
     setShowVisitModal(false);
+    setVisitToEdit(undefined);
     setPendingStatus(null);
+  };
+
+  // Handle edit visit
+  const handleEditVisit = (visit: RestaurantVisit) => {
+    setVisitToEdit(visit);
+    setShowVisitModal(true);
+  };
+
+  // Handle delete visit
+  const handleDeleteVisit = (visit: RestaurantVisit) => {
+    setVisitToDelete(visit);
+  };
+
+  // Confirm delete visit
+  const confirmDeleteVisit = async () => {
+    if (!visitToDelete) return;
+
+    try {
+      await visitService.deleteVisit(visitToDelete.id);
+
+      // Invalidate queries to refresh data
+      // - Restaurant detail: refreshes visit history display
+      queryClient.invalidateQueries({ queryKey: ["restaurant", id] });
+      // - Restaurant list: cached appreciation is recalculated by database trigger
+      //   (if last visit was deleted, appreciation returns to 'unknown')
+      queryClient.invalidateQueries({ queryKey: ["restaurants"] });
+
+      toast({
+        title: "Visit deleted",
+        description: "Visit has been removed from your history.",
+      });
+    } catch (err) {
+      console.error('Error deleting visit:', err);
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to delete visit",
+        variant: "destructive",
+      });
+    } finally {
+      setVisitToDelete(null);
+    }
   };
 
   // Keep old AppreciationPicker handlers for backward compatibility (may remove in future)
@@ -523,7 +578,11 @@ const RestaurantDetails = () => {
                   {/* Row 1: Visit History (logged in only) - spans 2 rows */}
                   {user && (
                     <div className="lg:row-span-2">
-                      <VisitHistory restaurantId={restaurant.id} />
+                      <VisitHistory
+                        restaurantId={restaurant.id}
+                        onEdit={handleEditVisit}
+                        onDelete={handleDeleteVisit}
+                      />
                     </div>
                   )}
 
@@ -688,7 +747,11 @@ const RestaurantDetails = () => {
                   {/* Row 1: Visit History (logged in only) - spans 2 rows */}
                   {user && (
                     <div className="lg:row-span-2">
-                      <VisitHistory restaurantId={restaurant.id} />
+                      <VisitHistory
+                        restaurantId={restaurant.id}
+                        onEdit={handleEditVisit}
+                        onDelete={handleDeleteVisit}
+                      />
                     </div>
                   )}
 
@@ -855,8 +918,30 @@ const RestaurantDetails = () => {
           onSuccess={handleVisitSuccess}
           restaurantId={restaurant.id}
           restaurantName={restaurant.name}
+          visitToEdit={visitToEdit}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!visitToDelete} onOpenChange={(open) => !open && setVisitToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Visit</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this visit? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteVisit}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

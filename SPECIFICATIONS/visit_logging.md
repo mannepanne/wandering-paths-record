@@ -24,12 +24,13 @@
 - Security hardening (XSS prevention, rating validation, timezone fixes)
 - Toast notifications and error handling
 
-**Phase 4: Edit/Delete Visits** 🔄 NEXT
-- Edit existing visits
-- Delete visits with confirmation
-- Fix placeholder dates
+**Phase 4: Edit/Delete Visits** ✅ COMPLETE (PR #5, 2026-03-02)
+- Edit existing visits with updateVisit()
+- Delete visits with confirmation dialog
+- Fix placeholder dates (clears migrated flag)
+- 13 new tests, 100 total passing
 
-**Phase 5: Verification & Documentation** ⏳ UPCOMING
+**Phase 5: Verification & Documentation** 🔄 NEXT
 - End-to-end testing
 - Performance verification
 - Security verification
@@ -624,41 +625,58 @@ async function checkRateLimit(userId: string, operation: string): Promise<boolea
 
 ---
 
-### Phase 4: Edit/Delete Visits
+### Phase 4: Edit/Delete Visits ✅ COMPLETE
 **Branch:** `feature/edit-delete-visits`
+**PR:** #5
 **Goal:** Allow users to edit or delete existing visits
 
-**Tasks:**
-1. Add `visitService.ts` edit/delete operations:
-   - `updateVisit()` with validation
-   - `deleteVisit()`
-2. Add edit button to `VisitHistory.tsx` component
-   - On click, opens `VisitModal` with `visitToEdit` prop populated
-   - Modal pre-fills form with existing visit data
-3. Update `VisitModal.tsx`:
-   - Detect edit mode (when `visitToEdit` prop is present)
-   - Use `visitService.updateVisit()` instead of `addVisit()` when editing
-   - Update modal title: "Add Visit" vs "Edit Visit"
-   - When user edits date on migrated visit, set `is_migrated_placeholder = FALSE`
-4. Add delete button to visit entries
-   - Shows confirmation dialog before deleting
-   - Calls `visitService.deleteVisit()`
-5. Handle optimistic updates for better UX
-6. Database trigger auto-updates cached rating after edit/delete (no manual refresh needed)
+**Implementation:**
+1. ✅ Added `visitService.ts` edit/delete operations:
+   - `updateVisit()` with full validation (XSS, rating, date, length)
+   - `deleteVisit()` with authentication check
+   - Clears `is_migrated_placeholder` flag when date changed
+   - Handles duplicate date conflicts
+2. ✅ Added edit/delete buttons to `VisitHistory.tsx`:
+   - Edit button opens `VisitModal` pre-filled with visit data
+   - Delete button opens AlertDialog confirmation
+   - Action buttons conditionally rendered based on callbacks
+3. ✅ Updated `VisitModal.tsx` for edit mode:
+   - Detects edit mode via `visitToEdit` prop
+   - Calls `updateVisit()` instead of `addVisit()` when editing
+   - Modal title changes: "Add Visit" vs "Edit Visit"
+   - Submit button changes: "Add Visit" vs "Update Visit"
+4. ✅ Delete confirmation dialog:
+   - AlertDialog from shadcn/ui
+   - Clear warning about irreversible action
+   - Destructive styling on confirm button
+5. ✅ `RestaurantDetails.tsx` integration:
+   - Handlers for edit and delete with query invalidation
+   - Toast notifications for user feedback
+   - State management for visitToEdit and visitToDelete
+6. ✅ Database trigger auto-updates cached rating after edit/delete
 
-**Key user flow:** Users can fix placeholder "Before 2026" dates by:
-1. Click edit on migrated visit
-2. Change date to actual date they remember
-3. `is_migrated_placeholder` automatically set to FALSE
-4. Date now displays as formatted date instead of "Before 2026"
+**Key user flow: Fixing placeholder dates**
+1. Click edit on migrated visit (shows "Before 2026")
+2. Change date to actual date remembered
+3. `is_migrated_placeholder` automatically set to FALSE on save
+4. Date now displays normally (e.g., "Feb 15, 2026")
 
 **Testing:**
-- Test edit flow (including placeholder date fixes)
-- Test `is_migrated_placeholder` cleared when date edited
-- Test delete flow with confirmation
-- Test delete edge cases (only visit, latest visit, middle visit)
-- Test error handling
-- Test trigger updates cached rating correctly
+- ✅ 13 new service tests for updateVisit and deleteVisit
+- ✅ Component test for edit mode submission
+- ✅ All validation tests (XSS, rating, date, length)
+- ✅ Duplicate date detection test
+- ✅ Migrated placeholder flag clearing test
+- ✅ 100 tests passing across entire project
+- ⏳ Manual testing pending
+- ⏳ End-to-end testing (Phase 5)
+
+**Result:**
+- Users can now edit and delete visit history entries
+- Placeholder dates from migration can be corrected
+- All security features maintained (XSS prevention, validation)
+- Database trigger keeps cached ratings synchronized
+- Ready for Phase 5: verification and documentation
 
 **Acceptance Criteria:**
 - ✅ Edit button opens modal pre-populated with visit data

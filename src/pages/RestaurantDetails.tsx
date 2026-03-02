@@ -224,7 +224,10 @@ const RestaurantDetails = () => {
       await visitService.deleteVisit(visitToDelete.id);
 
       // Invalidate queries to refresh data
+      // - Restaurant detail: refreshes visit history display
       queryClient.invalidateQueries({ queryKey: ["restaurant", id] });
+      // - Restaurant list: cached appreciation is recalculated by database trigger
+      //   (if last visit was deleted, appreciation returns to 'unknown')
       queryClient.invalidateQueries({ queryKey: ["restaurants"] });
 
       toast({

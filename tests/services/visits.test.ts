@@ -655,25 +655,83 @@ describe('visitService.updateVisit - Functionality', () => {
 describe('visitService.deleteVisit', () => {
   it('should delete a visit successfully', async () => {
     const { supabase } = await import('@/lib/supabase');
+
+    // Mock select to find the visit
+    const selectMock = vi.fn(() => Promise.resolve({
+      data: {
+        id: 'visit-123',
+        user_id: 'test-user-id',
+      },
+      error: null,
+    }));
+
+    // Mock delete operation
+    const deleteMock = vi.fn(() => Promise.resolve({ error: null }));
+
     vi.mocked(supabase.from).mockReturnValue({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          single: selectMock,
+        })),
+      })),
       delete: vi.fn(() => ({
-        eq: vi.fn(() => Promise.resolve({ error: null })),
+        eq: deleteMock,
       })),
     } as any);
 
     await expect(visitService.deleteVisit('visit-123')).resolves.not.toThrow();
   });
 
-  it('should handle deletion errors', async () => {
+  it('should throw error when visit not found', async () => {
     const { supabase } = await import('@/lib/supabase');
+
+    // Mock select returning no visit
     vi.mocked(supabase.from).mockReturnValue({
-      delete: vi.fn(() => ({
-        eq: vi.fn(() => Promise.resolve({
-          error: new Error('Database error'),
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          single: vi.fn(() => Promise.resolve({
+            data: null,
+            error: { code: 'PGRST116', message: 'Not found' },
+          })),
         })),
       })),
     } as any);
 
-    await expect(visitService.deleteVisit('visit-123')).rejects.toThrow();
+    await expect(visitService.deleteVisit('visit-123')).rejects.toThrow(
+      'Visit not found or you do not have permission to delete it'
+    );
+  });
+
+  it('should handle deletion errors', async () => {
+    const { supabase } = await import('@/lib/supabase');
+
+    // Mock select to find the visit
+    const selectMock = vi.fn(() => Promise.resolve({
+      data: {
+        id: 'visit-123',
+        user_id: 'test-user-id',
+      },
+      error: null,
+    }));
+
+    // Mock delete operation failing
+    const deleteMock = vi.fn(() => Promise.resolve({
+      error: new Error('Database error'),
+    }));
+
+    vi.mocked(supabase.from).mockReturnValue({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          single: selectMock,
+        })),
+      })),
+      delete: vi.fn(() => ({
+        eq: deleteMock,
+      })),
+    } as any);
+
+    await expect(visitService.deleteVisit('visit-123')).rejects.toThrow(
+      'Failed to delete visit. Please try again.'
+    );
   });
 });

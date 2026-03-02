@@ -17,6 +17,7 @@ interface CreateVisitInput {
 
 /**
  * Input data for updating an existing visit
+ * Note: restaurant_id is intentionally excluded - visits cannot be reassigned to different restaurants
  */
 interface UpdateVisitInput {
   visit_date: string; // ISO date string (YYYY-MM-DD)
@@ -25,53 +26,77 @@ interface UpdateVisitInput {
   company_notes?: string;
 }
 
+// ============================================================================
+// Shared Validation Helpers
+// ============================================================================
+
 /**
- * Validates and sanitizes visit input data
- * @param input - Raw visit input data
- * @returns Sanitized input data
- * @throws Error if validation fails
+ * Strips HTML-like characters and trims whitespace from text
+ * @param text - Input text to sanitize
+ * @returns Sanitized text or undefined if empty
+ * @throws Error if HTML-like characters are found
  */
-const validateVisitInput = (input: CreateVisitInput): CreateVisitInput => {
-  // Validate rating - prevent 'unknown' and invalid values
-  const validRatings: PersonalAppreciation[] = ['avoid', 'fine', 'good', 'great'];
-  if (!validRatings.includes(input.rating)) {
-    throw new Error('Rating must be a valid appreciation level (avoid, fine, good, or great)');
+const stripHtml = (text?: string): string | undefined => {
+  if (!text) return undefined;
+
+  const trimmed = text.trim();
+  if (!trimmed) return undefined;
+
+  // Reject any HTML-like characters to prevent XSS attacks
+  // This prevents: <script>, encoded HTML entities (&lt;), event handlers, etc.
+  if (/<|>|&/.test(trimmed)) {
+    throw new Error('HTML and special characters are not allowed in notes');
   }
 
+  return trimmed;
+};
+
+/**
+ * Validates that rating is a valid appreciation level (not 'unknown')
+ * @param rating - Rating to validate
+ * @throws Error if rating is invalid
+ */
+const validateRating = (rating: PersonalAppreciation): void => {
+  const validRatings: PersonalAppreciation[] = ['avoid', 'fine', 'good', 'great'];
+  if (!validRatings.includes(rating)) {
+    throw new Error('Rating must be a valid appreciation level (avoid, fine, good, or great)');
+  }
+};
+
+/**
+ * Validates date format and range
+ * @param visitDate - Date string to validate (YYYY-MM-DD)
+ * @throws Error if date format is invalid or out of range
+ */
+const validateDate = (visitDate: string): void => {
   // Validate date format (YYYY-MM-DD)
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.visit_date)) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(visitDate)) {
     throw new Error('Invalid date format. Expected YYYY-MM-DD');
   }
 
   // Validate date range (not in future, not before 1900)
   // Use string comparison to avoid timezone issues with YYYY-MM-DD format
-  const visitDateStr = input.visit_date;
   const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD in UTC
   const minDateStr = '1900-01-01';
 
-  if (visitDateStr < minDateStr || visitDateStr > todayStr) {
+  if (visitDate < minDateStr || visitDate > todayStr) {
     throw new Error('Visit date must be between 1900-01-01 and today');
   }
+};
 
-  // Sanitize text fields: reject HTML-like characters, trim whitespace
-  // Using strict rejection approach to prevent XSS (encoded HTML, event handlers, etc.)
-  const stripHtml = (text?: string): string | undefined => {
-    if (!text) return undefined;
-
-    const trimmed = text.trim();
-    if (!trimmed) return undefined;
-
-    // Reject any HTML-like characters to prevent XSS attacks
-    // This prevents: <script>, encoded HTML entities (&lt;), event handlers, etc.
-    if (/<|>|&/.test(trimmed)) {
-      throw new Error('HTML and special characters are not allowed in notes');
-    }
-
-    return trimmed;
-  };
-
-  const sanitizedExperienceNotes = stripHtml(input.experience_notes);
-  const sanitizedCompanyNotes = stripHtml(input.company_notes);
+/**
+ * Sanitizes and validates notes fields
+ * @param experienceNotes - Optional experience notes
+ * @param companyNotes - Optional company notes
+ * @returns Object with sanitized notes
+ * @throws Error if length constraints are violated
+ */
+const sanitizeAndValidateNotes = (
+  experienceNotes?: string,
+  companyNotes?: string
+): { experience_notes?: string; company_notes?: string } => {
+  const sanitizedExperienceNotes = stripHtml(experienceNotes);
+  const sanitizedCompanyNotes = stripHtml(companyNotes);
 
   // Validate length constraints
   if (sanitizedExperienceNotes && sanitizedExperienceNotes.length > 2000) {
@@ -83,11 +108,36 @@ const validateVisitInput = (input: CreateVisitInput): CreateVisitInput => {
   }
 
   return {
+    experience_notes: sanitizedExperienceNotes,
+    company_notes: sanitizedCompanyNotes,
+  };
+};
+
+// ============================================================================
+// Validation Functions
+// ============================================================================
+
+/**
+ * Validates and sanitizes visit input data
+ * @param input - Raw visit input data
+ * @returns Sanitized input data
+ * @throws Error if validation fails
+ */
+const validateVisitInput = (input: CreateVisitInput): CreateVisitInput => {
+  // Validate restaurant_id
+  if (!input.restaurant_id || input.restaurant_id.trim() === '') {
+    throw new Error('Restaurant ID is required');
+  }
+
+  validateRating(input.rating);
+  validateDate(input.visit_date);
+  const sanitizedNotes = sanitizeAndValidateNotes(input.experience_notes, input.company_notes);
+
+  return {
     restaurant_id: input.restaurant_id,
     visit_date: input.visit_date,
     rating: input.rating,
-    experience_notes: sanitizedExperienceNotes,
-    company_notes: sanitizedCompanyNotes,
+    ...sanitizedNotes,
   };
 };
 
@@ -98,54 +148,14 @@ const validateVisitInput = (input: CreateVisitInput): CreateVisitInput => {
  * @throws Error if validation fails
  */
 const validateUpdateInput = (input: UpdateVisitInput): UpdateVisitInput => {
-  // Validate rating - prevent 'unknown' and invalid values
-  const validRatings: PersonalAppreciation[] = ['avoid', 'fine', 'good', 'great'];
-  if (!validRatings.includes(input.rating)) {
-    throw new Error('Rating must be a valid appreciation level (avoid, fine, good, or great)');
-  }
-
-  // Validate date format (YYYY-MM-DD)
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.visit_date)) {
-    throw new Error('Invalid date format. Expected YYYY-MM-DD');
-  }
-
-  // Validate date range (not in future, not before 1900)
-  const visitDateStr = input.visit_date;
-  const todayStr = new Date().toISOString().split('T')[0];
-  const minDateStr = '1900-01-01';
-
-  if (visitDateStr < minDateStr || visitDateStr > todayStr) {
-    throw new Error('Visit date must be between 1900-01-01 and today');
-  }
-
-  // Sanitize text fields using same approach as create
-  const stripHtml = (text?: string): string | undefined => {
-    if (!text) return undefined;
-    const trimmed = text.trim();
-    if (!trimmed) return undefined;
-    if (/<|>|&/.test(trimmed)) {
-      throw new Error('HTML and special characters are not allowed in notes');
-    }
-    return trimmed;
-  };
-
-  const sanitizedExperienceNotes = stripHtml(input.experience_notes);
-  const sanitizedCompanyNotes = stripHtml(input.company_notes);
-
-  // Validate length constraints
-  if (sanitizedExperienceNotes && sanitizedExperienceNotes.length > 2000) {
-    throw new Error('Experience notes must be 2000 characters or less');
-  }
-
-  if (sanitizedCompanyNotes && sanitizedCompanyNotes.length > 500) {
-    throw new Error('Company notes must be 500 characters or less');
-  }
+  validateRating(input.rating);
+  validateDate(input.visit_date);
+  const sanitizedNotes = sanitizeAndValidateNotes(input.experience_notes, input.company_notes);
 
   return {
     visit_date: input.visit_date,
     rating: input.rating,
-    experience_notes: sanitizedExperienceNotes,
-    company_notes: sanitizedCompanyNotes,
+    ...sanitizedNotes,
   };
 };
 
@@ -312,7 +322,11 @@ export const visitService = {
       throw new Error('Visit not found');
     }
 
-    // Determine if this is a migrated placeholder being edited
+    // Migrated placeholder logic:
+    // - Visits migrated from the old system have is_migrated_placeholder = true
+    // - These visits have a default date (2024-01-01) since the old system didn't track dates
+    // - When user edits the date on a migrated visit, we clear the flag to indicate it's now a real date
+    // - This allows us to distinguish between "placeholder date" and "user-confirmed date"
     const isEditingMigratedDate = existingVisit.is_migrated_placeholder &&
                                    existingVisit.visit_date !== validatedInput.visit_date;
 
@@ -324,7 +338,7 @@ export const visitService = {
         rating: validatedInput.rating,
         experience_notes: validatedInput.experience_notes,
         company_notes: validatedInput.company_notes,
-        // Clear migrated flag if user is editing the date
+        // Clear migrated flag if user is editing the date (making it a real date now)
         is_migrated_placeholder: isEditingMigratedDate ? false : existingVisit.is_migrated_placeholder,
       })
       .eq('id', visitId)
@@ -351,7 +365,7 @@ export const visitService = {
   /**
    * Delete a visit
    * @param visitId - The visit ID to delete
-   * @throws Error if database operation fails
+   * @throws Error if database operation fails or visit not found
    */
   async deleteVisit(visitId: string): Promise<void> {
     // Get current user from Supabase auth
@@ -361,7 +375,22 @@ export const visitService = {
       throw new Error('User must be authenticated to delete visits');
     }
 
-    // Delete the visit (RLS policy ensures user can only delete their own visits)
+    // First check if visit exists and belongs to current user
+    const { data: existingVisit, error: fetchError } = await supabase
+      .from('restaurant_visits')
+      .select('id, user_id')
+      .eq('id', visitId)
+      .single();
+
+    if (fetchError || !existingVisit) {
+      throw new Error('Visit not found or you do not have permission to delete it');
+    }
+
+    if (existingVisit.user_id !== user.id) {
+      throw new Error('You do not have permission to delete this visit');
+    }
+
+    // Delete the visit (RLS policy provides additional security layer)
     const { error } = await supabase
       .from('restaurant_visits')
       .delete()
@@ -369,7 +398,7 @@ export const visitService = {
 
     if (error) {
       console.error('Error deleting visit:', error);
-      throw error;
+      throw new Error('Failed to delete visit. Please try again.');
     }
   },
 };

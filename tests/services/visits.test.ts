@@ -359,3 +359,321 @@ describe('visitService.getVisitCount', () => {
     expect(result).toBe(0);
   });
 });
+
+describe('visitService.updateVisit - Validation', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('XSS Prevention', () => {
+    it('should reject experience notes with HTML characters', async () => {
+      const input = {
+        visit_date: '2026-03-01',
+        rating: 'good' as const,
+        experience_notes: 'Great meal <script>alert(1)</script>',
+      };
+
+      await expect(visitService.updateVisit('visit-123', input)).rejects.toThrow(
+        'HTML and special characters are not allowed in notes'
+      );
+    });
+
+    it('should reject company notes with HTML characters', async () => {
+      const input = {
+        visit_date: '2026-03-01',
+        rating: 'good' as const,
+        company_notes: '<b>Sarah</b>',
+      };
+
+      await expect(visitService.updateVisit('visit-123', input)).rejects.toThrow(
+        'HTML and special characters are not allowed in notes'
+      );
+    });
+  });
+
+  describe('Rating Validation', () => {
+    it('should reject invalid rating values', async () => {
+      const input = {
+        visit_date: '2026-03-01',
+        rating: 'excellent' as any,
+      };
+
+      await expect(visitService.updateVisit('visit-123', input)).rejects.toThrow(
+        'Rating must be a valid appreciation level'
+      );
+    });
+
+    it('should accept valid ratings', async () => {
+      // Mock existing visit fetch and update
+      const { supabase } = await import('@/lib/supabase');
+      vi.mocked(supabase.from).mockReturnValueOnce({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            single: vi.fn(() => Promise.resolve({
+              data: {
+                id: 'visit-123',
+                restaurant_id: 'restaurant-1',
+                user_id: 'test-user-id',
+                visit_date: '2026-03-01',
+                rating: 'good',
+                is_migrated_placeholder: false,
+                created_at: '2026-03-01T00:00:00Z',
+                updated_at: '2026-03-01T00:00:00Z',
+              },
+              error: null,
+            })),
+          })),
+        })),
+      } as any).mockReturnValueOnce({
+        update: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            select: vi.fn(() => ({
+              single: vi.fn(() => Promise.resolve({
+                data: {
+                  id: 'visit-123',
+                  restaurant_id: 'restaurant-1',
+                  user_id: 'test-user-id',
+                  visit_date: '2026-03-01',
+                  rating: 'great',
+                  is_migrated_placeholder: false,
+                  created_at: '2026-03-01T00:00:00Z',
+                  updated_at: '2026-03-01T12:00:00Z',
+                },
+                error: null,
+              })),
+            })),
+          })),
+        })),
+      } as any);
+
+      const input = {
+        visit_date: '2026-03-01',
+        rating: 'great' as const,
+      };
+
+      await expect(visitService.updateVisit('visit-123', input)).resolves.toBeDefined();
+    });
+  });
+
+  describe('Date Validation', () => {
+    it('should reject invalid date format', async () => {
+      const input = {
+        visit_date: '03/01/2026',
+        rating: 'good' as const,
+      };
+
+      await expect(visitService.updateVisit('visit-123', input)).rejects.toThrow(
+        'Invalid date format. Expected YYYY-MM-DD'
+      );
+    });
+
+    it('should reject future dates', async () => {
+      const input = {
+        visit_date: '2099-12-31',
+        rating: 'good' as const,
+      };
+
+      await expect(visitService.updateVisit('visit-123', input)).rejects.toThrow(
+        'Visit date must be between 1900-01-01 and today'
+      );
+    });
+
+    it('should accept valid dates', async () => {
+      // Mock existing visit fetch and update
+      const { supabase } = await import('@/lib/supabase');
+      vi.mocked(supabase.from).mockReturnValueOnce({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            single: vi.fn(() => Promise.resolve({
+              data: {
+                id: 'visit-123',
+                restaurant_id: 'restaurant-1',
+                user_id: 'test-user-id',
+                visit_date: '2026-02-10',
+                rating: 'good',
+                is_migrated_placeholder: false,
+                created_at: '2026-02-10T00:00:00Z',
+                updated_at: '2026-02-10T00:00:00Z',
+              },
+              error: null,
+            })),
+          })),
+        })),
+      } as any).mockReturnValueOnce({
+        update: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            select: vi.fn(() => ({
+              single: vi.fn(() => Promise.resolve({
+                data: {
+                  id: 'visit-123',
+                  restaurant_id: 'restaurant-1',
+                  user_id: 'test-user-id',
+                  visit_date: '2026-02-15',
+                  rating: 'good',
+                  is_migrated_placeholder: false,
+                  created_at: '2026-02-10T00:00:00Z',
+                  updated_at: '2026-03-01T12:00:00Z',
+                },
+                error: null,
+              })),
+            })),
+          })),
+        })),
+      } as any);
+
+      const input = {
+        visit_date: '2026-02-15',
+        rating: 'good' as const,
+      };
+
+      await expect(visitService.updateVisit('visit-123', input)).resolves.toBeDefined();
+    });
+  });
+
+  describe('Character Length Validation', () => {
+    it('should reject experience notes longer than 2000 characters', async () => {
+      const input = {
+        visit_date: '2026-03-01',
+        rating: 'good' as const,
+        experience_notes: 'x'.repeat(2001),
+      };
+
+      await expect(visitService.updateVisit('visit-123', input)).rejects.toThrow(
+        'Experience notes must be 2000 characters or less'
+      );
+    });
+
+    it('should reject company notes longer than 500 characters', async () => {
+      const input = {
+        visit_date: '2026-03-01',
+        rating: 'good' as const,
+        company_notes: 'x'.repeat(501),
+      };
+
+      await expect(visitService.updateVisit('visit-123', input)).rejects.toThrow(
+        'Company notes must be 500 characters or less'
+      );
+    });
+  });
+});
+
+describe('visitService.updateVisit - Functionality', () => {
+  it('should clear migrated placeholder flag when date is changed', async () => {
+    // Mock the existing visit fetch to return a migrated placeholder
+    const { supabase } = await import('@/lib/supabase');
+    vi.mocked(supabase.from).mockReturnValue({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          single: vi.fn(() => Promise.resolve({
+            data: {
+              id: 'visit-123',
+              restaurant_id: 'restaurant-1',
+              user_id: 'test-user-id',
+              visit_date: '2025-01-01',
+              rating: 'good',
+              is_migrated_placeholder: true,
+              created_at: '2025-01-01T00:00:00Z',
+              updated_at: '2025-01-01T00:00:00Z',
+            },
+            error: null,
+          })),
+        })),
+      })),
+      update: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          select: vi.fn(() => ({
+            single: vi.fn(() => Promise.resolve({
+              data: {
+                id: 'visit-123',
+                restaurant_id: 'restaurant-1',
+                user_id: 'test-user-id',
+                visit_date: '2026-02-15',
+                rating: 'great',
+                is_migrated_placeholder: false,
+                created_at: '2025-01-01T00:00:00Z',
+                updated_at: '2026-03-01T12:00:00Z',
+              },
+              error: null,
+            })),
+          })),
+        })),
+      })),
+    } as any);
+
+    const input = {
+      visit_date: '2026-02-15',
+      rating: 'great' as const,
+    };
+
+    const result = await visitService.updateVisit('visit-123', input);
+    expect(result.is_migrated_placeholder).toBe(false);
+  });
+
+  it('should handle duplicate visit date', async () => {
+    const { supabase } = await import('@/lib/supabase');
+    vi.mocked(supabase.from).mockReturnValue({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          single: vi.fn(() => Promise.resolve({
+            data: {
+              id: 'visit-123',
+              restaurant_id: 'restaurant-1',
+              user_id: 'test-user-id',
+              visit_date: '2026-02-15',
+              rating: 'good',
+              is_migrated_placeholder: false,
+              created_at: '2026-02-15T00:00:00Z',
+              updated_at: '2026-02-15T00:00:00Z',
+            },
+            error: null,
+          })),
+        })),
+      })),
+      update: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          select: vi.fn(() => ({
+            single: vi.fn(() => Promise.resolve({
+              data: null,
+              error: { code: '23505' }, // Unique constraint violation
+            })),
+          })),
+        })),
+      })),
+    } as any);
+
+    const input = {
+      visit_date: '2026-02-20',
+      rating: 'great' as const,
+    };
+
+    await expect(visitService.updateVisit('visit-123', input)).rejects.toThrow(
+      'You already have a visit logged for this restaurant on 2026-02-20'
+    );
+  });
+});
+
+describe('visitService.deleteVisit', () => {
+  it('should delete a visit successfully', async () => {
+    const { supabase } = await import('@/lib/supabase');
+    vi.mocked(supabase.from).mockReturnValue({
+      delete: vi.fn(() => ({
+        eq: vi.fn(() => Promise.resolve({ error: null })),
+      })),
+    } as any);
+
+    await expect(visitService.deleteVisit('visit-123')).resolves.not.toThrow();
+  });
+
+  it('should handle deletion errors', async () => {
+    const { supabase } = await import('@/lib/supabase');
+    vi.mocked(supabase.from).mockReturnValue({
+      delete: vi.fn(() => ({
+        eq: vi.fn(() => Promise.resolve({
+          error: new Error('Database error'),
+        })),
+      })),
+    } as any);
+
+    await expect(visitService.deleteVisit('visit-123')).rejects.toThrow();
+  });
+});

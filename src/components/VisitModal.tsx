@@ -1,4 +1,4 @@
-// ABOUT: Modal component for adding (and future editing) restaurant visits
+// ABOUT: Modal component for adding and editing restaurant visits
 // ABOUT: Handles date selection, rating, and notes for visit logging
 
 import { useState, useEffect } from 'react';
@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { PersonalAppreciation, APPRECIATION_LEVELS, RestaurantVisit } from '@/types/place';
-import { visitService, CreateVisitInput } from '@/services/visits';
+import { visitService, CreateVisitInput, UpdateVisitInput } from '@/services/visits';
 
 interface VisitModalProps {
   isOpen: boolean;
@@ -79,20 +79,24 @@ export const VisitModal = ({
     setIsSubmitting(true);
 
     try {
-      const visitData: CreateVisitInput = {
-        restaurant_id: restaurantId,
-        visit_date: visitDate,
-        rating: rating,
-        experience_notes: experienceNotes.trim() || undefined,
-        company_notes: companyNotes.trim() || undefined,
-      };
-
-      if (isEditMode) {
+      if (isEditMode && visitToEdit) {
         // Phase 4: Update existing visit
-        // await visitService.updateVisit(visitToEdit.id, visitData);
-        console.log('Edit mode - Phase 4 implementation');
+        const updateData: UpdateVisitInput = {
+          visit_date: visitDate,
+          rating: rating,
+          experience_notes: experienceNotes.trim() || undefined,
+          company_notes: companyNotes.trim() || undefined,
+        };
+        await visitService.updateVisit(visitToEdit.id, updateData);
       } else {
         // Phase 3: Create new visit
+        const visitData: CreateVisitInput = {
+          restaurant_id: restaurantId,
+          visit_date: visitDate,
+          rating: rating,
+          experience_notes: experienceNotes.trim() || undefined,
+          company_notes: companyNotes.trim() || undefined,
+        };
         await visitService.addVisit(visitData);
       }
 

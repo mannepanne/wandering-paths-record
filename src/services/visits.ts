@@ -16,6 +16,16 @@ interface CreateVisitInput {
 }
 
 /**
+ * Input data for updating an existing visit
+ */
+interface UpdateVisitInput {
+  visit_date: string; // ISO date string (YYYY-MM-DD)
+  rating: PersonalAppreciation;
+  experience_notes?: string;
+  company_notes?: string;
+}
+
+/**
  * Validates and sanitizes visit input data
  * @param input - Raw visit input data
  * @returns Sanitized input data
@@ -74,6 +84,64 @@ const validateVisitInput = (input: CreateVisitInput): CreateVisitInput => {
 
   return {
     restaurant_id: input.restaurant_id,
+    visit_date: input.visit_date,
+    rating: input.rating,
+    experience_notes: sanitizedExperienceNotes,
+    company_notes: sanitizedCompanyNotes,
+  };
+};
+
+/**
+ * Validates and sanitizes visit update input data
+ * @param input - Raw visit update input data
+ * @returns Sanitized input data
+ * @throws Error if validation fails
+ */
+const validateUpdateInput = (input: UpdateVisitInput): UpdateVisitInput => {
+  // Validate rating - prevent 'unknown' and invalid values
+  const validRatings: PersonalAppreciation[] = ['avoid', 'fine', 'good', 'great'];
+  if (!validRatings.includes(input.rating)) {
+    throw new Error('Rating must be a valid appreciation level (avoid, fine, good, or great)');
+  }
+
+  // Validate date format (YYYY-MM-DD)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.visit_date)) {
+    throw new Error('Invalid date format. Expected YYYY-MM-DD');
+  }
+
+  // Validate date range (not in future, not before 1900)
+  const visitDateStr = input.visit_date;
+  const todayStr = new Date().toISOString().split('T')[0];
+  const minDateStr = '1900-01-01';
+
+  if (visitDateStr < minDateStr || visitDateStr > todayStr) {
+    throw new Error('Visit date must be between 1900-01-01 and today');
+  }
+
+  // Sanitize text fields using same approach as create
+  const stripHtml = (text?: string): string | undefined => {
+    if (!text) return undefined;
+    const trimmed = text.trim();
+    if (!trimmed) return undefined;
+    if (/<|>|&/.test(trimmed)) {
+      throw new Error('HTML and special characters are not allowed in notes');
+    }
+    return trimmed;
+  };
+
+  const sanitizedExperienceNotes = stripHtml(input.experience_notes);
+  const sanitizedCompanyNotes = stripHtml(input.company_notes);
+
+  // Validate length constraints
+  if (sanitizedExperienceNotes && sanitizedExperienceNotes.length > 2000) {
+    throw new Error('Experience notes must be 2000 characters or less');
+  }
+
+  if (sanitizedCompanyNotes && sanitizedCompanyNotes.length > 500) {
+    throw new Error('Company notes must be 500 characters or less');
+  }
+
+  return {
     visit_date: input.visit_date,
     rating: input.rating,
     experience_notes: sanitizedExperienceNotes,
@@ -213,7 +281,98 @@ export const visitService = {
 
     return data;
   },
+
+  /**
+   * Update an existing visit
+   * @param visitId - The visit ID to update
+   * @param input - Updated visit data
+   * @returns The updated visit record
+   * @throws Error if validation fails or database operation fails
+   */
+  async updateVisit(visitId: string, input: UpdateVisitInput): Promise<RestaurantVisit> {
+    // Validate and sanitize input
+    const validatedInput = validateUpdateInput(input);
+
+    // Get current user from Supabase auth
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      throw new Error('User must be authenticated to update visits');
+    }
+
+    // Get the existing visit to check if date is being changed
+    const { data: existingVisit, error: fetchError } = await supabase
+      .from('restaurant_visits')
+      .select('*')
+      .eq('id', visitId)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching visit for update:', fetchError);
+      throw new Error('Visit not found');
+    }
+
+    // Determine if this is a migrated placeholder being edited
+    const isEditingMigratedDate = existingVisit.is_migrated_placeholder &&
+                                   existingVisit.visit_date !== validatedInput.visit_date;
+
+    // Update visit record
+    const { data, error } = await supabase
+      .from('restaurant_visits')
+      .update({
+        visit_date: validatedInput.visit_date,
+        rating: validatedInput.rating,
+        experience_notes: validatedInput.experience_notes,
+        company_notes: validatedInput.company_notes,
+        // Clear migrated flag if user is editing the date
+        is_migrated_placeholder: isEditingMigratedDate ? false : existingVisit.is_migrated_placeholder,
+      })
+      .eq('id', visitId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating visit:', error);
+
+      // Check for duplicate visit on same date
+      if (error.code === '23505') { // Unique constraint violation
+        throw new Error(
+          `You already have a visit logged for this restaurant on ${validatedInput.visit_date}. ` +
+          'Please choose a different date.'
+        );
+      }
+
+      throw error;
+    }
+
+    return data;
+  },
+
+  /**
+   * Delete a visit
+   * @param visitId - The visit ID to delete
+   * @throws Error if database operation fails
+   */
+  async deleteVisit(visitId: string): Promise<void> {
+    // Get current user from Supabase auth
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      throw new Error('User must be authenticated to delete visits');
+    }
+
+    // Delete the visit (RLS policy ensures user can only delete their own visits)
+    const { error } = await supabase
+      .from('restaurant_visits')
+      .delete()
+      .eq('id', visitId);
+
+    if (error) {
+      console.error('Error deleting visit:', error);
+      throw error;
+    }
+  },
 };
 
-// Export the CreateVisitInput type for use in components
-export type { CreateVisitInput };
+// Export types for use in components
+export type { CreateVisitInput, UpdateVisitInput };

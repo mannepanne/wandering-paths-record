@@ -809,7 +809,15 @@ Each phase is independently deployable and can be rolled back:
 **Technical debt to address later:**
 1. Eventually remove `personal_appreciation` column from `restaurants` table
 2. Add visit count caching (currently computed)
-3. Consider pagination for restaurants with many visits
+3. **Truncate long experience notes** (added 2026-03-02)
+   - Currently unrestricted display length can break layout
+   - Solution: Truncate to 2-3 lines with "Read more" expansion
+   - Options: Modal popup or inline expansion
+4. **Pagination for visit lists** (added 2026-03-02)
+   - Currently showing all visits can make page unwieldy (>3 visits)
+   - Solution: Show latest 3 visits by default with "Show all" option
+   - Options: Modal popup with full list, or separate page
+   - Should coordinate with experience notes expansion UI (modal vs. inline)
 
 ---
 

@@ -43,6 +43,31 @@ Items here are accepted risks or pragmatic choices made during development, not 
 - **Future fix:** Add specialty filter UI and populate data via AI extraction
 - **Introduced:** Category system planning
 
+### TD-005: Long experience notes can break visit list layout
+- **Location:** `VisitHistory.tsx` component displays, `RestaurantDetails.tsx` page layout
+- **Issue:** Experience notes have no display length restriction, causing vertical expansion that pushes content down when notes are long. Especially problematic with single long note.
+- **Why accepted:** Feature velocity - getting CRUD functionality live was priority
+- **Risk:** Medium - poor UX for restaurants with detailed notes, but not breaking
+- **Future fix:**
+  - Truncate notes to 2-3 lines with "Read more" expansion
+  - Options: Modal popup for full note, or inline expansion
+  - Coordinate with TD-006 pagination solution (shared modal vs. separate approaches)
+- **Introduced:** Phase 2 visit history display (2026-03-01)
+- **User reported:** 2026-03-02 (post Phase 4 deployment)
+
+### TD-006: No pagination for visit lists
+- **Location:** `VisitHistory.tsx` component (currently shows all visits)
+- **Issue:** Restaurants with >3 visits cause vertical layout expansion, making page unwieldy. Worsens with long notes (see TD-005).
+- **Why accepted:** Feature velocity - getting CRUD functionality live was priority
+- **Risk:** Medium - poor UX for frequently visited restaurants, but not breaking
+- **Future fix:**
+  - Show latest 3 visits by default
+  - Add "Show all visits" button/link
+  - Options: Modal popup with full list, or separate `/restaurant/:id/visits` page
+  - Coordinate with TD-005 note expansion (shared modal reduces UI patterns)
+- **Introduced:** Phase 2 visit history display (2026-03-01)
+- **User reported:** 2026-03-02 (post Phase 4 deployment)
+
 ---
 
 ## Future Enhancement Ideas

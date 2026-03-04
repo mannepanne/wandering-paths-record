@@ -22,22 +22,22 @@ export const VisitHistory = ({ restaurantId, onEdit, onDelete }: VisitHistoryPro
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const loadVisits = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await visitService.getLatestVisits(restaurantId, 5);
+        setVisits(data);
+      } catch (err) {
+        console.error('Error loading visits:', err);
+        setError('Failed to load visit history');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     loadVisits();
   }, [restaurantId]);
-
-  const loadVisits = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await visitService.getLatestVisits(restaurantId, 5);
-      setVisits(data);
-    } catch (err) {
-      console.error('Error loading visits:', err);
-      setError('Failed to load visit history');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const formatVisitDate = (visit: RestaurantVisit): string => {
     if (visit.is_migrated_placeholder) {

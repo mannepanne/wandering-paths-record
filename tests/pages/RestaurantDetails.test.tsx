@@ -114,9 +114,10 @@ describe('RestaurantDetails - Visit Deletion', () => {
   it('should show confirmation dialog when delete button clicked', async () => {
     render(<RestaurantDetails />, { wrapper: createWrapper() });
 
-    // Wait for data to load
+    // Wait for restaurant and visit history to load
     await waitFor(() => {
       expect(screen.getByText('Test Restaurant')).toBeInTheDocument();
+      expect(screen.getByText('Great meal')).toBeInTheDocument();
     });
 
     // Find and click delete button
@@ -136,9 +137,10 @@ describe('RestaurantDetails - Visit Deletion', () => {
 
     render(<RestaurantDetails />, { wrapper: createWrapper() });
 
-    // Wait for data to load
+    // Wait for restaurant and visit history to load
     await waitFor(() => {
       expect(screen.getByText('Test Restaurant')).toBeInTheDocument();
+      expect(screen.getByText('Great meal')).toBeInTheDocument();
     });
 
     // Click delete button

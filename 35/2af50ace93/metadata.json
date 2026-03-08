@@ -1,0 +1,30 @@
+{
+  "cli_version": "0.4.8",
+  "checkpoint_id": "352af50ace93",
+  "strategy": "manual-commit",
+  "branch": "feature/visit-history-improvements",
+  "checkpoints_count": 3,
+  "files_touched": [
+    "REFERENCE/technical-debt.md",
+    "src/App.tsx",
+    "src/components/VisitHistory.tsx",
+    "src/pages/RestaurantVisits.tsx",
+    "src/services/visits.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/35/2af50ace93/0/metadata.json",
+      "transcript": "/35/2af50ace93/0/full.jsonl",
+      "context": "/35/2af50ace93/0/context.md",
+      "content_hash": "/35/2af50ace93/0/content_hash.txt",
+      "prompt": "/35/2af50ace93/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 12296,
+    "cache_creation_tokens": 227574,
+    "cache_read_tokens": 3102195,
+    "output_tokens": 19566,
+    "api_call_count": 47
+  }
+}

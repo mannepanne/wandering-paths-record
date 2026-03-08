@@ -15,6 +15,7 @@ vi.mock('@/services/visits', () => ({
     deleteVisit: vi.fn(),
     getVisitsByRestaurant: vi.fn(),
     getLatestVisits: vi.fn(),
+    getVisitCount: vi.fn(),
   },
 }));
 
@@ -109,6 +110,9 @@ describe('RestaurantDetails - Visit Deletion', () => {
         updated_at: '2026-02-15T12:00:00Z',
       },
     ]);
+
+    // Mock visit count
+    vi.mocked(visitService.getVisitCount).mockResolvedValue(1);
   });
 
   it('should show confirmation dialog when delete button clicked', async () => {

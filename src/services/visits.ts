@@ -182,6 +182,27 @@ export const visitService = {
   },
 
   /**
+   * Get all visits for a restaurant (for dedicated visits page)
+   * @param restaurantId - The restaurant ID to fetch visits for
+   * @returns Array of all visits, sorted by date (newest first)
+   */
+  async getAllVisits(restaurantId: string): Promise<RestaurantVisit[]> {
+    const { data, error } = await supabase
+      .from('restaurant_visits')
+      .select('*')
+      .eq('restaurant_id', restaurantId)
+      .order('visit_date', { ascending: false })
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching all visits:', error);
+      throw error;
+    }
+
+    return data || [];
+  },
+
+  /**
    * Get latest N visits for a restaurant (for pagination/preview)
    * @param restaurantId - The restaurant ID to fetch visits for
    * @param limit - Maximum number of visits to return (default: 5)

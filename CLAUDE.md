@@ -136,6 +136,8 @@ The build process auto-syncs Worker asset references via `scripts/update-worker-
 - `REFERENCE/testing-strategy.md` - Testing approach (not yet implemented)
 - `REFERENCE/web-analytics.md` - Analytics setup (planned)
 
+- **Architecture decisions?** → [decisions/](./REFERENCE/decisions/) - ADRs explaining why things are this way
+
 ### Technical Specifications (SPECIFICATIONS/)
 
 **Planning docs** - Active work and project history:

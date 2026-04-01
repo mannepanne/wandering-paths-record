@@ -80,17 +80,17 @@ This project uses automated PR review skills powered by agent teams. Reviews use
 
 **The three reviewers:**
 
-**Security Specialist** 🛡️
+**Security Specialist**
 - Authentication, authorization, secrets
 - XSS, CSRF, SQL injection, input validation
 - Session security, dependency vulnerabilities
 
-**Product Manager** 📦
+**Product Manager**
 - Requirements alignment, UX
 - Edge cases, error handling, completeness
 - Documentation, backward compatibility
 
-**Senior Architect** 🏗️
+**Senior Architect**
 - Design patterns, code quality
 - Scalability, maintainability, testing
 - Technical debt, performance, architectural fit

@@ -143,6 +143,7 @@ We prefer free/low-cost, state-of-the-art solutions. Always use latest stable ve
 
 ### Writing code
 - **Follow the rules**: When submitting work, verify that your work is compliant with all our rules. (See also The First Rule!)
+- **Write tests alongside implementation** — tests are part of done, not a follow-up. See [testing-strategy.md](../REFERENCE/testing-strategy.md)
 - **Only build what is required**: Follow the YAGNI principle (You Aren't Gonna Need It).
 - **Prepare for the future**: While we want simple solutions that are fit for purpose and not more, design with flexibility and extensibility in mind. Remember that it's usually possible to add more extensibility later, but you can never take it away without introducing breaking changes.
 - **Use consistent style, always**: When modifying code, match the style and formatting of surrounding code, even if it differs from standard style guides. Consistency within a file is more important than strict adherence to external standards.
@@ -174,7 +175,7 @@ Tests serve dual purposes: **Validation** (verify code works) and **Directional 
 ## Version control and repository management
 
 ### Repository configuration
-- If the project isn't in a git repo, stop and ask if we shouldn't initialize one first. Usually we do want to do this straight away so we don't risk losing any work.
+- If the project isn't in a git repo, stop and ask if we shouldn't initialise one first. Usually we do want to do this straight away so we don't risk losing any work.
 - Maintain README.md file and SPECIFICATIONS/OnePagerRequirements.md with project-specific details.
 - Use .gitignore for system files (.DS_Store, Thumbs.db, etc).
 - Structure projects with clear separation of concerns.
@@ -221,6 +222,8 @@ I value clean git history, but not at the expense of losing work or slowing down
 - Include context about why the change was needed
 - Reference issues or requirements if relevant
 - Example: "Fix user login redirect after password reset - was sending users to 404 page"
+
+**Pull request reviews:** Always use `/review-pr` (regular PRs) or `/review-pr-team` (critical/architectural) — never review manually in the main session. See [pr-review-workflow.md](../REFERENCE/pr-review-workflow.md).
 
 The goal is tracking our work and enabling collaboration, not perfect git aesthetics.
 

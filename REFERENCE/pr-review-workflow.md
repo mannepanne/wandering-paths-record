@@ -2,7 +2,7 @@
 
 **Related Documents:**
 - [Development workflow](../CLAUDE.md#development-commands)
-- [Testing Strategy](./testing-strategy.md)
+- [Testing strategy](./testing-strategy.md)
 
 **Skills Available:**
 - `/review-pr` - Fast single-reviewer (1-2 min)
@@ -57,7 +57,7 @@ This project uses automated PR review skills powered by agent teams. Reviews use
 - Functionality (bugs, edge cases, correctness)
 - Security (vulnerabilities, secrets management)
 - Architecture & design (fit, patterns, extensibility)
-- Performance (optimization, caching, queries)
+- Performance (optimisation, caching, queries)
 - Testing (coverage, quality of tests)
 - TypeScript/types (type safety, proper usage)
 - Best practices (conventions, no deprecated patterns)
@@ -76,7 +76,7 @@ This project uses automated PR review skills powered by agent teams. Reviews use
 1. Creates agent team with 3 specialized reviewers
 2. **Phase 1: Independent Review** - Each reviews from their perspective
 3. **Phase 2: Collaborative Discussion** - Reviewers debate, challenge, reach consensus
-4. Posts synthesized findings with discussion highlights
+4. Posts synthesised findings with discussion highlights
 
 **The three reviewers:**
 
@@ -99,7 +99,7 @@ This project uses automated PR review skills powered by agent teams. Reviews use
 - Reviewers **actually discuss** findings with each other
 - They **challenge** each other's severity assessments
 - They **debate** tradeoffs and propose solutions together
-- Lead synthesizes collaborative insights (not just 3 independent reports)
+- Lead synthesises collaborative insights (not just 3 independent reports)
 
 **Output includes:**
 - Team consensus on critical issues
@@ -136,7 +136,7 @@ The skill will:
 3. Create agent team (3 reviewers)
 4. Reviewers independently analyse
 5. Reviewers discuss and debate findings
-6. Lead synthesizes collaborative analysis
+6. Lead synthesises collaborative analysis
 7. Post unified review with discussion highlights
 8. Clean up team
 
@@ -214,13 +214,13 @@ git diff                 # Review your own changes first
 1. Create feature branch
 2. Review specs and architectural guidelines
 3. Implement with comprehensive tests
-5. Self-review: `git diff`, verify no secrets/debug code
-6. Create PR with detailed description
-7. **Run `/review-pr-team`** for multi-perspective analysis
-8. Reviewers discuss findings collaboratively
-9. Address critical issues and consensus concerns
-10. Document decisions on split opinions
-11. Merge when approved
+4. Self-review: `git diff`, verify no secrets/debug code
+5. Create PR with detailed description
+6. **Run `/review-pr-team`** for multi-perspective analysis
+7. Reviewers discuss findings collaboratively
+8. Address critical issues and consensus concerns
+9. Document decisions on split opinions
+10. Merge when approved
 
 ---
 

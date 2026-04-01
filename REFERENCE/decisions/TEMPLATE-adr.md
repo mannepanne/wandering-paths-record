@@ -1,3 +1,5 @@
+> **Note:** This is an illustrative example ADR. The content (Next.js references, tsconfig.json, etc.) is fictional and project-specific — it exists to demonstrate format and depth, not to reflect this project's actual decisions.
+
 # ADR: Use TypeScript for All New Code
 
 **Date:** 2026-03-15

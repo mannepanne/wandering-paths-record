@@ -1,7 +1,7 @@
-# Pull Request Review Workflow
+# Pull request review workflow
 
 **Related Documents:**
-- [Development Workflow](../CLAUDE.md#development-workflow)
+- [Development workflow](../CLAUDE.md#development-commands)
 - [Testing Strategy](./testing-strategy.md)
 
 **Skills Available:**
@@ -16,7 +16,7 @@ This project uses automated PR review skills powered by agent teams. Reviews use
 
 ---
 
-## Quick Reference
+## Quick reference
 
 ### Use `/review-pr` for:
 ✅ Regular implementation PRs
@@ -44,7 +44,7 @@ This project uses automated PR review skills powered by agent teams. Reviews use
 
 ---
 
-## How `/review-pr` Works
+## How `/review-pr` works
 
 **Fresh context approach:**
 1. Spawns independent subagent (not main session)
@@ -70,7 +70,7 @@ This project uses automated PR review skills powered by agent teams. Reviews use
 
 ---
 
-## How `/review-pr-team` Works
+## How `/review-pr-team` works
 
 **Agent team collaboration:**
 1. Creates agent team with 3 specialized reviewers
@@ -109,9 +109,9 @@ This project uses automated PR review skills powered by agent teams. Reviews use
 
 ---
 
-## Usage Examples
+## Usage examples
 
-### Running a Quick Review
+### Running a quick review
 ```bash
 # In your PR description or as a comment
 /review-pr 42
@@ -124,7 +124,7 @@ The skill will:
 4. Post comprehensive review
 5. Provide summary with recommendation
 
-### Running Team Review
+### Running team review
 ```bash
 # For critical changes
 /review-pr-team 42
@@ -142,9 +142,9 @@ The skill will:
 
 ---
 
-## Best Practices
+## Best practices
 
-### Before Requesting Review
+### Before requesting review
 
 **Pre-commit checklist:**
 ```bash
@@ -160,7 +160,7 @@ git diff                 # Review your own changes first
 - Any deployment considerations
 - Links to relevant specs/issues
 
-### Interpreting Review Results
+### Interpreting review results
 
 **Critical Issues (🔴):**
 - Address before merging
@@ -177,7 +177,7 @@ git diff                 # Review your own changes first
 - Consider for future work
 - Track in technical debt if deferred
 
-### Working with Team Reviews
+### Working with team reviews
 
 **If reviewers disagree:**
 - Both perspectives are valuable
@@ -197,9 +197,9 @@ git diff                 # Review your own changes first
 
 ---
 
-## Integration with Development Workflow
+## Integration with development workflow
 
-### Standard Workflow
+### Standard workflow
 
 1. Create feature branch: `git checkout -b feature/feature-name`
 2. Check relevant specs in `SPECIFICATIONS/`
@@ -209,12 +209,11 @@ git diff                 # Review your own changes first
 6. Address feedback
 7. Merge when approved
 
-### Critical Changes Workflow
+### Critical changes workflow
 
 1. Create feature branch
 2. Review specs and architectural guidelines
-3. Consider using EnterPlanMode for complex features
-4. Implement with comprehensive tests
+3. Implement with comprehensive tests
 5. Self-review: `git diff`, verify no secrets/debug code
 6. Create PR with detailed description
 7. **Run `/review-pr-team`** for multi-perspective analysis

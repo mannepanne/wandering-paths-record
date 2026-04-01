@@ -3,7 +3,7 @@
 
 - This file provides collaboration principles and ways of working guidance to Claude Code (claude.ai/code) when working with in this repository.
 - The purpose is to help the Claude to better collaborate on this project.
-- Last updated: 21st February 2026
+- Last updated: 1st April 2026
 
 **Credits and inspiration:**
 - https://github.com/obra
@@ -73,7 +73,7 @@ You'll still maintain all core collaboration principles (Swedish directness, no 
 - **Keep it simple** - We prefer simple, clean, maintainable solutions over clever or complex ones. Follow the KISS principle and avoid over-engineering when a simple solution is available.
 - **Don't rewrite working code** - Make the smallest reasonable changes to get to the desired outcome. Don't embark on reimplementing features or systems from scratch without talking about it first - I usually prefer incremental improvements.
 - **Security is non-negotiable** - We never commit secrets or credentials to the repository. Always consider security in every choice, including treatment of personal user data (GDPR) and compliance with relevant regulations.
-- **Tests are not optional** - All new features and bug fixes require tests before the work is considered complete. Write tests alongside implementation (TDD when practical), not as an afterthought. Tests serve dual purposes: validation and directional context for future work.
+- **NEVER push to main directly** - ALL changes (code, docs, anything) require a feature branch + PR. This is as critical as not committing secrets. Zero exceptions. Check your branch BEFORE making any changes.
 - **Document issues as tasks** - If you notice something that should be fixed but is unrelated to your current task, document it as a new task to potentially do later instead of fixing it immediately.
 - **Keep documentation current** - When making significant changes to architecture, APIs, or core functionality, proactively update project documentation to reflect the new reality. Use SPECIFICATIONS/ for active work, REFERENCE/ for implementation details.
 - **Don't waste tokens** - Be succinct and concise.
@@ -83,46 +83,40 @@ You'll still maintain all core collaboration principles (Swedish directness, no 
 2. **Scope Control**: Ask permission before major rewrites or scope changes
 3. **Technology Choices**: Justify new technology suggestions with clear benefits
 
-**Project documentation** refers to project-specific CLAUDE.md, README.md, and organized files in SPECIFICATIONS/ (active work), SPECIFICATIONS/ARCHIVE/ (completed specs), and REFERENCE/ (implementation guides).
+**Project documentation** refers to project-specific CLAUDE.md, README.md, and organised files in SPECIFICATIONS/ (active work), SPECIFICATIONS/ARCHIVE/ (completed specs), and REFERENCE/ (implementation guides).
 
-## Documentation Organization Pattern
+### Completion Requirements
 
-Projects use a **lifecycle-based documentation structure** to minimize context usage while maintaining comprehensive documentation:
+Work is complete ONLY when all three exist:
 
-### The Two CLAUDE.md Files
-- **`.claude/CLAUDE.md`** (this file) - General collaboration principles, technology preferences, and ways of working. Applies across all projects.
-- **`CLAUDE.md`** (project root) - **Navigation index only**. Lean, scannable quick reference with links to detailed docs. Project-specific context.
+1. **Tests pass** - TDD (write tests first), 95%+ coverage, type checking passes
+2. **Documentation current** - REFERENCE/ updated for implementations, CLAUDE.md reflects reality
+3. **Code clean** - Project conventions followed, no secrets/debug code, meaningful commits
 
-Both files are loaded as system context with every request, so keeping them minimal saves tokens.
+PR reviews MUST verify all three. No exceptions.
 
-### Documentation Folders
+## Documentation organisation pattern
 
-**SPECIFICATIONS/** - Forward-looking plans for features being built
-- Active specs remain here during planning and implementation
-- Completed specs move to `SPECIFICATIONS/ARCHIVE/` when done
-- This folder should always be lean - only active/upcoming work
+Projects use **lifecycle-based documentation** to minimise token usage:
 
-**REFERENCE/** - How-it-works documentation for implemented features
-- Implementation guides, troubleshooting, technical debt tracking
-- Living documentation that evolves with the codebase
-- Loaded on-demand when needed for specific tasks
+**The two CLAUDE.md files:**
+- `.claude/CLAUDE.md` (this file) - Collaboration principles, applies across projects
+- `CLAUDE.md` (project root) - Navigation index for project-specific context
 
-### The Pattern
-1. **Planning** → Create spec in `SPECIFICATIONS/`
-2. **Building** → Spec stays active in `SPECIFICATIONS/`, implementation docs added to `REFERENCE/`
-3. **Completion** → Spec moves to `SPECIFICATIONS/ARCHIVE/`, implementation docs remain in `REFERENCE/`
+**Both auto-load, so keep them lean (<300 lines). Details go in subdirectory files.**
 
-This creates clear separation between "what we're building" (SPECIFICATIONS) and "how it works" (REFERENCE).
+**Documentation folders:**
+- `SPECIFICATIONS/` - Plans for features being built (active work)
+- `SPECIFICATIONS/ARCHIVE/` - Completed specs (historical)
+- `REFERENCE/` - How-it-works docs for implemented features
+- `.claude/COLLABORATION/` - Behavioural guidance (PM mode, tech preferences, doc standards)
 
-### Keeping CLAUDE.md Lean
-The project root `CLAUDE.md` should be a navigation index:
-- Quick project overview (what/why)
-- Essential architecture patterns
-- Key file locations
-- Clear headings with summaries
-- Links to detailed docs in `REFERENCE/` and `SPECIFICATIONS/`
+**Lazy-loading pattern:**
+- Subdirectory CLAUDE.md files auto-load when you work in that directory
+- Each acts as a library index for that folder
+- Only pay token cost when relevant
 
-Extract detailed content into separate files: troubleshooting guides, setup instructions, testing strategies, etc. Reference them by link rather than including inline.
+**See project root CLAUDE.md for complete pattern details.**
 
 ## Technology Stack and Choices
 
@@ -134,36 +128,28 @@ We prefer free/low-cost, state-of-the-art solutions. Always use latest stable ve
 
 ## Development Standards
 
-### Writing Code
+### Pre-implementation checklist
+
+**Before ANY changes (code, docs, anything), verify:**
+
+- [ ] On feature branch (not main)
+- [ ] Branch follows naming convention (feature/, fix/, refactor/)
+- [ ] Read relevant specifications
+- [ ] Have clear acceptance criteria
+
+**If you cannot check all boxes, STOP and ask the user before proceeding.**
+
+**Checking your branch is NOT optional. It's the FIRST thing you do before any work.**
+
+### Writing code
 - **Follow the rules**: When submitting work, verify that your work is compliant with all our rules. (See also The First Rule!)
-- **Write tests with code**: For any new feature or significant change, write tests alongside implementation. Tests are part of the definition of "done", not a follow-up task.
 - **Only build what is required**: Follow the YAGNI principle (You Aren't Gonna Need It).
 - **Prepare for the future**: While we want simple solutions that are fit for purpose and not more, design with flexibility and extensibility in mind. Remember that it's usually possible to add more extensibility later, but you can never take it away without introducing breaking changes.
 - **Use consistent style, always**: When modifying code, match the style and formatting of surrounding code, even if it differs from standard style guides. Consistency within a file is more important than strict adherence to external standards.
 - **Stay focused**: Don't make code changes that aren't directly related to the task you're currently assigned.
 - **Stay relevant**: When writing comments, avoid referring to temporal context about refactors or recent changes. Comments should be evergreen and describe the code as it is, not how it evolved or was recently changed.
 
-### Feature Development Checklist
-
-Before marking any feature or fix as complete:
-- [ ] Create feature branch (not working on main)
-- [ ] Implementation code written and working
-- [ ] Tests written (unit, integration, or e2e as appropriate)
-- [ ] Tests passing locally
-- [ ] Type checking passes
-- [ ] Documentation updated (if architecture/API changes)
-- [ ] Code committed with descriptive message
-- [ ] Changes pushed to remote branch
-- [ ] Pull request created for review
-- [ ] PR approved and merged to main
-
-**Stop and ask for clarification if:**
-- You're unsure what level of testing is needed
-- Tests would be difficult to write (might indicate design issue)
-- Feature seems complete but tests haven't been written
-- Unsure whether to merge directly or wait for approval
-
-### Code Standards and Comments
+### Code standards and comments
 - All code files should start with:
 ```
   // ABOUT: [Brief description of file purpose]
@@ -173,48 +159,17 @@ Before marking any feature or fix as complete:
 - When migrating to new comment standards, do so systematically across the entire file.
 - Use evergreen naming conventions (avoid "new", "improved", "enhanced").
 
-### Testing Strategy
+### Testing strategy
 
-Testing is mandatory for all production code. We aim for practical, high-value test coverage that provides both validation and directional context.
+Tests serve dual purposes: **Validation** (verify code works) and **Directional Context** (guide AI development).
 
-**Tests as Development Guardrails (inspired by **[**OpenAI's Harness Engineering**](https://openai.com/index/harness-engineering/)**):**
-
-Tests serve dual purposes:
-1. **Validation** - Verify code works correctly
-2. **Directional Context** - Guide AI agents on what to build and how to build it
-
-When you make changes, tests should immediately signal if you're breaking existing functionality and provide clear context about what each component should do.
-
-**Test-Driven Development workflow:**
-1. Write tests first that describe expected behavior
-2. Implement minimum code to make tests pass
-3. Refactor while keeping tests green
-4. Aim for 100% coverage of new code (every line should have clear purpose)
-
-**Coverage philosophy:**
-- Untested code is unclear about its purpose and constraints
-- If we can't write a test for it, maybe we don't need it
-- Coverage gaps indicate missing specifications
+**Core principles:**
+- Write tests first (TDD workflow)
 - Target high coverage (95%+ lines/functions/statements, 90%+ branches)
+- Tests are living specifications
+- Pre-commit: run tests and type-check
 
-**Test organization:**
-- **Unit tests**: Individual functions work correctly
-- **Integration tests**: Components work together properly
-- **End-to-end tests**: Complete user workflows actually work
-- Test files mirror source structure for easy navigation
-
-**Practical guidelines:**
-- Pay attention to test output - failing tests are trying to tell you something important
-- Prefer real data over mocks when possible (but be pragmatic about API costs)
-- When working on existing code, maintain or improve test coverage
-- If unsure what to test, ask - I'd rather discuss strategy than have you guess
-
-**Pre-commit validation:**
-- Run tests before committing
-- Type-check before committing
-- Catch issues early, before they hit CI/CD
-
-Remember: tests should give us confidence to make changes, not slow us down with bureaucracy.
+**Complete testing guide:** [testing-strategy.md](../REFERENCE/testing-strategy.md)
 
 ## Version Control and Repository Management
 
@@ -225,7 +180,21 @@ Remember: tests should give us confidence to make changes, not slow us down with
 - Structure projects with clear separation of concerns.
 - Document use of API keys and configuration requirements, but never save secrets in the repository.
 
-### Git Operations and Workflow
+### Git operations and workflow — CRITICAL
+
+**⚠️ BEFORE ANY CHANGES - VERIFY YOUR BRANCH:**
+
+1. Verify you're on a feature branch (NOT main)
+2. If on main: create feature branch first (feature/, fix/, refactor/)
+3. Only then proceed with changes
+
+**CRITICAL RULES:**
+- **NEVER work on main directly**
+- **NEVER merge to main directly**
+- **ALL changes MUST go through pull request**
+
+**Zero exceptions. ALL file modifications require feature branch + PR.**
+
 I value clean git history, but not at the expense of losing work or slowing down progress.
 
 **During active development:**
@@ -308,7 +277,7 @@ Sometimes you need to move fast, sometimes the "proper" approach isn't practical
 
 The goal is sustainable progress, not perfect process.
 
-## Documentation Standards
+## Documentation standards
 
 We value documentation - it enables picking up projects later and communicating knowledge to others.
 
@@ -319,5 +288,10 @@ We value documentation - it enables picking up projects later and communicating 
 - Use lifecycle-based structure: SPECIFICATIONS/ (active), ARCHIVE/ (completed), REFERENCE/ (implementation)
 - Keep documentation current alongside code changes
 - Focus on clarity, completeness, and actionability
+
+**Writing style:**
+- **British English** - Use British spelling throughout (optimise not optimize, minimise not minimize, colour not color, etc.)
+- **Headline capitalisation** - Only capitalise the first word in headings and proper nouns, not every word (e.g., "Getting started with the project" not "Getting Started With The Project")
+- **Consistency** - Match the style of existing documentation when editing
 
 **Detailed templates and process:** [documentation-standards.md](./COLLABORATION/documentation-standards.md)

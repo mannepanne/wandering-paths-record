@@ -30,7 +30,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = () => {
-    window.location.href = `/cdn-cgi/access/login?redirect_url=${encodeURIComponent(window.location.href)}`;
+    // Navigate to /auth/login — CF Access enforces auth on this path,
+    // completes Google OAuth, sets the CF-Authorization cookie, then redirects
+    // back to /auth/login where the Worker redirects to /.
+    window.location.href = '/auth/login';
   };
 
   const signOut = () => {

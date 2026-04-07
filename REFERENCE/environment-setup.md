@@ -1,218 +1,130 @@
-# Environment & Secrets Setup
+# Environment and secrets setup
 
-Configuration guide for local development environment and Cloudflare Workers deployment secrets.
+Configuration reference for local development and Cloudflare Workers production.
 
 ---
 
-## Local Development Environment
+## Local development
 
-### Required Environment Variables
-
-Create a `.env` file in the project root with:
+Create a `.env` file in the project root:
 
 ```bash
-# Supabase Configuration
-VITE_SUPABASE_URL=https://drtjfbvudzacixvqkzav.supabase.co
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key_here
+# AI extraction (used by local API server, server.cjs)
+VITE_CLAUDE_API_KEY=your_anthropic_api_key
 
-# Claude API (for AI extraction)
-VITE_CLAUDE_API_KEY=your_anthropic_api_key_here
+# Google Maps — geocoding and place lookups
+VITE_GOOGLE_MAPS_API_KEY=your_google_maps_key
 
-# Google Maps (for geocoding and place lookups)
-VITE_GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
-
-# Mapbox (for interactive maps)
-VITE_MAPBOX_ACCESS_TOKEN=your_mapbox_token_here
+# Mapbox — interactive map display
+VITE_MAPBOX_ACCESS_TOKEN=your_mapbox_token
 ```
 
-### Where to Get API Keys
+**There are no Supabase variables.** The database is Cloudflare D1, which is bound to the Worker server-side. No client-side database config exists.
 
-**Supabase:**
-- Project URL is already configured in `wrangler.toml`
-- Get anon key from: Supabase Dashboard → Settings → API
-- Project: `drtjfbvudzacixvqkzav`
-
-**Claude API (Anthropic):**
-- Get from: https://console.anthropic.com/settings/keys
-- Used for AI restaurant extraction
-- Current model: `claude-sonnet-4-20250514` (configured in `src/config/claude.ts`)
-
-**Google Maps API:**
-- Get from: https://console.cloud.google.com/google/maps-apis/credentials
-- Required APIs: Geocoding API, Places API
-- Used for: address geocoding, place lookups, public ratings/reviews
-
-**Mapbox:**
-- Get from: https://account.mapbox.com/access-tokens/
-- Used for: interactive map display with clustering
-
-### Local Development Servers
-
+Restart dev servers after changing `.env`:
 ```bash
-# Frontend dev server (port 8080)
-npm run dev
-
-# Local API server for AI extraction (port 3001)
+pkill -f vite && pkill -f node && npm run dev
+# Terminal 2:
 npm run api
 ```
 
-**Note:** The local API server (`server.cjs`) is needed for AI extraction during development. In production, extraction runs in Cloudflare Worker (`src/worker.js`).
-
 ---
 
-## Cloudflare Workers Secrets
+## Cloudflare Worker secrets
 
-### Required Production Secrets
-
-Set via `wrangler secret put <SECRET_NAME>`:
+Set via Wrangler CLI. These are encrypted and stored in Cloudflare, not in the repo.
 
 ```bash
-# Supabase
-wrangler secret put SUPABASE_ANON_KEY
+wrangler secret put CLAUDE_API_KEY          # Anthropic API key
+wrangler secret put GOOGLE_MAPS_API_KEY     # Google Maps API key
+wrangler secret put MAPBOX_ACCESS_TOKEN     # Mapbox token
 
-# Claude API
-wrangler secret put CLAUDE_API_KEY
-
-# Google Maps
-wrangler secret put GOOGLE_MAPS_API_KEY
-```
-
-### Non-Secret Environment Variables
-
-Already configured in `wrangler.toml`:
-- `SUPABASE_URL` - Public Supabase project URL
-- `AUTHORIZED_ADMIN_EMAIL` - Admin user email for authentication
-
-### Viewing Secrets
-
-```bash
-# List all secrets
+# List current secrets
 wrangler secret list
 
-# Secrets are encrypted and cannot be viewed after creation
-# To update: wrangler secret put <SECRET_NAME>
-# To delete: wrangler secret delete <SECRET_NAME>
+# Update a secret
+wrangler secret put <NAME>
+
+# Delete a secret
+wrangler secret delete <NAME>
+```
+
+After adding secrets, redeploy:
+```bash
+npx wrangler deploy
 ```
 
 ---
 
-## Supabase Setup
+## wrangler.toml vars (non-sensitive)
 
-### Database Configuration
+These are committed to the repo in `wrangler.toml`. Not secrets — safe to be public.
 
-**Project:** `drtjfbvudzacixvqkzav.supabase.co`
+```toml
+[vars]
+CF_ACCESS_AUD        = "24c0d43..."     # CF Access application audience tag
+CF_TEAM_DOMAIN       = "https://herrings.cloudflareaccess.com"
+AUTHORIZED_ADMIN_EMAIL = "magnus.hultberg@gmail.com"
+```
 
-**Tables:**
-- `restaurants` - Main restaurant data with faceted categories
-- Authentication handled by Supabase Auth (magic link)
-
-**Row-Level Security (RLS):**
-- Public read access for all restaurants
-- Admin write access restricted to `magnus.hultberg@gmail.com`
-
-### Authentication
-
-**Method:** Magic link authentication via Supabase Auth
-
-**Admin User:**
-- Email: `magnus.hultberg@gmail.com`
-- Authorized via `AUTHORIZED_ADMIN_EMAIL` in `wrangler.toml`
-
-**Magic Link Flow:**
-1. User enters email on admin panel
-2. Supabase sends magic link email
-3. User clicks link, gets redirected back
-4. Session established via Supabase client
+**CF_ACCESS_AUD** and **CF_TEAM_DOMAIN** are used by the Worker to verify Cloudflare Access JWTs. See `REFERENCE/auth-setup.md` for details.
 
 ---
 
-## Google Maps & Places API
+## D1 database binding
 
-### APIs Required
+D1 is configured in `wrangler.toml` as a binding, not an environment variable:
 
-Enable these APIs in Google Cloud Console:
-- **Geocoding API** - Convert addresses to lat/lng coordinates
-- **Places API** - Lookup place details, ratings, reviews
+```toml
+[[d1_databases]]
+binding = "DB"
+database_name = "wandering-paths"
+database_id = "f928b168-fb21-4420-bff8-2f9320d3f22e"
+```
 
-### Usage in Application
-
-**Geocoding:**
-- Used in `src/services/locationService.ts`
-- Converts restaurant addresses to coordinates for map display
-- Endpoint: `https://maps.googleapis.com/maps/api/geocode/json`
-
-**Place Lookups:**
-- Used in `src/worker.js` for review enrichment
-- Fetches public ratings and reviews
-- Endpoints:
-  - Text search: `/maps/api/place/textsearch/json`
-  - Place details: `/maps/api/place/details/json`
-
-### Quotas and Costs
-
-- Geocoding API: Free tier covers typical usage
-- Places API: Monitor usage in Google Cloud Console
-- Consider enabling billing alerts
+The Worker accesses it as `env.DB`. No connection string, no SDK initialisation. This is entirely server-side — the React app never talks to D1 directly.
 
 ---
 
-## Mapbox Setup
+## Where to get API keys
 
-### Account Configuration
+**Claude API (Anthropic):**
+- https://console.anthropic.com/settings/keys
+- Current model: `claude-sonnet-4-20250514` (configured in `src/config/claude.ts`)
 
-**Access Token:** Required for map display
+**Google Maps:**
+- https://console.cloud.google.com/google/maps-apis/credentials
+- Enable: Geocoding API, Places API
 
-**Usage:**
-- Interactive map component (`src/components/InteractiveMap.tsx`)
-- Mapbox GL JS library
-- Clustering for multiple restaurant markers
-
-### Map Style
-
-Current style: `mapbox://styles/mapbox/streets-v12`
-
-Can be customized via Mapbox Studio for brand-specific styling.
+**Mapbox:**
+- https://account.mapbox.com/access-tokens/
 
 ---
 
-## Troubleshooting
+## GitHub Actions secrets
 
-### "API key not configured" errors
+Required for automated CI/CD deployment:
 
-**Local development:**
-- Verify `.env` file exists in project root
-- Check variable names match exactly (case-sensitive)
-- Restart dev servers after adding new variables
+```
+CLOUDFLARE_API_TOKEN    — Cloudflare Workers deployment access
+CLOUDFLARE_ACCOUNT_ID   — Your Cloudflare account ID
+```
 
-**Production (Cloudflare):**
-- Verify secrets are set: `wrangler secret list`
-- Re-run `wrangler secret put <SECRET_NAME>` if missing
-- Redeploy after updating secrets
-
-### CORS errors during local development
-
-- Ensure local API server is running (`npm run api`)
-- Check that `server.cjs` has `cors()` middleware enabled
-- Verify frontend is making requests to `http://localhost:3001`
-
-### Supabase connection issues
-
-- Verify `SUPABASE_URL` in `wrangler.toml` is correct
-- Check `SUPABASE_ANON_KEY` is valid (not expired)
-- Test connection in Supabase Dashboard → API → Auto-generated docs
+The Worker secrets (Claude, Google Maps, Mapbox) are stored in Cloudflare directly and don't need to be in GitHub.
 
 ---
 
-## Security Best Practices
+## Security checklist
 
-1. **Never commit `.env` to git** - Already in `.gitignore`
-2. **Rotate API keys periodically** - Especially after team changes
-3. **Use separate keys for dev/prod** - If budget allows
-4. **Monitor API usage** - Set up billing alerts in Google Cloud, Anthropic, Mapbox
-5. **Restrict API keys** - Use HTTP referrer restrictions (Google Maps), domain restrictions (Mapbox)
+- Never commit `.env` to git (it's in `.gitignore`)
+- Rotate API keys if they may have been exposed
+- Use `wrangler secret put` for all sensitive production values — never put them in `wrangler.toml`
+- Restrict Google Maps API keys by HTTP referrer in Google Cloud Console
+- Monitor usage: Anthropic Console, Google Cloud Console, Mapbox account
 
 ---
 
-**Related Documentation:**
-- See `REFERENCE/troubleshooting.md` for common setup issues
-- See `REFERENCE/DEVELOPMENT.md` for full development workflow
+**Related:**
+- `REFERENCE/auth-setup.md` — CF_ACCESS_AUD, CF_TEAM_DOMAIN usage
+- `REFERENCE/d1-setup.md` — D1 binding and database
+- `REFERENCE/troubleshooting.md` — Common config issues

@@ -92,8 +92,10 @@ pkill -f vite && pkill -f node && npm run dev
 
 # 4. Verify variables are loaded
 # In browser console:
-console.log(import.meta.env.VITE_SUPABASE_URL)
+console.log(import.meta.env.VITE_MAPBOX_ACCESS_TOKEN)
 ```
+
+**Note:** There are no `VITE_SUPABASE_*` variables — the database is Cloudflare D1, server-side only.
 
 ### Local API server (server.cjs) not working
 
@@ -170,9 +172,9 @@ npm run build
 wrangler secret list
 
 # Add missing secrets
-wrangler secret put SUPABASE_ANON_KEY
 wrangler secret put CLAUDE_API_KEY
 wrangler secret put GOOGLE_MAPS_API_KEY
+wrangler secret put MAPBOX_ACCESS_TOKEN
 
 # Redeploy after adding secrets
 npx wrangler deploy
@@ -223,35 +225,62 @@ npx wrangler deploy
 
 ---
 
-## Database Issues
+## Database issues
 
-### Supabase connection errors
+### D1 query errors
 
-**Symptom:** Cannot fetch restaurants, auth fails
+**Symptom:** API returns 500, Worker logs show database errors
 
 **Solution:**
 ```bash
-# 1. Verify Supabase project is active
-# Login to: https://supabase.com/dashboard/project/drtjfbvudzacixvqkzav
+# Check Worker logs live
+npx wrangler tail
 
-# 2. Check API keys
-# Dashboard → Settings → API → Copy anon key
-# Update in .env (local) and Cloudflare secrets (production)
+# Query D1 directly (production)
+npx wrangler d1 execute wandering-paths --command="SELECT count(*) FROM restaurants"
 
-# 3. Test connection
-# Dashboard → API Docs → Auto-generated → Test in browser
+# Query local D1
+npx wrangler d1 execute wandering-paths --local --command="SELECT count(*) FROM restaurants"
+
+# Re-apply schema if tables are missing
+npx wrangler d1 execute wandering-paths --file=scripts/d1-schema.sql
 ```
 
-### Row-Level Security (RLS) blocking writes
+**Common causes:**
+- Schema not applied — run the schema file against D1
+- SQLite type mismatch — arrays must be JSON strings, booleans as 0/1, datetimes as TEXT
+- Foreign key violation — `PRAGMA foreign_keys = ON` is set; cascade deletes handle most cases
 
-**Symptom:** Can read restaurants but cannot create/update/delete
+### Cloudflare Access auth not working
 
-**Cause:** RLS policies restrict write access to authorized admin
+**Symptom:** Admin features show "Unauthorised", or login loop
+
+**Diagnosis:**
+1. Check browser DevTools → Application → Cookies for `CF-Authorization` (hyphen) cookie
+2. If cookie is missing: Cloudflare Access login didn't complete, or cookie domain mismatch
+3. If cookie exists but requests fail: JWT verification failing (see below)
 
 **Solution:**
-- Verify logged-in user email matches `AUTHORIZED_ADMIN_EMAIL` in `wrangler.toml`
-- Check RLS policies in Supabase Dashboard → Authentication → Policies
-- For testing, can temporarily disable RLS (not recommended for production)
+- Navigate to `/auth/login` to trigger the Cloudflare Access login flow
+- Ensure you're logging in with `magnus.hultberg@gmail.com` (the `AUTHORIZED_ADMIN_EMAIL`)
+- Check `CF_ACCESS_AUD` in `wrangler.toml` matches the application AUD in the CF Access dashboard
+- Check `CF_TEAM_DOMAIN` is correct (e.g., `https://herrings.cloudflareaccess.com`)
+
+### JWT verification failing
+
+**Symptom:** 401 Unauthorised despite having the cookie
+
+**Causes and fixes:**
+- **Expired JWT:** Log out (`/cdn-cgi/access/logout`) and log back in
+- **Wrong AUD:** `CF_ACCESS_AUD` in `wrangler.toml` doesn't match the CF Access application — copy the AUD tag from the CF Zero Trust dashboard
+- **Wrong email:** JWT email doesn't match `AUTHORIZED_ADMIN_EMAIL` — check both values
+- **JWKS fetch failing:** `CF_TEAM_DOMAIN` is wrong — the Worker fetches public keys from `${CF_TEAM_DOMAIN}/cdn-cgi/access/certs`
+
+**Debug via Worker logs:**
+```bash
+npx wrangler tail
+# Then attempt an admin action — look for the auth check log output
+```
 
 ---
 
@@ -368,13 +397,13 @@ npm run build
 
 ### Safari private mode issues
 
-**Symptom:** Features not working in Safari private browsing
+**Symptom:** Admin features not working in Safari private browsing
 
-**Cause:** Safari blocks some localStorage/cookies in private mode
+**Cause:** Safari blocks cookies in private mode, which prevents the `CF-Authorization` cookie from being set
 
 **Solution:**
-- Use normal browsing mode for full functionality
-- Supabase auth relies on localStorage for session management
+- Use normal browsing mode for admin access
+- Public restaurant list still works without cookies
 
 ### Mobile viewport issues
 
@@ -394,7 +423,7 @@ npm run build
 lsof -i :8080  # Vite dev server
 lsof -i :3001  # API server
 
-# Check environment
+# Check environment (no Supabase vars — D1 is server-side only)
 cat .env
 echo $NODE_ENV
 
@@ -423,7 +452,6 @@ If issues persist after trying these solutions:
 2. **Search GitHub issues:** https://github.com/magnushultberg/wandering-paths-record/issues
 3. **Check service status:**
    - Cloudflare: https://www.cloudflarestatus.com/
-   - Supabase: https://status.supabase.com/
    - Anthropic: https://status.anthropic.com/
 4. **Create detailed bug report:** Include error messages, browser console output, steps to reproduce
 

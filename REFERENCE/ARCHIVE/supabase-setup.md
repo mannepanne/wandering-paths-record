@@ -1,4 +1,12 @@
-# Supabase Setup Guide
+# Supabase setup guide — LEGACY / ARCHIVED
+
+> **This document is archived.** The app has migrated from Supabase (PostgreSQL + magic link auth) to Cloudflare D1 (SQLite) + Cloudflare Access + Google OAuth. For current database and auth documentation, see:
+> - `REFERENCE/d1-setup.md` — D1 database and schema
+> - `REFERENCE/auth-setup.md` — Cloudflare Access authentication
+
+Kept for historical reference only.
+
+---
 
 Complete documentation for Supabase database, authentication, and configuration.
 

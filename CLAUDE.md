@@ -62,7 +62,7 @@ interface Restaurant {
   personal_appreciation?: 'unknown' | 'avoid' | 'fine' | 'good' | 'great';
   public_rating?: number;
   cuisine?: string;
-  price_range?: ' | '$' | '$ | '$$';
+  price_range?: '$' | '$$' | '$$$' | '$$$$';
   must_try_dishes?: string[];
   locations?: RestaurantAddress[];    // Multi-location support
 }
@@ -115,36 +115,37 @@ interface RestaurantAddress {
 ### Asset Reference Sync
 The build process auto-syncs Worker asset references via `scripts/update-worker-assets.js`. This prevents MIME type errors on deployment.
 
-### Admin Authentication
-- Cloudflare Access + Google OAuth (no password, no magic links)
-- Login: navigate to `/auth/login` → Google OAuth → CF-Authorization cookie set
-- JWT verified server-side in Worker via `verifyCFAccessJWT()` (RS256 + JWKS)
-- Authorized email checked in Worker: `AUTHORIZED_ADMIN_EMAIL` in wrangler.toml
+### Admin authentication
+- Cloudflare Access + Google OAuth; login via `/auth/login`, logout via `/cdn-cgi/access/logout`
+- Worker verifies `CF_Authorization` cookie (underscore — not hyphen) on every protected endpoint
+- JWT verification: RS256 signature via JWKS, audience check, expiry check, email check
+- Authorized email configured as `AUTHORIZED_ADMIN_EMAIL` in wrangler.toml
 - Admin controls (edit/delete/rate) hidden from unauthenticated users
 
 ## Documentation
 
 ### Implementation Reference (REFERENCE/)
 
-**Essential guides** - Read these when working on specific systems:
+**Essential guides** — read when working on specific systems:
 
-- `REFERENCE/DEVELOPMENT.md` - **Full development workflow** (setup, commands, deployment)
+- `REFERENCE/DEVELOPMENT.md` - Full development workflow (setup, commands, deployment)
 - `REFERENCE/environment-setup.md` - Secrets and API key configuration
-- `REFERENCE/supabase-setup.md` - Legacy: Supabase setup (migrated to D1 — see `SPECIFICATIONS/d1-migration.md`)
-- `REFERENCE/d1-setup.md` - D1 database schema and Worker API (TODO: create)
+- `REFERENCE/d1-setup.md` - D1 database schema and Worker API endpoints
+- `REFERENCE/auth-setup.md` - Cloudflare Access + Google OAuth setup and flow
 - `REFERENCE/ai-extraction-guide.md` - How Claude extraction works
 - `REFERENCE/geo-services-guide.md` - Maps, geocoding, location search
 - `REFERENCE/claude_model_updates.md` - Updating Claude API model versions
 - `REFERENCE/troubleshooting.md` - Common issues and solutions
 - `REFERENCE/technical-debt.md` - Known limitations and future work
-- `REFERENCE/testing-strategy.md` - Testing approach (not yet implemented)
+- `REFERENCE/testing-strategy.md` - Testing approach
 - `REFERENCE/web-analytics.md` - Analytics setup (planned)
+- `REFERENCE/ARCHIVE/supabase-setup.md` - Legacy Supabase setup (archived — migrated to D1)
 
 - **Architecture decisions?** → [decisions/](./REFERENCE/decisions/) - ADRs explaining why things are this way
 
 ### Technical Specifications (SPECIFICATIONS/)
 
-**Planning docs** - Active work and project history:
+**Planning docs** — active work and project history:
 
 - `SPECIFICATIONS/technical_specifications.md` - Overall architecture
 - `SPECIFICATIONS/PROJECT_HISTORY.md` - Project evolution

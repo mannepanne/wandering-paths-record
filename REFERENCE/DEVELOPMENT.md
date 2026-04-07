@@ -1,621 +1,185 @@
-# Development Guide: Wandering Paths Restaurant Curation System
+# Development guide
 
-## System Overview
+Day-to-day development workflow for the Wandering Paths restaurant curation app.
 
-Wandering Paths is a sophisticated restaurant curation and discovery application built with modern web technologies. The system uses CloudFlare Workers for production deployment with AI-powered restaurant extraction, multi-location support, and advanced geo-search capabilities.
+**Live at:** [restaurants.hultberg.org](https://restaurants.hultberg.org)
 
-**Live Application**: [restaurants.hultberg.org](https://restaurants.hultberg.org)
+---
 
-## Architecture Summary
+## Tech stack
 
-### Tech Stack
-- **Frontend**: Vite + React 18 + TypeScript (strict mode)
-- **UI Framework**: shadcn/ui with Radix UI components
-- **Styling**: Tailwind CSS with custom earth-tone design system
-- **State Management**: TanStack Query v5 for server state
-- **Database**: Supabase PostgreSQL with multi-location schema
-- **Authentication**: Supabase Auth with magic links
-- **AI Integration**: Claude Sonnet 4.5 API for extraction and review summarization (centralized config)
-- **Maps**: Mapbox GL JS v3.14.0 with clustering support
-- **Geo Services**: Google Maps Geocoding and Places APIs
-- **Deployment**: CloudFlare Workers with static asset serving
+- **Frontend:** Vite + React 18 + TypeScript (strict) + shadcn/ui + Tailwind CSS
+- **State management:** TanStack Query v5
+- **Database:** Cloudflare D1 (SQLite), server-side only, bound to Worker as `env.DB`
+- **Authentication:** Cloudflare Access + Google OAuth, JWT verified in Worker
+- **AI:** Claude Sonnet 4.5 (`src/config/claude.ts` for centralised version config)
+- **Maps:** Mapbox GL JS v3.14 with clustering
+- **Geo:** Google Maps Geocoding + Places APIs
+- **Deployment:** Cloudflare Workers with static asset serving
 
-**⚠️ Note:** Claude model versions are centralized in `src/config/claude.ts` to handle Anthropic's periodic deprecations. See "Centralized Claude Model Configuration" section below for details.
+---
 
-### Development vs Production Architecture
+## Development commands
 
-```mermaid
-graph TB
-    subgraph "Development Environment"
-        React[React App :8080] --> Express[Express API :3001]
-        Express --> Claude[Claude API]
-        Express --> Google[Google Maps API]
-    end
-
-    subgraph "Production Environment"
-        CDN[CloudFlare CDN] --> Worker[CloudFlare Worker]
-        Worker --> Assets[Static Assets]
-        Worker --> ClaudeAPI[Claude API Proxy]
-        Worker --> GoogleAPI[Google Maps Proxy]
-    end
-
-    React --> Supabase[Supabase Database]
-    Worker --> Supabase
+```bash
+npm run dev           # Frontend dev server on port 8080
+npm run api           # Local API server on port 3001 (needed for AI extraction in dev)
+npm run build         # Production build (auto-syncs Worker asset references)
+npm run lint          # ESLint
+npx tsc --noEmit      # TypeScript check
+npx wrangler dev      # Run Worker locally with local D1 (alternative to npm run api)
+npx wrangler deploy   # Deploy to Cloudflare Workers
+npx wrangler tail     # Stream live Worker logs
 ```
 
-## Prerequisites
+---
 
-- Node.js 18+ (recommended: use [nvm](https://github.com/nvm-sh/nvm))
-- npm or yarn package manager
-- **Required API Keys:**
-  - Supabase project (database + auth)
-  - Claude API key (Anthropic)
-  - Google Maps API key (Geocoding + Places)
-  - Mapbox access token (for maps)
+## Local development setup
 
-## Environment Setup
+### 1. Install dependencies
 
-### 1. Clone and Install
 ```bash
 git clone <repository-url>
 cd wandering-paths-record
 npm install
 ```
 
-### 2. Environment Configuration
+### 2. Environment variables
 
-Create `.env` file in project root:
-```env
-# Supabase Configuration
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+Create `.env` in the project root:
 
-# Authentication
-VITE_AUTHORIZED_ADMIN_EMAIL=your@email.com
+```bash
+# AI extraction (local dev server only)
+VITE_CLAUDE_API_KEY=your_anthropic_api_key
 
-# AI & Maps (Development)
-VITE_CLAUDE_API_KEY=your_claude_api_key
+# Google Maps (geocoding + places)
 VITE_GOOGLE_MAPS_API_KEY=your_google_maps_key
+
+# Mapbox (map display)
 VITE_MAPBOX_ACCESS_TOKEN=your_mapbox_token
-
-# Development API URL
-VITE_API_BASE_URL=http://localhost:3001
 ```
 
-**Production Secrets** (CloudFlare Workers):
-```toml
-# wrangler.toml (already configured)
-[vars]
-SUPABASE_URL = "https://drtjfbvudzacixvqkzav.supabase.co"
-AUTHORIZED_ADMIN_EMAIL = "magnus.hultberg@gmail.com"
+**No Supabase variables.** The database is D1, which is server-side only — no client config needed.
 
-# Set via: wrangler secret put <KEY> or GitHub Actions
-SUPABASE_ANON_KEY=<secret>
-CLAUDE_API_KEY=<secret>
-GOOGLE_MAPS_API_KEY=<secret>
-```
+**Note:** `VITE_` prefix is required for Vite to expose variables to the browser bundle. The API keys are used by the local dev server (`server.cjs`) and Worker, not directly by the React app.
 
-### 3. Database Setup
+### 3. Start development
 
-The application uses a sophisticated multi-location restaurant schema:
-
-```sql
--- Core restaurant data
-CREATE TABLE restaurants (
-    id UUID PRIMARY KEY,
-    name TEXT NOT NULL,
-    address TEXT, -- Human-readable summary
-    website TEXT,
-    status TEXT CHECK (status IN ('to-visit', 'visited')),
-
-    -- Ratings & Reviews
-    public_rating DECIMAL(2,1),
-    public_rating_count INTEGER,
-    personal_rating DECIMAL(2,1),
-    public_review_summary TEXT,
-    public_review_summary_updated_at TIMESTAMP,
-
-    -- Restaurant Details
-    cuisine TEXT,
-    price_range TEXT,
-    atmosphere TEXT,
-    description TEXT,
-    must_try_dishes TEXT[],
-    dietary_options TEXT,
-
-    -- Metadata
-    source TEXT DEFAULT 'manual',
-    source_url TEXT,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-
--- Multi-location support for restaurant chains
-CREATE TABLE restaurant_addresses (
-    id UUID PRIMARY KEY,
-    restaurant_id UUID REFERENCES restaurants(id) ON DELETE CASCADE,
-    location_name TEXT, -- e.g., "Shoreditch", "King's Cross"
-    full_address TEXT,
-    city TEXT,
-    country TEXT,
-    latitude DECIMAL(10, 8),
-    longitude DECIMAL(11, 8),
-    phone TEXT,
-    created_at TIMESTAMP DEFAULT NOW()
-);
-```
-
-## Development Workflow
-
-### 1. Start Development Environment
 ```bash
-# Terminal 1: Start React development server
+# Terminal 1 — React dev server
 npm run dev
-# Serves on http://localhost:8080
 
-# Terminal 2: Start API server (for AI extraction)
+# Terminal 2 — Local API server (AI extraction, Google Maps proxy)
 npm run api
-# Serves on http://localhost:3001
 ```
 
-### 2. Access the Application
-- **Frontend**: http://localhost:8080
-- **Admin Panel**: Sign in with your configured email
-- **API Health**: http://localhost:3001/health
+- Frontend: http://localhost:8080
+- API: http://localhost:3001
+- Health check: http://localhost:3001/health
 
-### 3. Key Development Features
+### 4. Admin access in local dev
 
-#### Admin Panel (`/admin`)
-- AI-powered restaurant extraction from URLs
-- Batch geocoding and review enrichment
-- Individual restaurant operations (geocoding & review updates)
-- Cache management for development
-- Manual restaurant entry and editing
+The admin panel requires a valid Cloudflare Access JWT. In local development, the Worker's `isAuthenticated()` check still runs. Options:
 
-#### About Page (`/about`)
-- Comprehensive explanation of the appreciation system
-- Feature overview and tech stack information
-- Personal branding and curation philosophy
-- User guide for behavioral rating scale
-
-#### Restaurant Details (`/restaurant/:id`)
-- Comprehensive restaurant information display
-- Multi-location support with individual location cards
-- Smart layout: Description spans full width when Source is empty
-- Interactive maps integration
-- Personal appreciation badges with tooltips
-- Admin controls for authenticated users
-
-#### Interactive Features
-- Multi-location restaurant search
-- GPS-based "Near Me" functionality
-- Interactive Mapbox maps with clustering
-- Advanced filtering (cuisine, status, location)
-- SPA routing with deep linking support
-
-## Core System Components
-
-### 1. AI Restaurant Extraction
-
-**Location**: `src/services/claudeExtractor.ts`
-
-```typescript
-// Intelligent business detection + restaurant data extraction
-const extractionFlow = {
-    1: "Business Type Detection", // Restaurant vs. hotel/gallery/retail
-    2: "Content Analysis", // Multi-page crawling via proxy
-    3: "Data Extraction", // Structured restaurant information
-    4: "Multi-Location Processing" // Chain restaurant handling
-};
-```
-
-**Features**:
-- Smart business type detection (avoids extracting non-restaurants)
-- Multi-page content analysis with proxy services
-- Automatic multi-location detection and geocoding
-- 24-hour URL caching to prevent duplicate API calls
-- Cost optimization (~$0.01-0.05 per extraction)
-
-#### Centralized Claude Model Configuration
-
-**⚠️ CRITICAL MAINTENANCE:** Claude model versions are centralized to handle Anthropic's periodic model deprecations.
-
-**Current Model:** `claude-sonnet-4-20250514` (Sonnet 4.5)
-
-**Configuration Locations:**
-- **TypeScript files:** `src/config/claude.ts` (import from here)
-- **Node.js files:** Constants at top of `server.cjs` and `src/worker.js`
-
-**Why This Matters:**
-In January 2025, Anthropic deprecated `claude-3-5-sonnet-20240620` without warning, breaking restaurant extraction and review summarization across the entire application. The model version was hardcoded in 4 different files (server.cjs, worker.js, claudeExtractor.ts, reviewEnrichmentService.ts), making it difficult to fix quickly.
-
-With centralized configuration:
-- **TypeScript services:** Update ONE file (`src/config/claude.ts`)
-- **Node.js files:** Update constants in `server.cjs` and `src/worker.js`
-
-**When Anthropic releases new models:**
-1. See `SPECIFICATIONS/claude_model_updates.md` for step-by-step instructions
-2. Update centralized config
-3. Test locally
-4. Deploy to production
-
-**Files Using Claude API:**
-- `src/services/claudeExtractor.ts` - Restaurant extraction
-- `src/services/reviewEnrichmentService.ts` - Review summarization
-- `server.cjs` - Local development API
-- `src/worker.js` - CloudFlare Workers production API
-
-### 2. Multi-Location Architecture
-
-**Location**: `src/services/restaurants.ts`
-
-The system supports both single-location restaurants and multi-location chains:
-
-```typescript
-interface Restaurant {
-    // Core restaurant data
-    name: string;
-    address: string; // Human-readable summary
-
-    // Multi-location support
-    locations?: RestaurantAddress[];
-}
-
-interface RestaurantAddress {
-    location_name: string; // "Shoreditch", "King's Cross"
-    full_address: string;
-    latitude?: number;
-    longitude?: number;
-    city: string;
-    country: string;
-}
-```
-
-**Search Capabilities**:
-- Find restaurants by location name ("Dishoom Shoreditch")
-- GPS-based distance calculations
-- Multi-city restaurant chain support
-
-### 3. Review Enrichment System
-
-**Location**: `src/services/reviewEnrichmentService.ts`
-
-**Phase 2 Feature**: Automatic enhancement with Google Reviews data
-
-```typescript
-const enrichmentProcess = {
-    1: "Google Places Search", // Find restaurant on Google Maps
-    2: "Reviews Retrieval", // Fetch recent reviews and ratings
-    3: "Claude Summarization", // AI-generated review summary
-    4: "Must-Try Dishes", // Extract popular menu items
-    5: "Database Update" // Store enriched data
-};
-```
-
-### 4. Smart Geo Search
-
-**Location**: `src/services/smartGeoSearch.ts`
-
-**Phase 3 Feature**: Advanced location-based search
-
-```typescript
-// GPS-based "Near Me" functionality
-const geoSearch = {
-    userLocation: "GPS coordinates via browser",
-    haversineDistance: "Calculate distances to restaurants",
-    locationBias: "Improve geocoding accuracy",
-    proximitySort: "Order results by distance"
-};
-```
-
-### 5. Interactive Maps
-
-**Location**: `src/components/InteractiveMap.tsx`
-
-**Features**:
-- Mapbox GL JS integration with custom earth-tone styling
-- Restaurant clustering for performance
-- Popup navigation to restaurant details
-- Mobile-optimized controls
-- Real-time filter synchronization
-
-## API Architecture
-
-### Development APIs (Express Server)
-
-**Base URL**: `http://localhost:3001`
-
-```typescript
-// AI Extraction
-POST /api/extract-restaurant
-Body: { url: string }
-Response: { success: boolean, data: RestaurantData }
-
-// Health Check
-GET /health
-Response: { status: "OK", timestamp: string }
-```
-
-### Production APIs (CloudFlare Workers)
-
-**Base URL**: `https://restaurants.hultberg.org`
-
-```typescript
-// Restaurant Extraction (with CORS handling)
-POST /api/extract-restaurant
-Headers: { "Content-Type": "application/json" }
-
-// Claude API Proxy (for review summarization)
-POST /api/claude
-Body: Claude API request format
-
-// Google Maps Proxy (geocoding, places, reviews)
-GET /api/google-maps?endpoint=geocode&query=address
-GET /api/google-maps?endpoint=textsearch&query=restaurant
-GET /api/google-maps?endpoint=details&place_id=xyz
-```
-
-## Deployment
-
-### Development Build
-```bash
-npm run build:dev  # Development mode build
-npm run preview    # Preview production build locally
-```
-
-### Production Deployment
-
-#### Automated Deployment (Recommended)
-**GitHub Actions automatically deploys when you push to ****`main`**** branch:**
-```bash
-git add .
-git commit -m "Your changes"
-git push origin main
-# 🚀 Automatic deployment triggered!
-```
-
-**Setup Required**: Configure GitHub secrets for automated deployment. See [GITHUB-ACTIONS-SETUP.md](./GITHUB-ACTIONS-SETUP.md) for complete setup instructions.
-
-**Required GitHub Secrets:**
-- `CLOUDFLARE_API_TOKEN`: CloudFlare Workers deployment access
-- `CLOUDFLARE_ACCOUNT_ID`: Your CloudFlare account identifier
-- `SUPABASE_ANON_KEY`: Supabase anonymous public key for database access
-
-**Benefits:**
-- ✅ Zero manual deployment steps
-- ✅ Asset reference synchronization guaranteed
-- ✅ Quality gates (linting) prevent broken deployments
-- ✅ Fast feedback on deployment success/failure
-
-#### Manual Deployment (Fallback)
-```bash
-# Deploy to CloudFlare Workers manually
-npm run build  # Automatically updates Worker asset references
-npx wrangler deploy
-
-# Production URLs:
-# - https://restaurants.hultberg.org (custom domain)
-# - https://wandering-paths-record.herrings.workers.dev (workers.dev)
-```
-
-**⚠️ IMPORTANT: Asset Reference Automation**
-
-The build process includes automatic asset reference synchronization to prevent deployment issues. See [DEPLOYMENT-NOTES.md](./DEPLOYMENT-NOTES.md) for complete details.
-
-**Key Points:**
-- `npm run build` automatically updates CloudFlare Worker with correct asset references
-- This prevents MIME type and 404 errors that occurred with manual deployments
-- The `scripts/update-worker-assets.js` script runs after every build
-- No manual intervention required - assets always sync correctly
-
-### CloudFlare Workers Configuration
-
-**File**: `wrangler.toml`
-```toml
-name = "wandering-paths-record"
-compatibility_date = "2025-01-01"
-compatibility_flags = ["nodejs_compat"]
-main = "./src/worker.js"
-
-# Static assets served from dist/client
-[assets]
-directory = "./dist/client"
-
-# Custom domain routing
-[[routes]]
-pattern = "restaurants.hultberg.org/"
-zone_name = "hultberg.org"
-
-[[routes]]
-pattern = "restaurants.hultberg.org/*"
-zone_name = "hultberg.org"
-
-# Environment variables (non-sensitive)
-[vars]
-SUPABASE_URL = "https://drtjfbvudzacixvqkzav.supabase.co"
-AUTHORIZED_ADMIN_EMAIL = "magnus.hultberg@gmail.com"
-```
-
-## Testing & Quality Assurance
-
-### Testing Restaurant Extraction
-1. **Navigate to Admin Panel**: Sign in with configured email
-2. **Test Restaurant URLs**:
-  - Fine dining: `https://noma.dk`
-  - Chain restaurants: `https://dishoom.com`
-  - Multi-location: `https://hawksmoor.com`
-3. **Test Non-Restaurant Detection**:
-  - Art gallery: `https://tate.org.uk`
-  - Retail: `https://apple.com`
-
-### Development Testing
-```bash
-# Run linter
-npm run lint
-
-# Type checking
-npm run type-check
-
-# Build verification
-npm run build
-```
-
-### Monitoring & Debugging
-
-**Browser Console Debugging**:
-```javascript
-// Enable extraction debugging
-localStorage.setItem('debug-extraction', 'true');
-
-// Monitor API calls
-localStorage.setItem('debug-api', 'true');
-```
-
-**CloudFlare Workers Monitoring**:
-```bash
-# Real-time log monitoring
-npx wrangler tail
-
-# Check deployment status
-npx wrangler deploy --dry-run
-```
-
-## Common Development Issues
-
-### 1. API Key Configuration
-```bash
-# ❌ "Claude API key not configured"
-# ✅ Ensure VITE_CLAUDE_API_KEY is set in .env
-# ✅ Restart both dev servers after env changes
-
-# ❌ "Google Maps error"
-# ✅ Verify VITE_GOOGLE_MAPS_API_KEY is valid
-# ✅ Check API quotas and billing in Google Cloud Console
-```
-
-### 2. CORS Issues
-```bash
-# ❌ Development CORS errors are expected
-# ✅ Content fetching uses proxy services to bypass CORS
-# ✅ Production uses CloudFlare Workers (no CORS issues)
-```
-
-### 3. Database Connection
-```bash
-# ❌ Supabase connection failed
-# ✅ Verify VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY
-# ✅ Check Supabase project status and RLS policies
-```
-
-### 4. Maps Not Loading
-```bash
-# ❌ Mapbox maps not displaying
-# ✅ Verify VITE_MAPBOX_ACCESS_TOKEN is set
-# ✅ Check Mapbox account limits and usage
-```
-
-### 5. SPA Routing Issues
-```bash
-# ❌ 522 errors on restaurant detail page refresh (production)
-# ✅ This is resolved - worker handles SPA routing with embedded HTML
-
-# ❌ Localhost development SPA routing issues
-# ✅ Known issue - production works perfectly, use production for testing deep links
-# ✅ For development, navigate via the app rather than direct URL refresh
-```
-
-### 6. CloudFlare Workers Deployment
-```bash
-# ❌ ASSETS binding not available
-# ✅ This is resolved - worker uses environment-aware routing
-# ✅ Development: passes through to Vite
-# ✅ Production: serves embedded HTML for SPA routes
-
-# ❌ Worker version not updating
-# ✅ Check CloudFlare dashboard for deployment status
-# ✅ Use `npx wrangler tail` to monitor real-time logs
-```
-
-## Performance Considerations
-
-### AI Extraction Optimization
-- **Caching**: 24-hour URL-based cache prevents duplicate extractions
-- **Content Truncation**: Smart content limiting keeps within Claude token limits
-- **Proxy Rotation**: Multiple proxy services for reliability
-- **Cost Monitoring**: Typical extraction cost: $0.01-0.05
-
-### Database Performance
-- **Indexes**: Optimized for location-based queries
-- **RLS Policies**: Row-level security for multi-tenant support
-- **Query Optimization**: Efficient joins for multi-location searches
-
-### Frontend Performance
-- **Code Splitting**: Automatic route-based splitting via Vite
-- **Image Optimization**: WebP format with fallbacks
-- **Map Clustering**: Performance optimization for large datasets
-- **Query Caching**: TanStack Query reduces redundant API calls
-
-## Security & Compliance
-
-### Authentication
-- **Magic Links**: Passwordless authentication via Supabase
-- **Admin-Only Features**: Restaurant editing restricted to authorized email
-- **Session Management**: Automatic token refresh and secure storage
-
-### API Security
-- **CORS Configuration**: Properly configured for cross-origin requests
-- **Rate Limiting**: CloudFlare Workers built-in DDoS protection
-- **Environment Variables**: Sensitive keys stored in CloudFlare secrets
-
-### Data Privacy
-- **No Personal Data**: System stores only restaurant information
-- **GDPR Compliance**: No user tracking or personal data collection
-- **Secure Transit**: All API calls over HTTPS
-
-## Future Development Roadmap
-
-### Phase 4: Personal Visit Tracking & Individual Operations (✅ COMPLETED)
-- ✅ **Behavioral appreciation scale**: 5-level system (unknown/skip/fine/recommend/must-visit)
-- ✅ **Personal rating system**: Separate from public Google ratings
-- ✅ **Smart status management**: Auto-prompts for appreciation when marking as visited
-- ✅ **Interactive tooltips**: Hover descriptions for all appreciation levels
-- ✅ **UI consistency**: Matching experience across PlaceCard and RestaurantDetails
-- ✅ **Database migration**: Schema updated with personal_appreciation field
-- ✅ **Individual restaurant operations**: Single-restaurant geocoding and review enrichment
-- ✅ **Admin UI improvements**: Context-aware admin sections (hide bulk ops when editing)
-- ✅ **Smart reset behavior**: Appreciation resets to "unknown" when toggling back to 'to-visit'
-- ✅ **About page (4.3)**: Comprehensive explanation of appreciation system and features
-- ✅ **Navigation integration**: About button in header with seamless routing
-- ✅ **Personal branding**: Customized content reflecting Magnus's curation approach
-
-### Potential Enhancements
-- **Advanced Analytics**: Visit patterns and preference analysis
-- **Social Features**: Restaurant recommendation sharing
-- **Mobile App**: Native iOS/Android applications
-- **Photo Integration**: Restaurant visit photo uploads
-- **Review Integration**: Personal review writing and management
-
-## Support & Resources
-
-### Documentation
-- **API Reference**: See `src/services/` for service implementations
-- **Component Docs**: See `src/components/` with JSDoc comments
-- **Database Schema**: See Supabase dashboard for full schema
-
-### Debugging Resources
-1. **Browser DevTools**: Network tab for API call analysis
-2. **CloudFlare Dashboard**: Workers logs and analytics
-3. **Supabase Dashboard**: Database queries and real-time monitoring
-4. **API Testing**: Use curl or Postman for API endpoint testing
-
-### Getting Help
-1. Check browser console for detailed error messages
-2. Verify all environment variables are properly configured
-3. Test with simple restaurant websites first
-4. Review CloudFlare Workers logs for production issues
-5. Check Supabase logs for database-related problems
+- Use `npx wrangler dev` instead of `npm run api` for a full local Worker environment (including auth)
+- Or temporarily bypass auth for local testing (not committed to main)
 
 ---
 
-**Last Updated**: September 2025
-**System Version**: Phase 4.3 (Personal Visit Tracking & About Page) - Production Ready
+## Environment variables reference
+
+### Local `.env` (development only)
+
+| Variable | Required | Used for |
+|----------|----------|---------|
+| `VITE_CLAUDE_API_KEY` | Yes | AI extraction via local API server |
+| `VITE_GOOGLE_MAPS_API_KEY` | Yes | Geocoding and place lookups |
+| `VITE_MAPBOX_ACCESS_TOKEN` | Yes | Map display |
+
+### Cloudflare Worker secrets (production)
+
+Set via `wrangler secret put <NAME>`:
+
+| Secret | Description |
+|--------|-------------|
+| `CLAUDE_API_KEY` | Anthropic API key |
+| `GOOGLE_MAPS_API_KEY` | Google Maps API key |
+| `MAPBOX_ACCESS_TOKEN` | Mapbox token |
+
+### Cloudflare Worker vars (in `wrangler.toml`)
+
+Non-sensitive config committed to the repo:
+
+| Variable | Description |
+|----------|-------------|
+| `CF_ACCESS_AUD` | Cloudflare Access application audience tag |
+| `CF_TEAM_DOMAIN` | Cloudflare Zero Trust team domain URL |
+| `AUTHORIZED_ADMIN_EMAIL` | Admin email checked in JWT verification |
+
+### D1 binding (in `wrangler.toml`)
+
+```toml
+[[d1_databases]]
+binding = "DB"
+database_name = "wandering-paths"
+database_id = "f928b168-fb21-4420-bff8-2f9320d3f22e"
+```
+
+D1 is available in the Worker as `env.DB`. No connection strings, no client SDK.
+
+---
+
+## Deployment
+
+### Automated (recommended)
+
+GitHub Actions deploys automatically on push to `main`. Required GitHub secrets:
+
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+
+### Manual
+
+```bash
+npm run build         # Builds frontend + auto-syncs Worker asset references
+npx wrangler deploy
+```
+
+**Asset reference sync:** `npm run build` runs `scripts/update-worker-assets.js` which updates the Worker's embedded HTML with correct asset filenames. This prevents MIME type errors. Always use `npm run build`, not `vite build` directly.
+
+### Production URLs
+
+- Primary: https://restaurants.hultberg.org
+- Workers.dev: https://wandering-paths-record.herrings.workers.dev
+
+---
+
+## Claude model configuration
+
+Model versions are centralised in `src/config/claude.ts` (TypeScript) and as constants at the top of `server.cjs` and `src/worker.js` (Node.js files). When Anthropic deprecates a model, update these and redeploy. See `REFERENCE/claude_model_updates.md` for step-by-step instructions.
+
+**Current model:** `claude-sonnet-4-20250514` (Sonnet 4.5)
+
+---
+
+## Monitoring
+
+```bash
+# Live Worker logs
+npx wrangler tail
+
+# Check D1 database
+npx wrangler d1 execute wandering-paths --command="SELECT count(*) FROM restaurants"
+
+# Check secrets
+wrangler secret list
+```
+
+---
+
+**Related documentation:**
+- `REFERENCE/d1-setup.md` — Database schema and API endpoints
+- `REFERENCE/auth-setup.md` — Cloudflare Access JWT auth
+- `REFERENCE/environment-setup.md` — Full secrets and config reference
+- `REFERENCE/troubleshooting.md` — Common issues
+- `REFERENCE/claude_model_updates.md` — Updating Claude model versions

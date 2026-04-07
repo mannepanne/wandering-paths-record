@@ -33,11 +33,12 @@ When visiting new or even familiar cities, it's easy to lose track of amazing re
 - **Mobile Optimized**: Perfect for remembering restaurants while on-the-go and planning visits
 - **Offline Ready**: Core functionality works without constant internet connection
 
-## Tech Stack
+## Tech stack
 
 **Frontend:** React 18 + TypeScript + Vite + shadcn/ui + Tailwind CSS
-**Backend:** Supabase (database) + Cloudflare Workers (API)
-**AI:** Anthropic Claude 3.5 Sonnet for content extraction
+**Backend:** Cloudflare D1 (SQLite) + Cloudflare Workers (API)
+**Auth:** Cloudflare Access + Google OAuth
+**AI:** Anthropic Claude Sonnet 4.5 for content extraction
 **Maps:** Mapbox GL JS with clustering and mobile optimization
 **Hosting:** Cloudflare Workers with global edge distribution
 
@@ -58,17 +59,17 @@ npm run build
 npx wrangler deploy
 ```
 
-## Environment Setup
+## Environment setup
 
-Create a `.env` file:
+Create a `.env` file for local development:
 
 ```bash
-# Required for local development
 VITE_CLAUDE_API_KEY=your_claude_api_key_here
-VITE_SUPABASE_URL=your_supabase_project_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_GOOGLE_MAPS_API_KEY=your_google_maps_key
 VITE_MAPBOX_ACCESS_TOKEN=your_mapbox_access_token_here
 ```
+
+No database config needed — the database is Cloudflare D1, server-side only. See `REFERENCE/environment-setup.md` for the full reference including Cloudflare Worker secrets.
 
 ## Documentation
 

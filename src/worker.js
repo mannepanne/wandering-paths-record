@@ -875,7 +875,7 @@ function parseRestaurant(row) {
 
 function getCFToken(request) {
   const cookie = request.headers.get('Cookie') || '';
-  const match = cookie.match(/CF-Authorization=([^;]+)/);
+  const match = cookie.match(/CF_Authorization=([^;]+)/);
   return match ? match[1] : null;
 }
 

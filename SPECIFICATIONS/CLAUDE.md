@@ -112,22 +112,13 @@ When starting your project, replace the content below this line with your actual
 
 ## Active implementation phases
 
-Development is organised into [X] sequential phases. Each phase includes scope, acceptance criteria, testing strategy, and PR workflow.
+**Current work:** Database migration from Supabase to Cloudflare D1
 
-**Current phase:** [Phase number and name]
+### Active specifications
 
-### Phase Files (Work Through in Order)
-
-1. **[01-phase-name.md](./01-phase-name.md)** - [Timeframe]
-   [Brief description of what this phase builds]
-
-2. **[02-phase-name.md](./02-phase-name.md)** - [Timeframe]
-   [Brief description of what this phase builds]
-
-3. **[03-phase-name.md](./03-phase-name.md)** - [Timeframe]
-   [Brief description of what this phase builds]
-
-[Continue numbering phases...]
+1. **[d1-migration.md](./d1-migration.md)** — Ready to implement
+   Migration of database and auth from Supabase to Cloudflare D1 + Cloudflare Access + Google OAuth.
+   Auth decision made. Next step: Phase 1 (schema + data migration).
 
 ### Supporting documentation
 

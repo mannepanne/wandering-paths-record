@@ -837,6 +837,104 @@ async function handleGoogleMapsRequest(request, env) {
   }
 }
 
+// --- D1 Database API ---
+
+function jsonResponse(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Content-Type': 'application/json' }
+  });
+}
+
+// Returns the SQL subquery that fetches addresses as a JSON array for a restaurant row aliased 'r'
+function locationsSubquery() {
+  return `COALESCE(
+    (SELECT json_group_array(json_object(
+      'id', a.id, 'restaurant_id', a.restaurant_id,
+      'location_name', a.location_name, 'full_address', a.full_address,
+      'city', a.city, 'country', a.country,
+      'latitude', a.latitude, 'longitude', a.longitude,
+      'phone', a.phone, 'created_at', a.created_at, 'updated_at', a.updated_at
+    )) FROM restaurant_addresses a WHERE a.restaurant_id = r.id),
+    '[]'
+  )`;
+}
+
+// Parse JSON fields that SQLite stores as strings
+function parseRestaurant(row) {
+  if (!row) return null;
+  return {
+    ...row,
+    specialty: row.specialty ? JSON.parse(row.specialty) : [],
+    must_try_dishes: row.must_try_dishes ? JSON.parse(row.must_try_dishes) : [],
+    locations: row.locations ? JSON.parse(row.locations) : []
+  };
+}
+
+// --- Cloudflare Access JWT Verification ---
+
+function getCFToken(request) {
+  const cookie = request.headers.get('Cookie') || '';
+  const match = cookie.match(/CF-Authorization=([^;]+)/);
+  return match ? match[1] : null;
+}
+
+async function verifyCFAccessJWT(token, env) {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return false;
+
+    const b64 = s => s.replace(/-/g, '+').replace(/_/g, '/');
+    const header = JSON.parse(atob(b64(parts[0])));
+    const payload = JSON.parse(atob(b64(parts[1])));
+
+    const aud = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
+    if (!aud.includes(env.CF_ACCESS_AUD)) return false;
+    if (payload.exp < Math.floor(Date.now() / 1000)) return false;
+
+    const certsResp = await fetch(`${env.CF_TEAM_DOMAIN}/cdn-cgi/access/certs`);
+    const { keys } = await certsResp.json();
+    const key = keys.find(k => k.kid === header.kid);
+    if (!key) return false;
+
+    const cryptoKey = await crypto.subtle.importKey(
+      'jwk', key,
+      { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+      false, ['verify']
+    );
+    const data = new TextEncoder().encode(`${parts[0]}.${parts[1]}`);
+    const sigBytes = Uint8Array.from(atob(b64(parts[2])), c => c.charCodeAt(0));
+    return await crypto.subtle.verify('RSASSA-PKCS1-v1_5', cryptoKey, sigBytes, data);
+  } catch {
+    return false;
+  }
+}
+
+async function isAuthenticated(request, env) {
+  const token = getCFToken(request);
+  if (!token) return false;
+  return verifyCFAccessJWT(token, env);
+}
+
+// Replaces the old PostgreSQL trigger: keeps personal_appreciation and visit_count
+// in sync with the most recent visit after any change to restaurant_visits
+async function syncRestaurantVisitData(db, restaurantId) {
+  const latest = await db.prepare(
+    `SELECT rating FROM restaurant_visits
+     WHERE restaurant_id = ?
+     ORDER BY visit_date DESC, created_at DESC LIMIT 1`
+  ).bind(restaurantId).first();
+
+  const countRow = await db.prepare(
+    `SELECT COUNT(*) as cnt FROM restaurant_visits
+     WHERE restaurant_id = ? AND is_migrated_placeholder = 0`
+  ).bind(restaurantId).first();
+
+  await db.prepare(
+    `UPDATE restaurants SET personal_appreciation = ?, visit_count = ?, updated_at = datetime('now') WHERE id = ?`
+  ).bind(latest ? latest.rating : 'unknown', countRow ? countRow.cnt : 0, restaurantId).run();
+}
+
 // Main Workers handler
 export default {
   async fetch(request, env, ctx) {
@@ -922,6 +1020,220 @@ export default {
       return newResponse;
     }
     
+    // --- D1 Data API routes ---
+
+    // GET /api/restaurants — all restaurants with locations and optional filters (public)
+    if (url.pathname === '/api/restaurants' && request.method === 'GET') {
+      const p = url.searchParams;
+      const conditions = [];
+      const bindings = [];
+      if (p.get('status'))         { conditions.push('r.status = ?');                bindings.push(p.get('status')); }
+      if (p.get('appreciation'))   { conditions.push('r.personal_appreciation = ?'); bindings.push(p.get('appreciation')); }
+      if (p.get('cuisine_primary')){ conditions.push('r.cuisine_primary = ?');       bindings.push(p.get('cuisine_primary')); }
+      if (p.get('style'))          { conditions.push('r.style = ?');                 bindings.push(p.get('style')); }
+      if (p.get('venue'))          { conditions.push('r.venue = ?');                 bindings.push(p.get('venue')); }
+      if (p.get('q')) {
+        conditions.push('(r.name LIKE ? OR r.description LIKE ? OR r.cuisine_primary LIKE ?)');
+        const t = `%${p.get('q')}%`;
+        bindings.push(t, t, t);
+      }
+      const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+      const { results } = await env.DB.prepare(
+        `SELECT r.*, ${locationsSubquery()} as locations FROM restaurants r ${where} ORDER BY r.created_at DESC`
+      ).bind(...bindings).all();
+      return jsonResponse(results.map(parseRestaurant));
+    }
+
+    // GET /api/restaurants/meta — distinct filter values (public)
+    if (url.pathname === '/api/restaurants/meta' && request.method === 'GET') {
+      const [cuisines, styles, venues] = await Promise.all([
+        env.DB.prepare(`SELECT DISTINCT cuisine_primary as v FROM restaurants WHERE cuisine_primary IS NOT NULL ORDER BY cuisine_primary`).all(),
+        env.DB.prepare(`SELECT DISTINCT style as v FROM restaurants WHERE style IS NOT NULL ORDER BY style`).all(),
+        env.DB.prepare(`SELECT DISTINCT venue as v FROM restaurants WHERE venue IS NOT NULL ORDER BY venue`).all(),
+      ]);
+      return jsonResponse({
+        cuisines: cuisines.results.map(r => r.v),
+        styles:   styles.results.map(r => r.v),
+        venues:   venues.results.map(r => r.v),
+      });
+    }
+
+    // GET /api/restaurants/:id — single restaurant with locations (public)
+    if (url.pathname.match(/^\/api\/restaurants\/[^/]+$/) && request.method === 'GET') {
+      const id = url.pathname.split('/')[3];
+      const row = await env.DB.prepare(
+        `SELECT r.*, ${locationsSubquery()} as locations FROM restaurants r WHERE r.id = ?`
+      ).bind(id).first();
+      if (!row) return jsonResponse({ error: 'Not found' }, 404);
+      return jsonResponse(parseRestaurant(row));
+    }
+
+    // GET /api/visits/:restaurantId — visits for a restaurant (protected)
+    if (url.pathname.match(/^\/api\/visits\/[^/]+$/) && request.method === 'GET') {
+      if (!await isAuthenticated(request, env)) return jsonResponse({ error: 'Unauthorised' }, 401);
+      const restaurantId = url.pathname.split('/')[3];
+      const { results } = await env.DB.prepare(
+        `SELECT * FROM restaurant_visits WHERE restaurant_id = ? ORDER BY visit_date DESC, created_at DESC`
+      ).bind(restaurantId).all();
+      return jsonResponse(results);
+    }
+
+    // POST /api/admin/restaurants — create restaurant (protected)
+    if (url.pathname === '/api/admin/restaurants' && request.method === 'POST') {
+      if (!await isAuthenticated(request, env)) return jsonResponse({ error: 'Unauthorised' }, 401);
+      const body = await request.json();
+      const id = crypto.randomUUID();
+      const now = new Date().toISOString();
+      await env.DB.prepare(`
+        INSERT INTO restaurants (
+          id, name, address, website, status, personal_appreciation, description,
+          cuisine, cuisine_primary, cuisine_secondary, style, venue,
+          specialty, must_try_dishes, price_range, atmosphere, dietary_options,
+          source, source_url, latitude, longitude, created_at, updated_at
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+      `).bind(
+        id, body.name, body.address || null, body.website || null,
+        body.status || 'to-visit', body.personal_appreciation || 'unknown',
+        body.description || null, body.cuisine || null, body.cuisine_primary || null,
+        body.cuisine_secondary || null, body.style || null, body.venue || null,
+        body.specialty ? JSON.stringify(body.specialty) : null,
+        body.must_try_dishes ? JSON.stringify(body.must_try_dishes) : null,
+        body.price_range || null, body.atmosphere || null, body.dietary_options || null,
+        body.source || null, body.source_url || null,
+        body.latitude || null, body.longitude || null, now, now
+      ).run();
+      if (body.locations?.length) {
+        for (const loc of body.locations) {
+          await env.DB.prepare(`
+            INSERT INTO restaurant_addresses (id, restaurant_id, location_name, full_address, city, country, latitude, longitude, phone, created_at, updated_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?)
+          `).bind(crypto.randomUUID(), id, loc.location_name || null, loc.full_address || null, loc.city || null, loc.country || null, loc.latitude || null, loc.longitude || null, loc.phone || null, now, now).run();
+        }
+      }
+      const row = await env.DB.prepare(
+        `SELECT r.*, ${locationsSubquery()} as locations FROM restaurants r WHERE r.id = ?`
+      ).bind(id).first();
+      return jsonResponse(parseRestaurant(row), 201);
+    }
+
+    // PUT /api/admin/restaurants/:id — update restaurant (protected)
+    if (url.pathname.match(/^\/api\/admin\/restaurants\/[^/]+$/) && request.method === 'PUT') {
+      if (!await isAuthenticated(request, env)) return jsonResponse({ error: 'Unauthorised' }, 401);
+      const id = url.pathname.split('/')[4];
+      const body = await request.json();
+      const now = new Date().toISOString();
+      const fields = [];
+      const values = [];
+      const scalarFields = [
+        'name','address','website','status','personal_appreciation','description',
+        'cuisine','cuisine_primary','cuisine_secondary','style','venue','price_range',
+        'atmosphere','dietary_options','source','source_url','latitude','longitude',
+        'public_rating','public_rating_count','public_review_summary',
+        'public_review_summary_updated_at','public_review_latest_created_at'
+      ];
+      for (const f of scalarFields) {
+        if (f in body) { fields.push(`${f} = ?`); values.push(body[f]); }
+      }
+      if ('specialty' in body)      { fields.push('specialty = ?');      values.push(body.specialty      ? JSON.stringify(body.specialty)      : null); }
+      if ('must_try_dishes' in body) { fields.push('must_try_dishes = ?'); values.push(body.must_try_dishes ? JSON.stringify(body.must_try_dishes) : null); }
+      if (fields.length) {
+        fields.push('updated_at = ?');
+        values.push(now, id);
+        await env.DB.prepare(`UPDATE restaurants SET ${fields.join(', ')} WHERE id = ?`).bind(...values).run();
+      }
+      const row = await env.DB.prepare(
+        `SELECT r.*, ${locationsSubquery()} as locations FROM restaurants r WHERE r.id = ?`
+      ).bind(id).first();
+      return jsonResponse(parseRestaurant(row));
+    }
+
+    // DELETE /api/admin/restaurants/:id — delete restaurant (protected)
+    if (url.pathname.match(/^\/api\/admin\/restaurants\/[^/]+$/) && request.method === 'DELETE') {
+      if (!await isAuthenticated(request, env)) return jsonResponse({ error: 'Unauthorised' }, 401);
+      const id = url.pathname.split('/')[4];
+      await env.DB.prepare('DELETE FROM restaurants WHERE id = ?').bind(id).run();
+      return jsonResponse({ success: true });
+    }
+
+    // POST /api/admin/restaurants/:id/addresses — add address (protected)
+    if (url.pathname.match(/^\/api\/admin\/restaurants\/[^/]+\/addresses$/) && request.method === 'POST') {
+      if (!await isAuthenticated(request, env)) return jsonResponse({ error: 'Unauthorised' }, 401);
+      const restaurantId = url.pathname.split('/')[4];
+      const body = await request.json();
+      const id = crypto.randomUUID();
+      const now = new Date().toISOString();
+      await env.DB.prepare(`
+        INSERT INTO restaurant_addresses (id, restaurant_id, location_name, full_address, city, country, latitude, longitude, phone, created_at, updated_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?)
+      `).bind(id, restaurantId, body.location_name || null, body.full_address || null, body.city || null, body.country || null, body.latitude || null, body.longitude || null, body.phone || null, now, now).run();
+      const row = await env.DB.prepare('SELECT * FROM restaurant_addresses WHERE id = ?').bind(id).first();
+      return jsonResponse(row, 201);
+    }
+
+    // PUT /api/admin/addresses/:id — update address (protected)
+    if (url.pathname.match(/^\/api\/admin\/addresses\/[^/]+$/) && request.method === 'PUT') {
+      if (!await isAuthenticated(request, env)) return jsonResponse({ error: 'Unauthorised' }, 401);
+      const id = url.pathname.split('/')[4];
+      const body = await request.json();
+      const now = new Date().toISOString();
+      await env.DB.prepare(`
+        UPDATE restaurant_addresses
+        SET location_name = ?, full_address = ?, city = ?, country = ?, latitude = ?, longitude = ?, phone = ?, updated_at = ?
+        WHERE id = ?
+      `).bind(body.location_name || null, body.full_address || null, body.city || null, body.country || null, body.latitude || null, body.longitude || null, body.phone || null, now, id).run();
+      const row = await env.DB.prepare('SELECT * FROM restaurant_addresses WHERE id = ?').bind(id).first();
+      return jsonResponse(row);
+    }
+
+    // DELETE /api/admin/addresses/:id — delete address (protected)
+    if (url.pathname.match(/^\/api\/admin\/addresses\/[^/]+$/) && request.method === 'DELETE') {
+      if (!await isAuthenticated(request, env)) return jsonResponse({ error: 'Unauthorised' }, 401);
+      const id = url.pathname.split('/')[4];
+      await env.DB.prepare('DELETE FROM restaurant_addresses WHERE id = ?').bind(id).run();
+      return jsonResponse({ success: true });
+    }
+
+    // POST /api/admin/visits — add visit (protected)
+    if (url.pathname === '/api/admin/visits' && request.method === 'POST') {
+      if (!await isAuthenticated(request, env)) return jsonResponse({ error: 'Unauthorised' }, 401);
+      const body = await request.json();
+      const id = crypto.randomUUID();
+      const now = new Date().toISOString();
+      await env.DB.prepare(`
+        INSERT INTO restaurant_visits (id, restaurant_id, visit_date, rating, experience_notes, company_notes, is_migrated_placeholder, created_at, updated_at)
+        VALUES (?,?,?,?,?,?,0,?,?)
+      `).bind(id, body.restaurant_id, body.visit_date, body.rating || 'unknown', body.experience_notes || null, body.company_notes || null, now, now).run();
+      await syncRestaurantVisitData(env.DB, body.restaurant_id);
+      const row = await env.DB.prepare('SELECT * FROM restaurant_visits WHERE id = ?').bind(id).first();
+      return jsonResponse(row, 201);
+    }
+
+    // PUT /api/admin/visits/:id — update visit (protected)
+    if (url.pathname.match(/^\/api\/admin\/visits\/[^/]+$/) && request.method === 'PUT') {
+      if (!await isAuthenticated(request, env)) return jsonResponse({ error: 'Unauthorised' }, 401);
+      const id = url.pathname.split('/')[4];
+      const body = await request.json();
+      const now = new Date().toISOString();
+      await env.DB.prepare(`
+        UPDATE restaurant_visits
+        SET visit_date = ?, rating = ?, experience_notes = ?, company_notes = ?, updated_at = ?
+        WHERE id = ?
+      `).bind(body.visit_date, body.rating || 'unknown', body.experience_notes || null, body.company_notes || null, now, id).run();
+      const row = await env.DB.prepare('SELECT * FROM restaurant_visits WHERE id = ?').bind(id).first();
+      if (row) await syncRestaurantVisitData(env.DB, row.restaurant_id);
+      return jsonResponse(row);
+    }
+
+    // DELETE /api/admin/visits/:id — delete visit (protected)
+    if (url.pathname.match(/^\/api\/admin\/visits\/[^/]+$/) && request.method === 'DELETE') {
+      if (!await isAuthenticated(request, env)) return jsonResponse({ error: 'Unauthorised' }, 401);
+      const id = url.pathname.split('/')[4];
+      const row = await env.DB.prepare('SELECT restaurant_id FROM restaurant_visits WHERE id = ?').bind(id).first();
+      await env.DB.prepare('DELETE FROM restaurant_visits WHERE id = ?').bind(id).run();
+      if (row) await syncRestaurantVisitData(env.DB, row.restaurant_id);
+      return jsonResponse({ success: true });
+    }
+
     // Check if we're in development mode (localhost)
     const isDevelopment = url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname.endsWith('.local');
 

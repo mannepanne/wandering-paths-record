@@ -17,7 +17,8 @@ The Curated Restaurant Hitlist is a sophisticated restaurant curation and discov
 - **Maps**: Mapbox GL JS with clustering and mobile optimization
 
 **Backend & AI:**
-- **Database**: Supabase with multi-location restaurant architecture
+- **Database**: Cloudflare D1 (SQLite), server-side only, bound to Worker as `env.DB`
+- **Authentication**: Cloudflare Access + Google OAuth, JWT verified in Worker
 - **AI Engine**: Anthropic Claude Sonnet 4.5 API for content analysis (centralized config in `src/config/claude.ts`)
 - **Production API**: Cloudflare Workers runtime with integrated API routes
 - **Development API**: Express.js development server with CORS support
@@ -37,58 +38,53 @@ The Curated Restaurant Hitlist is a sophisticated restaurant curation and discov
 
 The application uses a sophisticated multi-location restaurant architecture:
 
-#### Database Schema
+#### Database schema
 
-**`restaurants`**** Table** - Main restaurant brands
+Database is **Cloudflare D1 (SQLite)**. Authoritative schema: `scripts/d1-schema.sql`. See `REFERENCE/d1-setup.md` for full table documentation.
+
+**`restaurants` table** — main restaurant brands
 ```sql
-- id (uuid, primary key)
-- name (text) - Restaurant brand name
-- address (text) - Human-readable address summary
-- website (text)
-- public_rating (numeric) - Public rating 1-5
-- personal_rating (numeric) - Personal rating when visited
-- status (text) - 'must-visit' | 'visited'
-- description (text) - Personal notes
-- visit_count (integer)
-- cuisine (text)
-- must_try_dishes (text[]) - Array of dish names
-- price_range (text) - '$' | '$$' | '$$$' | '$$$$'
-- atmosphere (text)
-- dietary_options (text)
-- created_at (timestamptz)
-- updated_at (timestamptz)
+id TEXT PRIMARY KEY          -- UUID as text (no native UUID in SQLite)
+name TEXT NOT NULL
+address TEXT                 -- Human-readable location summary
+status TEXT                  -- 'to-visit' | 'visited'
+personal_appreciation TEXT   -- cached from latest visit: 'unknown'|'avoid'|'fine'|'good'|'great'
+visit_count INTEGER          -- cached count of non-placeholder visits
+must_try_dishes TEXT         -- JSON array as text (no native arrays in SQLite)
+price_range TEXT
+created_at TEXT              -- ISO datetime string (no TIMESTAMPTZ in SQLite)
+updated_at TEXT
+-- ... plus cuisine, style, venue, specialty, public_rating, etc.
 ```
 
-**`restaurant_addresses`**** Table** - Individual locations
+**`restaurant_addresses` table** — individual locations for chains
 ```sql
-- id (uuid, primary key)
-- restaurant_id (uuid, foreign key)
-- location_name (text) - e.g., "Canary Wharf", "Shoreditch"
-- full_address (text)
-- country (text)
-- city (text)
-- latitude (numeric) - Geocoded coordinates
-- longitude (numeric) - Geocoded coordinates
-- phone (text)
-- created_at (timestamptz)
-- updated_at (timestamptz)
+id TEXT PRIMARY KEY
+restaurant_id TEXT           -- FK → restaurants(id) ON DELETE CASCADE
+location_name TEXT           -- e.g., "Canary Wharf", "Shoreditch"
+full_address TEXT
+city TEXT
+country TEXT
+latitude REAL
+longitude REAL
+phone TEXT
+created_at TEXT
+updated_at TEXT
 ```
 
-**`restaurant_visits`**** Table** - Visit history tracking (Phase 3 complete: Full create functionality)
+**`restaurant_visits` table** — visit history
 ```sql
-- id (uuid, primary key)
-- restaurant_id (uuid, foreign key)
-- user_id (uuid, foreign key to auth.users)
-- visit_date (date) - When the restaurant was visited
-- rating (personal_appreciation enum) - 'avoid' | 'fine' | 'good' | 'great'
-- experience_notes (text) - Optional notes about dishes, experience (max 2000 chars)
-- company_notes (text) - Optional notes about who you dined with (max 500 chars)
-- is_migrated_placeholder (boolean) - True for historical pre-2026 data
-- created_at (timestamptz)
-- updated_at (timestamptz)
+id TEXT PRIMARY KEY
+restaurant_id TEXT           -- FK → restaurants(id) ON DELETE CASCADE
+visit_date TEXT              -- ISO date 'YYYY-MM-DD'
+rating TEXT                  -- 'avoid' | 'fine' | 'good' | 'great'
+experience_notes TEXT        -- max 2000 chars
+company_notes TEXT           -- max 500 chars
+is_migrated_placeholder INTEGER  -- 0 or 1 (SQLite boolean)
+created_at TEXT
+updated_at TEXT
+UNIQUE(restaurant_id, visit_date)
 ```
-
-**Row Level Security:** Visit data protected by RLS policies - users can only view/edit their own visits.
 
 **Security Features (Phase 3):**
 - XSS prevention: Strict HTML character rejection (`<`, `>`, `&`)
@@ -112,29 +108,27 @@ ORDER BY visit_date DESC LIMIT 1;  -- N queries
 
 **With 100 restaurants = 101 queries = slow page loads**
 
-**Solution:** Database trigger maintains cached field:
-```sql
-CREATE OR REPLACE FUNCTION update_restaurant_cached_rating()
-RETURNS TRIGGER AS $$
-BEGIN
-  UPDATE restaurants
-  SET personal_appreciation = COALESCE(
-    (SELECT rating FROM restaurant_visits
-     WHERE restaurant_id = COALESCE(NEW.restaurant_id, OLD.restaurant_id)
-       AND user_id = COALESCE(NEW.user_id, OLD.user_id)
-     ORDER BY visit_date DESC, created_at DESC
-     LIMIT 1),
-    'unknown'::personal_appreciation  -- Fallback when no visits
-  )
-  WHERE id = COALESCE(NEW.restaurant_id, OLD.restaurant_id);
-  RETURN COALESCE(NEW, OLD);
-END;
-$$ LANGUAGE plpgsql;
+**Solution:** Worker function maintains cached fields after every visit mutation (replaces the old PostgreSQL trigger — SQLite/D1 does not support triggers):
 
--- Trigger fires on INSERT, UPDATE, DELETE
-CREATE TRIGGER trigger_update_cached_rating
-  AFTER INSERT OR UPDATE OR DELETE ON restaurant_visits
-  FOR EACH ROW EXECUTE FUNCTION update_restaurant_cached_rating();
+```javascript
+// src/worker.js — syncRestaurantVisitData()
+// Called after any INSERT, UPDATE, DELETE on restaurant_visits
+async function syncRestaurantVisitData(db, restaurantId) {
+  const latest = await db.prepare(
+    `SELECT rating FROM restaurant_visits
+     WHERE restaurant_id = ?
+     ORDER BY visit_date DESC, created_at DESC LIMIT 1`
+  ).bind(restaurantId).first();
+
+  const countRow = await db.prepare(
+    `SELECT COUNT(*) as cnt FROM restaurant_visits
+     WHERE restaurant_id = ? AND is_migrated_placeholder = 0`
+  ).bind(restaurantId).first();
+
+  await db.prepare(
+    `UPDATE restaurants SET personal_appreciation = ?, visit_count = ?, updated_at = datetime('now') WHERE id = ?`
+  ).bind(latest ? latest.rating : 'unknown', countRow?.cnt ?? 0, restaurantId).run();
+}
 ```
 
 **Performance Impact:**
@@ -274,17 +268,20 @@ interface RestaurantAddress {
 - Cluster expansion on click with smooth animations
 - London Bridge fallback coordinates (51.5074, -0.0877)
 
-### 5. Authentication & Admin Controls
+### 5. Authentication & admin controls
 
-**Components:** `AuthContext.tsx`, `LoginForm.tsx`
+**Auth:** Cloudflare Access + Google OAuth. No client-side auth SDK.
 
-**Features:**
-- Magic link email authentication via Supabase
-- Admin email authorization (magnus.hultberg@gmail.com)
-- Admin button visibility control:
-  - Edit/status buttons hidden from unauthenticated users
-  - Clean public interface for general visitors
-- Session management with auth state persistence
+**Flow:**
+1. User hits `/auth/login` → Cloudflare Access → Google OAuth
+2. Cloudflare sets `CF-Authorization` cookie on app domain
+3. Worker verifies JWT (RS256 via JWKS) on every protected request
+4. Email checked against `AUTHORIZED_ADMIN_EMAIL` env var
+5. Logout via `/cdn-cgi/access/logout`
+
+**Frontend:** Checks auth state via `GET /api/auth/me`. Admin controls hidden if unauthenticated. Public restaurant list requires no auth.
+
+See `REFERENCE/auth-setup.md` for full details.
 
 ## Development Setup
 
@@ -292,25 +289,26 @@ interface RestaurantAddress {
 
 - Node.js (latest LTS recommended)
 - npm
-- Supabase account and project
 - Claude API key (Anthropic)
-- Mapbox account and access token
+- Google Maps API key
+- Mapbox access token
 
-### Environment Configuration
+### Environment configuration
 
 Create a `.env` file in the project root:
 
 ```bash
-# AI Integration
+# AI extraction (local dev server)
 VITE_CLAUDE_API_KEY=your_claude_api_key_here
 
-# Database
-VITE_SUPABASE_URL=your_supabase_project_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+# Google Maps (geocoding + places)
+VITE_GOOGLE_MAPS_API_KEY=your_google_maps_key
 
-# Maps
+# Maps display
 VITE_MAPBOX_ACCESS_TOKEN=your_mapbox_access_token_here
 ```
+
+No Supabase variables — the database is Cloudflare D1, server-side only. See `REFERENCE/environment-setup.md` for complete reference.
 
 ### Installation & Development
 
@@ -348,17 +346,15 @@ npx wrangler deploy
 │   │   ├── InteractiveMap.tsx    # Mapbox integration with clustering
 │   │   └── LoginForm.tsx         # Magic link authentication
 │   ├── contexts/
-│   │   └── AuthContext.tsx       # Supabase authentication context
+│   │   └── AuthContext.tsx       # Authentication state (CF Access)
 │   ├── pages/
 │   │   ├── Index.tsx             # Main application interface
 │   │   └── NotFound.tsx          # 404 page
 │   ├── services/
 │   │   ├── claudeExtractor.ts    # AI extraction with caching
-│   │   └── restaurants.ts        # Supabase CRUD operations
+│   │   └── restaurants.ts        # REST API CRUD operations (apiFetch)
 │   ├── types/
 │   │   └── place.ts             # TypeScript interfaces
-│   └── lib/
-│       └── supabase.ts          # Supabase client configuration
 ├── wrangler.toml                 # Cloudflare Workers configuration
 └── SPECIFICATIONS/               # Technical documentation
 ```
@@ -396,35 +392,35 @@ npx wrangler deploy
 - Secure environment variable management via Cloudflare secrets
 - Custom domain with automatic SSL certificate management
 
-**Environment Variables (Production):**
+**wrangler.toml vars (non-sensitive):**
 ```toml
-# wrangler.toml
 [vars]
-SUPABASE_URL = "https://drtjfbvudzacixvqkzav.supabase.co"
+CF_ACCESS_AUD          = "24c0d43..."
+CF_TEAM_DOMAIN         = "https://herrings.cloudflareaccess.com"
 AUTHORIZED_ADMIN_EMAIL = "magnus.hultberg@gmail.com"
+```
 
-[observability]
-enabled = true
+**D1 binding:**
+```toml
+[[d1_databases]]
+binding = "DB"
+database_name = "wandering-paths"
+database_id = "f928b168-fb21-4420-bff8-2f9320d3f22e"
 ```
 
 **Secrets (via Wrangler CLI):**
-- `CLAUDE_API_KEY` - Anthropic Claude API key
-- `SUPABASE_ANON_KEY` - Supabase anonymous key
-- `MAPBOX_ACCESS_TOKEN` - Mapbox GL JS access token
+- `CLAUDE_API_KEY` — Anthropic Claude API key
+- `GOOGLE_MAPS_API_KEY` — Google Maps API key
+- `MAPBOX_ACCESS_TOKEN` — Mapbox GL JS access token
 
-### Database Configuration
+### Database configuration
 
-**Supabase Setup:**
-1. Create Supabase project
-2. Run SQL migrations for `restaurants` and `restaurant_addresses` tables
-3. Create `restaurants_with_locations` view
-4. Configure Row Level Security (RLS) policies
-5. Set up authentication with magic link provider
+D1 schema applied via:
+```bash
+npx wrangler d1 execute wandering-paths --file=scripts/d1-schema.sql
+```
 
-**Required Database Policies:**
-- Public read access for restaurant data
-- Authenticated write access for admin operations
-- Email-based admin authorization for sensitive operations
+No migrations folder — schema is in `scripts/d1-schema.sql`. For schema changes, alter the file and re-apply, or run `ALTER TABLE` statements directly via `wrangler d1 execute`.
 
 ## Key Implementation Details
 

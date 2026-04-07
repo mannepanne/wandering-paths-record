@@ -1024,6 +1024,13 @@ export default {
       return newResponse;
     }
     
+    // GET /auth/login — CF Access login trigger
+    // CF Access enforces auth on this path, sets the CF-Authorization cookie,
+    // then redirects here. The Worker redirects to / so the user lands on the homepage.
+    if (url.pathname === '/auth/login' && request.method === 'GET') {
+      return Response.redirect(`${url.origin}/`, 302);
+    }
+
     // --- D1 Data API routes ---
 
     // GET /api/restaurants — all restaurants with locations and optional filters (public)

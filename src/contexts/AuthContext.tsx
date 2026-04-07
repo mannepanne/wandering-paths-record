@@ -30,15 +30,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = () => {
-    // CF Access login is served from the team domain, not the app domain.
-    // This sets the CF-Authorization cookie for the app, then redirects back.
-    const teamDomain = 'https://herrings.cloudflareaccess.com';
-    window.location.href = `${teamDomain}/cdn-cgi/access/login?redirect_url=${encodeURIComponent(window.location.href)}`;
+    // Navigate to /auth/login — CF Access enforces auth on this path,
+    // completes Google OAuth, sets the CF-Authorization cookie, then redirects
+    // back to /auth/login where the Worker redirects to /.
+    window.location.href = '/auth/login';
   };
 
   const signOut = () => {
     setUser(null);
-    window.location.href = 'https://herrings.cloudflareaccess.com/cdn-cgi/access/logout';
+    window.location.href = '/cdn-cgi/access/logout';
   };
 
   return (

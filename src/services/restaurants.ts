@@ -355,29 +355,20 @@ export const restaurantService = {
     await apiFetch(`/api/admin/addresses/${addressId}`, { method: 'DELETE' });
   },
 
-  // Update restaurant with addresses (replaces all existing addresses)
+  // Update restaurant with addresses (replaces all existing addresses atomically)
+  // When addresses is provided the Worker deletes + re-inserts them in a single db.batch()
+  // so a network failure can never leave the restaurant without addresses.
   async updateRestaurantWithAddresses(
     restaurant: Restaurant,
     addresses?: Omit<RestaurantAddress, 'id' | 'restaurant_id' | 'created_at' | 'updated_at'>[]
   ): Promise<Restaurant> {
-    await apiFetch(`/api/admin/restaurants/${restaurant.id}`, {
+    const body = addresses !== undefined
+      ? { ...restaurant, locations: addresses }
+      : { ...restaurant };
+    return apiFetch(`/api/admin/restaurants/${restaurant.id}`, {
       method: 'PUT',
-      body: JSON.stringify(restaurant),
+      body: JSON.stringify(body),
     });
-
-    if (addresses) {
-      // Clear all existing addresses then insert new ones
-      await apiFetch(`/api/admin/restaurants/${restaurant.id}/addresses`, { method: 'DELETE' });
-
-      for (const addr of addresses) {
-        await apiFetch(`/api/admin/restaurants/${restaurant.id}/addresses`, {
-          method: 'POST',
-          body: JSON.stringify(addr),
-        });
-      }
-    }
-
-    return this.getRestaurantById(restaurant.id);
   },
 
   // Update a restaurant with addresses and automatic geocoding

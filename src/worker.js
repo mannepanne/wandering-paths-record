@@ -1135,11 +1135,13 @@ export default {
     }
 
     // PUT /api/admin/restaurants/:id — update restaurant (protected)
+    // If body includes a `locations` array, addresses are atomically replaced in the same batch.
     if (url.pathname.match(/^\/api\/admin\/restaurants\/[^/]+$/) && request.method === 'PUT') {
       if (!await isAuthenticated(request, env)) return jsonResponse({ error: 'Unauthorised' }, 401);
       const id = url.pathname.split('/')[4];
       const body = await request.json();
       const now = new Date().toISOString();
+      const statements = [];
       const fields = [];
       const values = [];
       const scalarFields = [
@@ -1157,8 +1159,19 @@ export default {
       if (fields.length) {
         fields.push('updated_at = ?');
         values.push(now, id);
-        await env.DB.prepare(`UPDATE restaurants SET ${fields.join(', ')} WHERE id = ?`).bind(...values).run();
+        statements.push(env.DB.prepare(`UPDATE restaurants SET ${fields.join(', ')} WHERE id = ?`).bind(...values));
       }
+      // If locations are provided, atomically replace all addresses in the same batch
+      if ('locations' in body && Array.isArray(body.locations)) {
+        statements.push(env.DB.prepare('DELETE FROM restaurant_addresses WHERE restaurant_id = ?').bind(id));
+        for (const loc of body.locations) {
+          statements.push(env.DB.prepare(`
+            INSERT INTO restaurant_addresses (id, restaurant_id, location_name, full_address, city, country, latitude, longitude, phone, created_at, updated_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?)
+          `).bind(crypto.randomUUID(), id, loc.location_name || null, loc.full_address || null, loc.city || null, loc.country || null, loc.latitude || null, loc.longitude || null, loc.phone || null, now, now));
+        }
+      }
+      if (statements.length) await env.DB.batch(statements);
       const row = await env.DB.prepare(
         `SELECT r.*, ${locationsSubquery()} as locations FROM restaurants r WHERE r.id = ?`
       ).bind(id).first();

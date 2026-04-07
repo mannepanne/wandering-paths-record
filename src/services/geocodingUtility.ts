@@ -1,9 +1,8 @@
 // ABOUT: Utility for batch geocoding restaurant addresses to add missing coordinates
 // ABOUT: Used to populate lat/lng for existing restaurants in the database
 
-import { supabase } from '@/lib/supabase';
 import { locationService } from './locationService';
-import { RestaurantAddress } from '@/types/place';
+import { Restaurant, RestaurantAddress } from '@/types/place';
 
 export interface GeocodingProgress {
   total: number;
@@ -13,37 +12,33 @@ export interface GeocodingProgress {
   isComplete: boolean;
 }
 
+async function apiFetch(path: string, options?: RequestInit): Promise<any> {
+  const res = await fetch(path, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    credentials: 'include',
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => res.statusText);
+    throw new Error(`API error ${res.status}: ${text}`);
+  }
+  return res.json();
+}
+
+// Flatten all addresses from restaurants, attaching restaurant_name
+function flattenAddresses(restaurants: Restaurant[]): (RestaurantAddress & { restaurant_name?: string })[] {
+  return restaurants.flatMap(r =>
+    (r.locations || []).map(addr => ({ ...addr, restaurant_name: r.name }))
+  );
+}
+
 export const geocodingUtility = {
   // Get all restaurant addresses that need geocoding (missing coordinates) with restaurant names
   async getAddressesNeedingGeocoding(forceAll: boolean = false): Promise<(RestaurantAddress & { restaurant_name?: string })[]> {
-    const query = supabase
-      .from('restaurant_addresses')
-      .select(`
-        *,
-        restaurants!inner(name)
-      `)
-      .order('created_at', { ascending: true });
-
-    // If forceAll is true, get ALL addresses, otherwise only get those missing coordinates
-    if (!forceAll) {
-      query.or('latitude.is.null,longitude.is.null');
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error('Error fetching addresses for geocoding:', error);
-      throw error;
-    }
-
-    // Transform the data to include restaurant_name at the top level
-    const transformedData = (data || []).map(item => ({
-      ...item,
-      restaurant_name: item.restaurants?.name || undefined,
-      restaurants: undefined // Remove the nested object
-    }));
-
-    return transformedData;
+    const restaurants: Restaurant[] = await apiFetch('/api/restaurants');
+    const all = flattenAddresses(restaurants);
+    if (forceAll) return all;
+    return all.filter(a => !a.latitude || !a.longitude);
   },
 
   // Geocode a single address and update the database
@@ -57,11 +52,11 @@ export const geocodingUtility = {
 
       // Try to geocode the full address with restaurant name for enhanced accuracy
       let coords = await locationService.geocodeLocation(address.full_address, restaurantName);
-      
+
       // If that fails, try progressive fallback strategies
       if (!coords) {
         console.log('🔍 Full address failed, trying fallback strategies...');
-        
+
         // Strategy 1: Try restaurant name + postcode + city
         const postcodeMatch = address.full_address.match(/\b[A-Z]{1,2}\d{1,2}[A-Z]?\s?\d[A-Z]{2}\b/i);
         if (!coords && postcodeMatch && address.city && restaurantName) {
@@ -93,17 +88,17 @@ export const geocodingUtility = {
         if (!coords && restaurantName) {
           const addressParts = address.full_address.split(',').map(p => p.trim());
           if (addressParts.length > 1) {
-            const streetQuery = addressParts.slice(1).join(', '); // Skip the first part (building name)
+            const streetQuery = addressParts.slice(1).join(', ');
             console.log(`🔍 Trying restaurant name + street without building: "${restaurantName}, ${streetQuery}"`);
             coords = await locationService.geocodeLocation(streetQuery, restaurantName);
           }
         }
 
-        // Strategy 6: Try street address without building name (remove first part before comma)
+        // Strategy 6: Try street address without building name
         if (!coords) {
           const addressParts = address.full_address.split(',').map(p => p.trim());
           if (addressParts.length > 1) {
-            const streetQuery = addressParts.slice(1).join(', '); // Skip the first part (building name)
+            const streetQuery = addressParts.slice(1).join(', ');
             console.log(`🔍 Trying street address without building: "${streetQuery}"`);
             coords = await locationService.geocodeLocation(streetQuery);
           }
@@ -135,7 +130,7 @@ export const geocodingUtility = {
           coords = await locationService.geocodeLocation(address.city, restaurantName);
         }
 
-        // Strategy 10: Last resort - just the city (original fallback)
+        // Strategy 10: Last resort - just the city
         if (!coords && address.city) {
           console.log(`🔍 Last resort - trying just city: "${address.city}"`);
           coords = await locationService.geocodeLocation(address.city);
@@ -143,21 +138,10 @@ export const geocodingUtility = {
       }
 
       if (coords) {
-        // Update the database with coordinates
-        const { error } = await supabase
-          .from('restaurant_addresses')
-          .update({
-            latitude: coords.lat,
-            longitude: coords.lng,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', address.id);
-
-        if (error) {
-          console.error('Error updating address coordinates:', error);
-          return false;
-        }
-
+        await apiFetch(`/api/admin/addresses/${address.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ ...address, latitude: coords.lat, longitude: coords.lng }),
+        });
         console.log(`Successfully geocoded: ${address.full_address} -> ${coords.lat}, ${coords.lng}`);
         return true;
       } else {
@@ -176,7 +160,7 @@ export const geocodingUtility = {
     forceAll: boolean = false
   ): Promise<GeocodingProgress> {
     const addressesToGeocode = await this.getAddressesNeedingGeocoding(forceAll);
-    
+
     const progress: GeocodingProgress = {
       total: addressesToGeocode.length,
       processed: 0,
@@ -185,7 +169,6 @@ export const geocodingUtility = {
       isComplete: false
     };
 
-    // If no addresses need geocoding
     if (addressesToGeocode.length === 0) {
       progress.isComplete = true;
       onProgress?.(progress);
@@ -194,24 +177,17 @@ export const geocodingUtility = {
 
     console.log(`Starting ${forceAll ? 'FULL REGENERATION' : 'batch geocoding'} for ${addressesToGeocode.length} addresses...`);
 
-    // Process addresses one by one with a small delay to be respectful to the geocoding service
     for (const address of addressesToGeocode) {
       try {
         const success = await this.geocodeAddress(address, address.restaurant_name);
-
         progress.processed++;
         if (success) {
           progress.success++;
         } else {
           progress.errors.push(`Failed to geocode: ${address.restaurant_name || 'Unknown'} - ${address.full_address}`);
         }
-
-        // Call progress callback
         onProgress?.(progress);
-
-        // Small delay to be respectful to the geocoding service
-        await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay
-
+        await new Promise(resolve => setTimeout(resolve, 1000));
       } catch (error) {
         progress.processed++;
         progress.errors.push(`Error processing ${address.restaurant_name || 'Unknown'} - ${address.full_address}: ${error}`);
@@ -221,7 +197,6 @@ export const geocodingUtility = {
 
     progress.isComplete = true;
     console.log(`Batch geocoding complete. Success: ${progress.success}/${progress.total}`);
-    
     return progress;
   },
 
@@ -232,36 +207,12 @@ export const geocodingUtility = {
     needsGeocoding: number;
     percentage: number;
   }> {
-    // Get total addresses
-    const { count: total, error: totalError } = await supabase
-      .from('restaurant_addresses')
-      .select('*', { count: 'exact', head: true });
-
-    if (totalError) {
-      throw totalError;
-    }
-
-    // Get addresses with coordinates
-    const { count: geocoded, error: geocodedError } = await supabase
-      .from('restaurant_addresses')
-      .select('*', { count: 'exact', head: true })
-      .not('latitude', 'is', null)
-      .not('longitude', 'is', null);
-
-    if (geocodedError) {
-      throw geocodedError;
-    }
-
-    const totalCount = total || 0;
-    const geocodedCount = geocoded || 0;
-    const needsGeocoding = totalCount - geocodedCount;
-    const percentage = totalCount > 0 ? Math.round((geocodedCount / totalCount) * 100) : 0;
-
-    return {
-      total: totalCount,
-      geocoded: geocodedCount,
-      needsGeocoding,
-      percentage
-    };
+    const restaurants: Restaurant[] = await apiFetch('/api/restaurants');
+    const all = flattenAddresses(restaurants);
+    const total = all.length;
+    const geocoded = all.filter(a => a.latitude && a.longitude).length;
+    const needsGeocoding = total - geocoded;
+    const percentage = total > 0 ? Math.round((geocoded / total) * 100) : 0;
+    return { total, geocoded, needsGeocoding, percentage };
   }
 };

@@ -8,10 +8,18 @@ main = "./src/worker.js"
 [assets]
 directory = "./dist/client"
 
+# D1 database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "wandering-paths"
+database_id = "f928b168-fb21-4420-bff8-2f9320d3f22e"
+
 # Environment variables (non-sensitive)
 [vars]
 SUPABASE_URL = "https://drtjfbvudzacixvqkzav.supabase.co"
 AUTHORIZED_ADMIN_EMAIL = "magnus.hultberg@gmail.com"
+CF_ACCESS_AUD = "24c0d43fd9d2755ac7b754a513d91ae607679cca259ebcddb1bbe99357c637b6"
+CF_TEAM_DOMAIN = "https://herrings.cloudflareaccess.com"
 
 # Custom domain configuration - force fresh route binding
 [[routes]]

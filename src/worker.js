@@ -1068,6 +1068,20 @@ export default {
       return jsonResponse(parseRestaurant(row));
     }
 
+    // GET /api/auth/me — return identity from verified CF-Authorization JWT (protected)
+    if (url.pathname === '/api/auth/me' && request.method === 'GET') {
+      const token = getCFToken(request);
+      if (!token) return jsonResponse({ error: 'Unauthorised' }, 401);
+      try {
+        if (!await verifyCFAccessJWT(token, env)) return jsonResponse({ error: 'Unauthorised' }, 401);
+        const b64 = s => s.replace(/-/g, '+').replace(/_/g, '/');
+        const payload = JSON.parse(atob(b64(token.split('.')[1])));
+        return jsonResponse({ email: payload.email });
+      } catch {
+        return jsonResponse({ error: 'Unauthorised' }, 401);
+      }
+    }
+
     // GET /api/visits/:restaurantId — visits for a restaurant (protected)
     if (url.pathname.match(/^\/api\/visits\/[^/]+$/) && request.method === 'GET') {
       if (!await isAuthenticated(request, env)) return jsonResponse({ error: 'Unauthorised' }, 401);
@@ -1185,7 +1199,15 @@ export default {
       return jsonResponse(row);
     }
 
-    // DELETE /api/admin/addresses/:id — delete address (protected)
+    // DELETE /api/admin/restaurants/:id/addresses — clear ALL addresses for a restaurant (protected)
+    if (url.pathname.match(/^\/api\/admin\/restaurants\/[^/]+\/addresses$/) && request.method === 'DELETE') {
+      if (!await isAuthenticated(request, env)) return jsonResponse({ error: 'Unauthorised' }, 401);
+      const restaurantId = url.pathname.split('/')[4];
+      await env.DB.prepare('DELETE FROM restaurant_addresses WHERE restaurant_id = ?').bind(restaurantId).run();
+      return jsonResponse({ success: true });
+    }
+
+    // DELETE /api/admin/addresses/:id — delete single address (protected)
     if (url.pathname.match(/^\/api\/admin\/addresses\/[^/]+$/) && request.method === 'DELETE') {
       if (!await isAuthenticated(request, env)) return jsonResponse({ error: 'Unauthorised' }, 401);
       const id = url.pathname.split('/')[4];
@@ -1214,11 +1236,16 @@ export default {
       const id = url.pathname.split('/')[4];
       const body = await request.json();
       const now = new Date().toISOString();
+      // Fetch existing visit to handle migrated placeholder logic:
+      // if the user edits the date on a migrated visit, clear the placeholder flag
+      const existing = await env.DB.prepare('SELECT * FROM restaurant_visits WHERE id = ?').bind(id).first();
+      const isEditingMigratedDate = existing?.is_migrated_placeholder && existing?.visit_date !== body.visit_date;
+      const migratedFlag = isEditingMigratedDate ? 0 : (existing?.is_migrated_placeholder ? 1 : 0);
       await env.DB.prepare(`
         UPDATE restaurant_visits
-        SET visit_date = ?, rating = ?, experience_notes = ?, company_notes = ?, updated_at = ?
+        SET visit_date = ?, rating = ?, experience_notes = ?, company_notes = ?, is_migrated_placeholder = ?, updated_at = ?
         WHERE id = ?
-      `).bind(body.visit_date, body.rating || 'unknown', body.experience_notes || null, body.company_notes || null, now, id).run();
+      `).bind(body.visit_date, body.rating || 'unknown', body.experience_notes || null, body.company_notes || null, migratedFlag, now, id).run();
       const row = await env.DB.prepare('SELECT * FROM restaurant_visits WHERE id = ?').bind(id).first();
       if (row) await syncRestaurantVisitData(env.DB, row.restaurant_id);
       return jsonResponse(row);

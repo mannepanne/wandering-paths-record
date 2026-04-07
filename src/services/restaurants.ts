@@ -1,4 +1,6 @@
-import { supabase } from '@/lib/supabase';
+// ABOUT: Service functions for restaurant data management
+// ABOUT: All data operations via Worker API endpoints (D1 database)
+
 import { Restaurant, RestaurantAddress, CuisinePrimary, RestaurantStyle, RestaurantVenue } from '@/types/place';
 
 // Haversine formula to calculate distance between two points on Earth
@@ -6,98 +8,54 @@ function calculateHaversineDistance(lat1: number, lng1: number, lat2: number, ln
   const R = 6371; // Earth's radius in kilometers
   const dLat = (lat2 - lat1) * (Math.PI / 180);
   const dLng = (lng2 - lng1) * (Math.PI / 180);
-  const a = 
+  const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * 
+    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) *
     Math.sin(dLng / 2) * Math.sin(dLng / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c; // Distance in kilometers
 }
 
+async function apiFetch(path: string, options?: RequestInit): Promise<any> {
+  const res = await fetch(path, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    credentials: 'include',
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => res.statusText);
+    throw new Error(`API error ${res.status}: ${text}`);
+  }
+  return res.json();
+}
+
 export const restaurantService = {
   // Get all restaurants with their locations
   async getAllRestaurants(): Promise<Restaurant[]> {
-    const { data, error } = await supabase
-      .from('restaurants')
-      .select(`
-        *,
-        locations:restaurant_addresses(*)
-      `)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching restaurants:', error);
-      throw error;
-    }
-
-    return data || [];
+    return apiFetch('/api/restaurants');
   },
 
-  // Get all restaurants (simple query without locations)
+  // Get all restaurants (simple query without locations — same endpoint, locations always included)
   async getAllRestaurantsSimple(): Promise<Restaurant[]> {
-    const { data, error } = await supabase
-      .from('restaurants')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching restaurants:', error);
-      throw error;
-    }
-
-    return data || [];
+    return apiFetch('/api/restaurants');
   },
 
-  // Get restaurants by cuisine
+  // Get restaurants by cuisine (legacy field)
   async getRestaurantsByCuisine(cuisine: string): Promise<Restaurant[]> {
-    const { data, error } = await supabase
-      .from('restaurants')
-      .select('*')
-      .eq('cuisine', cuisine)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching restaurants by cuisine:', error);
-      throw error;
-    }
-
-    return data || [];
+    return apiFetch(`/api/restaurants?cuisine_primary=${encodeURIComponent(cuisine)}`);
   },
 
   // Get all restaurants with their locations (for city matching and analysis)
   async getAllRestaurantsWithLocations(): Promise<Restaurant[]> {
-    const { data, error } = await supabase
-      .from('restaurants')
-      .select(`
-        *,
-        locations:restaurant_addresses(*)
-      `);
-
-    if (error) {
-      console.error('Error fetching restaurants with locations:', error);
-      throw error;
-    }
-
-    return data || [];
+    return apiFetch('/api/restaurants');
   },
 
   // Get restaurants by status
   async getRestaurantsByStatus(status: string): Promise<Restaurant[]> {
-    const { data, error } = await supabase
-      .from('restaurants')
-      .select('*')
-      .eq('status', status)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching restaurants by status:', error);
-      throw error;
-    }
-
-    return data || [];
+    return apiFetch(`/api/restaurants?status=${encodeURIComponent(status)}`);
   },
 
-  // Get restaurants with filters (including text search and location-based filtering)
+  // Get filtered restaurants with optional facets, text search, and geo filtering
   async getFilteredRestaurants(filters: {
     cuisine?: string; // Legacy - kept for backwards compatibility
     cuisine_primary?: string; // New facet
@@ -113,91 +71,65 @@ export const restaurantService = {
   }): Promise<Restaurant[]> {
     console.log("🍽️ getFilteredRestaurants called with filters:", filters);
 
-    // Fetch restaurants with ALL their locations using proper joins
-    console.log("📊 Fetching restaurants with all locations");
-
-    let query = supabase
-      .from('restaurants')
-      .select(`
-        *,
-        locations:restaurant_addresses(*)
-      `);
-
-    // New facet filters
+    // Build query params for server-side filtering
+    const params = new URLSearchParams();
     if (filters.cuisine_primary && filters.cuisine_primary !== 'all') {
-      query = query.eq('cuisine_primary', filters.cuisine_primary);
+      params.set('cuisine_primary', filters.cuisine_primary);
     }
-
     if (filters.style && filters.style !== 'all') {
-      query = query.eq('style', filters.style);
+      params.set('style', filters.style);
     }
-
     if (filters.venue && filters.venue !== 'all') {
-      query = query.eq('venue', filters.venue);
+      params.set('venue', filters.venue);
     }
-
-    // Legacy cuisine filter (fallback during migration)
     if (filters.cuisine && filters.cuisine !== 'all' && !filters.cuisine_primary) {
-      query = query.eq('cuisine', filters.cuisine);
+      params.set('cuisine_primary', filters.cuisine);
     }
-
     if (filters.status && filters.status !== 'all') {
-      query = query.eq('status', filters.status);
+      params.set('status', filters.status);
     }
 
-    // NOTE: Text search will be applied after fetching data since we need to search across joined location data
+    const query = params.toString();
+    console.log("📊 Fetching restaurants with all locations");
+    let results: Restaurant[] = await apiFetch(`/api/restaurants${query ? `?${query}` : ''}`);
 
-    query = query.order('created_at', { ascending: false });
+    console.log(`📋 Database query returned ${results.length} restaurants`);
 
-    const { data, error } = await query;
-
-    if (error) {
-      console.error('❌ Error fetching filtered restaurants:', error);
-      throw error;
-    }
-
-    console.log(`📋 Database query returned ${data?.length || 0} restaurants`);
-    
-    let results = data || [];
-    
-    // Apply text search across restaurant and location data
+    // Apply text search across restaurant and location data (client-side)
     if (filters.searchText && filters.searchText.trim()) {
       const searchTerm = filters.searchText.trim().toLowerCase();
       console.log("🔍 Applying text search for:", searchTerm);
-      
+
       results = results.filter(restaurant => {
-        // Search in restaurant-level fields
-        const restaurantMatch = 
+        const restaurantMatch =
           restaurant.name.toLowerCase().includes(searchTerm) ||
           restaurant.address?.toLowerCase().includes(searchTerm) ||
           restaurant.cuisine?.toLowerCase().includes(searchTerm);
-        
-        // Search in location-level fields
-        const locationMatch = restaurant.locations?.some(location => 
+
+        const locationMatch = restaurant.locations?.some(location =>
           location.location_name?.toLowerCase().includes(searchTerm) ||
           location.full_address?.toLowerCase().includes(searchTerm)
         );
-        
+
         const isMatch = restaurantMatch || locationMatch;
-        
+
         if (isMatch) {
           console.log(`✅ "${restaurant.name}" matches search "${searchTerm}"`);
           if (locationMatch && !restaurantMatch) {
-            // Find which location(s) matched
-            const matchingLocations = restaurant.locations?.filter(location => 
+            const matchingLocations = restaurant.locations?.filter(location =>
               location.location_name?.toLowerCase().includes(searchTerm) ||
               location.full_address?.toLowerCase().includes(searchTerm)
             ).map(loc => loc.location_name);
             console.log(`  📍 Matched via location(s): ${matchingLocations?.join(', ')}`);
           }
         }
-        
+
         return isMatch;
       });
-      
+
       console.log(`🔍 Text search filtered results to ${results.length} restaurants`);
     }
-    
+
     // Log debug info about locations
     results.forEach(restaurant => {
       console.log(`🏪 Restaurant "${restaurant.name}": ${restaurant.locations?.length || 0} locations`);
@@ -207,23 +139,21 @@ export const restaurantService = {
     if (filters.location && results.length > 0) {
       console.log("🗺️ Applying GPS-based location filtering");
       console.log("📍 User location:", filters.location);
-      
+
       const maxWalkingMinutes = filters.location.maxWalkingMinutes || 20;
       const maxDistanceKm = (maxWalkingMinutes / 60) * 5; // 5km/h walking speed
-      
+
       console.log(`🚶 Filtering for restaurants within ${maxWalkingMinutes} minutes walking (${maxDistanceKm.toFixed(1)}km)`);
-      
+
       results = results.filter(restaurant => {
-        // Check if restaurant has any locations with coordinates
         if (!restaurant.locations || restaurant.locations.length === 0) {
           console.log(`⚠️ Restaurant "${restaurant.name}" has no locations, excluding from Near Me results`);
           return false;
         }
-        
-        // Check each location to see if any are within range
+
         let closestDistance = Infinity;
         let hasValidLocation = false;
-        
+
         for (const location of restaurant.locations) {
           if (location.latitude && location.longitude) {
             hasValidLocation = true;
@@ -233,63 +163,36 @@ export const restaurantService = {
               location.latitude,
               location.longitude
             );
-            
-            if (distance < closestDistance) {
-              closestDistance = distance;
-            }
-            
+            if (distance < closestDistance) closestDistance = distance;
             console.log(`📏 "${restaurant.name}" (${location.location_name}): ${distance.toFixed(2)}km away`);
           }
         }
-        
+
         if (!hasValidLocation) {
           console.log(`⚠️ Restaurant "${restaurant.name}" has locations but no coordinates, excluding from Near Me results`);
           return false;
         }
-        
+
         const withinRange = closestDistance <= maxDistanceKm;
         console.log(`🎯 "${restaurant.name}": closest location ${closestDistance.toFixed(2)}km away - ${withinRange ? 'INCLUDED' : 'EXCLUDED'}`);
-        
         return withinRange;
       });
-      
+
       // Sort by distance (closest first)
       results.sort((a, b) => {
-        // Find closest location for restaurant A
-        let closestDistanceA = Infinity;
-        a.locations?.forEach(location => {
-          if (location.latitude && location.longitude) {
-            const distance = calculateHaversineDistance(
-              filters.location!.lat,
-              filters.location!.lng,
-              location.latitude,
-              location.longitude
-            );
-            if (distance < closestDistanceA) {
-              closestDistanceA = distance;
+        const closest = (r: Restaurant) => {
+          let min = Infinity;
+          r.locations?.forEach(loc => {
+            if (loc.latitude && loc.longitude) {
+              const d = calculateHaversineDistance(filters.location!.lat, filters.location!.lng, loc.latitude, loc.longitude);
+              if (d < min) min = d;
             }
-          }
-        });
-        
-        // Find closest location for restaurant B
-        let closestDistanceB = Infinity;
-        b.locations?.forEach(location => {
-          if (location.latitude && location.longitude) {
-            const distance = calculateHaversineDistance(
-              filters.location!.lat,
-              filters.location!.lng,
-              location.latitude,
-              location.longitude
-            );
-            if (distance < closestDistanceB) {
-              closestDistanceB = distance;
-            }
-          }
-        });
-        
-        return closestDistanceA - closestDistanceB;
+          });
+          return min;
+        };
+        return closest(a) - closest(b);
       });
-      
+
       console.log(`🎯 Found ${results.length} restaurants within ${maxWalkingMinutes} minutes walking distance`);
     }
 
@@ -299,139 +202,47 @@ export const restaurantService = {
 
   // Get single restaurant by ID
   async getRestaurantById(id: string): Promise<Restaurant> {
-    const { data, error } = await supabase
-      .from('restaurants')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (error) {
-      console.error('Error fetching restaurant by ID:', error);
-      throw error;
-    }
-
-    return data;
+    return apiFetch(`/api/restaurants/${id}`);
   },
 
-  // Get single restaurant by ID with all locations
+  // Get single restaurant by ID with all locations (same endpoint — locations always included)
   async getRestaurantByIdWithLocations(id: string): Promise<Restaurant> {
-    const { data, error } = await supabase
-      .from('restaurants')
-      .select(`
-        *,
-        locations:restaurant_addresses(*)
-      `)
-      .eq('id', id)
-      .single();
-
-    if (error) {
-      console.error('Error fetching restaurant with locations by ID:', error);
-      throw error;
-    }
-
-    return data;
+    return apiFetch(`/api/restaurants/${id}`);
   },
 
-  // Get distinct cuisines that exist in the database (legacy field)
+  // Get distinct cuisines (legacy field)
   async getDistinctCuisines(): Promise<string[]> {
-    const { data, error } = await supabase
-      .from('restaurants')
-      .select('cuisine')
-      .not('cuisine', 'is', null)
-      .not('cuisine', 'eq', '');
-
-    if (error) {
-      console.error('Error fetching distinct cuisines:', error);
-      throw error;
-    }
-
-    // Extract unique cuisines, filter out nulls/empty, and sort
-    const uniqueCuisines = [...new Set(data.map(row => row.cuisine).filter(Boolean))];
-    return uniqueCuisines.sort();
+    const meta = await apiFetch('/api/restaurants/meta');
+    return meta.cuisines as string[];
   },
 
-  // Get distinct primary cuisines that exist in the database (new facet system)
+  // Get distinct primary cuisines
   async getDistinctCuisinesPrimary(): Promise<CuisinePrimary[]> {
-    const { data, error } = await supabase
-      .from('restaurants')
-      .select('cuisine_primary')
-      .not('cuisine_primary', 'is', null);
-
-    if (error) {
-      console.error('Error fetching distinct primary cuisines:', error);
-      throw error;
-    }
-
-    const uniqueCuisines = [...new Set(data.map(row => row.cuisine_primary).filter(Boolean))] as CuisinePrimary[];
-    return uniqueCuisines.sort();
+    const meta = await apiFetch('/api/restaurants/meta');
+    return meta.cuisines as CuisinePrimary[];
   },
 
-  // Get distinct styles that exist in the database
+  // Get distinct styles
   async getDistinctStyles(): Promise<RestaurantStyle[]> {
-    const { data, error } = await supabase
-      .from('restaurants')
-      .select('style')
-      .not('style', 'is', null);
-
-    if (error) {
-      console.error('Error fetching distinct styles:', error);
-      throw error;
-    }
-
-    const uniqueStyles = [...new Set(data.map(row => row.style).filter(Boolean))] as RestaurantStyle[];
-    return uniqueStyles.sort();
+    const meta = await apiFetch('/api/restaurants/meta');
+    return meta.styles as RestaurantStyle[];
   },
 
-  // Get distinct venues that exist in the database
+  // Get distinct venues
   async getDistinctVenues(): Promise<RestaurantVenue[]> {
-    const { data, error } = await supabase
-      .from('restaurants')
-      .select('venue')
-      .not('venue', 'is', null);
-
-    if (error) {
-      console.error('Error fetching distinct venues:', error);
-      throw error;
-    }
-
-    const uniqueVenues = [...new Set(data.map(row => row.venue).filter(Boolean))] as RestaurantVenue[];
-    return uniqueVenues.sort();
+    const meta = await apiFetch('/api/restaurants/meta');
+    return meta.venues as RestaurantVenue[];
   },
 
-  // Create a new restaurant with addresses
+  // Create a new restaurant with optional addresses
   async createRestaurant(
     restaurant: Omit<Restaurant, 'id' | 'created_at' | 'updated_at' | 'locations'>,
     addresses?: Omit<RestaurantAddress, 'id' | 'restaurant_id' | 'created_at' | 'updated_at'>[]
   ): Promise<Restaurant> {
-    const { data, error } = await supabase
-      .from('restaurants')
-      .insert([restaurant])
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error creating restaurant:', error);
-      throw error;
-    }
-
-    // If addresses provided, create them too
-    if (addresses && addresses.length > 0) {
-      const addressRecords = addresses.map(addr => ({
-        ...addr,
-        restaurant_id: data.id
-      }));
-      
-      const { error: addressError } = await supabase
-        .from('restaurant_addresses')
-        .insert(addressRecords);
-        
-      if (addressError) {
-        console.error('Error creating restaurant addresses:', addressError);
-        // Don't throw here - restaurant was created successfully
-      }
-    }
-
-    return data;
+    return apiFetch('/api/admin/restaurants', {
+      method: 'POST',
+      body: JSON.stringify({ ...restaurant, locations: addresses }),
+    });
   },
 
   // Create a new restaurant with addresses and automatic geocoding
@@ -441,279 +252,131 @@ export const restaurantService = {
     onProgress?: (progress: string) => void
   ): Promise<Restaurant> {
     onProgress?.('Saving restaurant data...');
-    
-    // First, create the restaurant
-    const createdRestaurant = await this.createRestaurant(restaurant, addresses);
-    
-    // If addresses were provided, geocode them
-    if (addresses && addresses.length > 0) {
+
+    const created = await this.createRestaurant(restaurant, addresses);
+
+    if (created.locations?.length) {
       onProgress?.('Adding location coordinates...');
-      
-      // Get the created addresses from the database
-      const { data: createdAddresses, error } = await supabase
-        .from('restaurant_addresses')
-        .select('*')
-        .eq('restaurant_id', createdRestaurant.id);
-        
-      if (error) {
-        console.error('Error fetching created addresses for geocoding:', error);
-        // Don't throw - restaurant creation was successful
-        return createdRestaurant;
-      }
-      
-      // Geocode each address that doesn't already have coordinates
-      for (const address of createdAddresses || []) {
+
+      for (const address of created.locations) {
         if (!address.latitude || !address.longitude) {
           try {
             onProgress?.(`Geocoding ${address.location_name || 'location'}...`);
-            
-            // Import locationService dynamically to avoid circular imports
             const { locationService } = await import('./locationService');
-            
-            // Try to geocode the full address
             let coords = await locationService.geocodeLocation(address.full_address);
-            
-            // If that fails, try just the city if available
-            if (!coords && address.city) {
-              coords = await locationService.geocodeLocation(address.city);
-            }
-            
+            if (!coords && address.city) coords = await locationService.geocodeLocation(address.city);
+
             if (coords) {
-              // Update the address with coordinates
-              const { error: updateError } = await supabase
-                .from('restaurant_addresses')
-                .update({
-                  latitude: coords.lat,
-                  longitude: coords.lng,
-                  updated_at: new Date().toISOString()
-                })
-                .eq('id', address.id);
-                
-              if (updateError) {
-                console.error('Error updating address coordinates:', updateError);
-              } else {
-                console.log(`Successfully geocoded: ${address.full_address} -> ${coords.lat}, ${coords.lng}`);
-              }
+              await apiFetch(`/api/admin/addresses/${address.id}`, {
+                method: 'PUT',
+                body: JSON.stringify({ ...address, latitude: coords.lat, longitude: coords.lng }),
+              });
+              console.log(`Successfully geocoded: ${address.full_address} -> ${coords.lat}, ${coords.lng}`);
             } else {
               console.warn(`Could not geocode address: ${address.full_address}`);
             }
-            
-            // Small delay to be respectful to the geocoding service
+
             await new Promise(resolve => setTimeout(resolve, 500));
-            
           } catch (geocodeError) {
             console.error('Error during geocoding:', geocodeError);
-            // Continue with other addresses even if one fails
           }
         }
       }
     }
-    
+
     onProgress?.('Restaurant saved with coordinates!');
-    return createdRestaurant;
+    return this.getRestaurantById(created.id);
   },
 
   // Update a restaurant
   async updateRestaurant(id: string, updates: Partial<Restaurant>): Promise<Restaurant> {
-    const { data, error } = await supabase
-      .from('restaurants')
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error updating restaurant:', error);
-      throw error;
-    }
-
-    return data;
+    return apiFetch(`/api/admin/restaurants/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
   },
 
-  // Delete a restaurant and all related addresses
+  // Delete a restaurant (Worker cascades to addresses and visits)
   async deleteRestaurant(id: string): Promise<void> {
-    // First, delete all associated addresses
-    const { error: addressError } = await supabase
-      .from('restaurant_addresses')
-      .delete()
-      .eq('restaurant_id', id);
-
-    if (addressError) {
-      console.error('Error deleting restaurant addresses:', addressError);
-      throw addressError;
-    }
-
-    // Then delete the main restaurant record
-    const { error: restaurantError } = await supabase
-      .from('restaurants')
-      .delete()
-      .eq('id', id);
-
-    if (restaurantError) {
-      console.error('Error deleting restaurant:', restaurantError);
-      throw restaurantError;
-    }
+    await apiFetch(`/api/admin/restaurants/${id}`, { method: 'DELETE' });
   },
 
   // Update restaurant status
   async updateRestaurantStatus(id: string, status: 'to-visit' | 'visited'): Promise<Restaurant> {
     const updates: Partial<Restaurant> = { status };
-    
-    // If changing to visited and it's the first visit, set visit_count to 1
-    if (status === 'visited') {
-      updates.visit_count = 1;
-    }
-
+    if (status === 'visited') updates.visit_count = 1;
     return this.updateRestaurant(id, updates);
   },
 
-  // Phase 4.1: Update personal appreciation level
+  // Update personal appreciation level
   async updateRestaurantAppreciation(id: string, appreciation: 'unknown' | 'avoid' | 'fine' | 'good' | 'great'): Promise<Restaurant> {
-    const updates: Partial<Restaurant> = { personal_appreciation: appreciation };
-    return this.updateRestaurant(id, updates);
+    return this.updateRestaurant(id, { personal_appreciation: appreciation });
   },
 
-  // Phase 4.1: Enhanced status update with optional appreciation
+  // Enhanced status update with optional appreciation
   async updateRestaurantStatusWithAppreciation(
     id: string,
     status: 'to-visit' | 'visited',
     appreciation?: 'unknown' | 'avoid' | 'fine' | 'good' | 'great'
   ): Promise<Restaurant> {
     const updates: Partial<Restaurant> = { status };
-
-    // If changing to visited and it's the first visit, set visit_count to 1
-    if (status === 'visited') {
-      updates.visit_count = 1;
-    }
-
-    // Add appreciation if provided
-    if (appreciation) {
-      updates.personal_appreciation = appreciation;
-    }
-
+    if (status === 'visited') updates.visit_count = 1;
+    if (appreciation) updates.personal_appreciation = appreciation;
     return this.updateRestaurant(id, updates);
   },
 
   // Restaurant addresses management
   async getRestaurantAddresses(restaurantId: string): Promise<RestaurantAddress[]> {
-    const { data, error } = await supabase
-      .from('restaurant_addresses')
-      .select('*')
-      .eq('restaurant_id', restaurantId)
-      .order('created_at', { ascending: true });
-
-    if (error) {
-      console.error('Error fetching restaurant addresses:', error);
-      throw error;
-    }
-
-    return data || [];
+    const restaurant = await this.getRestaurantById(restaurantId);
+    return restaurant.locations || [];
   },
 
   async addRestaurantAddress(
-    restaurantId: string, 
+    restaurantId: string,
     address: Omit<RestaurantAddress, 'id' | 'restaurant_id' | 'created_at' | 'updated_at'>
   ): Promise<RestaurantAddress> {
-    const { data, error } = await supabase
-      .from('restaurant_addresses')
-      .insert([{ ...address, restaurant_id: restaurantId }])
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error adding restaurant address:', error);
-      throw error;
-    }
-
-    return data;
+    return apiFetch(`/api/admin/restaurants/${restaurantId}/addresses`, {
+      method: 'POST',
+      body: JSON.stringify(address),
+    });
   },
 
   async updateRestaurantAddress(
-    addressId: string, 
+    addressId: string,
     updates: Partial<RestaurantAddress>
   ): Promise<RestaurantAddress> {
-    const { data, error } = await supabase
-      .from('restaurant_addresses')
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq('id', addressId)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error updating restaurant address:', error);
-      throw error;
-    }
-
-    return data;
+    return apiFetch(`/api/admin/addresses/${addressId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
   },
 
   async deleteRestaurantAddress(addressId: string): Promise<void> {
-    const { error } = await supabase
-      .from('restaurant_addresses')
-      .delete()
-      .eq('id', addressId);
-
-    if (error) {
-      console.error('Error deleting restaurant address:', error);
-      throw error;
-    }
+    await apiFetch(`/api/admin/addresses/${addressId}`, { method: 'DELETE' });
   },
 
-  // Update restaurant with addresses (for editing functionality)
+  // Update restaurant with addresses (replaces all existing addresses)
   async updateRestaurantWithAddresses(
-    restaurant: Restaurant, 
+    restaurant: Restaurant,
     addresses?: Omit<RestaurantAddress, 'id' | 'restaurant_id' | 'created_at' | 'updated_at'>[]
   ): Promise<Restaurant> {
-    // Update the main restaurant record
-    const { data: updatedRestaurant, error: restaurantError } = await supabase
-      .from('restaurants')
-      .update({ 
-        ...restaurant, 
-        updated_at: new Date().toISOString() 
-      })
-      .eq('id', restaurant.id)
-      .select()
-      .single();
+    await apiFetch(`/api/admin/restaurants/${restaurant.id}`, {
+      method: 'PUT',
+      body: JSON.stringify(restaurant),
+    });
 
-    if (restaurantError) {
-      console.error('Error updating restaurant:', restaurantError);
-      throw restaurantError;
-    }
-
-    // If addresses are provided, replace all existing addresses
     if (addresses) {
-      // Delete all existing addresses for this restaurant
-      const { error: deleteError } = await supabase
-        .from('restaurant_addresses')
-        .delete()
-        .eq('restaurant_id', restaurant.id);
+      // Clear all existing addresses then insert new ones
+      await apiFetch(`/api/admin/restaurants/${restaurant.id}/addresses`, { method: 'DELETE' });
 
-      if (deleteError) {
-        console.error('Error deleting existing addresses:', deleteError);
-        throw deleteError;
-      }
-
-      // Insert new addresses if any are provided
-      if (addresses.length > 0) {
-        const addressInserts = addresses.map(addr => ({
-          ...addr,
-          restaurant_id: restaurant.id,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }));
-
-        const { error: insertError } = await supabase
-          .from('restaurant_addresses')
-          .insert(addressInserts);
-
-        if (insertError) {
-          console.error('Error inserting new addresses:', insertError);
-          throw insertError;
-        }
+      for (const addr of addresses) {
+        await apiFetch(`/api/admin/restaurants/${restaurant.id}/addresses`, {
+          method: 'POST',
+          body: JSON.stringify(addr),
+        });
       }
     }
 
-    // Return the updated restaurant with addresses
     return this.getRestaurantById(restaurant.id);
   },
 
@@ -724,79 +387,43 @@ export const restaurantService = {
     onProgress?: (progress: string) => void
   ): Promise<Restaurant> {
     onProgress?.('Updating restaurant data...');
+    const updated = await this.updateRestaurantWithAddresses(restaurant, addresses);
 
-    // First, update using the existing function
-    const updatedRestaurant = await this.updateRestaurantWithAddresses(restaurant, addresses);
-
-    // If addresses were provided, geocode any that don't have coordinates
     if (addresses && addresses.length > 0) {
       onProgress?.('Adding location coordinates...');
+      const current = await this.getRestaurantById(restaurant.id);
 
-      // Get the newly created addresses from the database
-      const { data: newAddresses, error } = await supabase
-        .from('restaurant_addresses')
-        .select('*')
-        .eq('restaurant_id', restaurant.id);
-
-      if (error) {
-        console.error('Error fetching addresses for geocoding:', error);
-        // Don't throw - restaurant update was successful
-        return updatedRestaurant;
-      }
-
-      // Geocode each address that doesn't already have coordinates
-      for (const address of newAddresses || []) {
+      for (const address of current.locations || []) {
         if (!address.latitude || !address.longitude) {
           try {
             onProgress?.(`Geocoding ${address.location_name || 'location'}...`);
-
-            // Import locationService dynamically to avoid circular imports
             const { locationService } = await import('./locationService');
-
-            // Try to geocode the full address
             let coords = await locationService.geocodeLocation(address.full_address);
-
-            // If that fails, try just the city if available
-            if (!coords && address.city) {
-              coords = await locationService.geocodeLocation(address.city);
-            }
+            if (!coords && address.city) coords = await locationService.geocodeLocation(address.city);
 
             if (coords) {
-              // Update the address with coordinates
-              const { error: updateError } = await supabase
-                .from('restaurant_addresses')
-                .update({
-                  latitude: coords.lat,
-                  longitude: coords.lng,
-                  updated_at: new Date().toISOString()
-                })
-                .eq('id', address.id);
-
-              if (updateError) {
-                console.error('Error updating address coordinates:', updateError);
-              } else {
-                console.log(`Successfully geocoded: ${address.full_address} -> ${coords.lat}, ${coords.lng}`);
-              }
+              await apiFetch(`/api/admin/addresses/${address.id}`, {
+                method: 'PUT',
+                body: JSON.stringify({ ...address, latitude: coords.lat, longitude: coords.lng }),
+              });
+              console.log(`Successfully geocoded: ${address.full_address} -> ${coords.lat}, ${coords.lng}`);
             } else {
               console.warn(`Could not geocode address: ${address.full_address}`);
             }
 
-            // Small delay to be respectful to the geocoding service
             await new Promise(resolve => setTimeout(resolve, 500));
-
           } catch (geocodeError) {
             console.error('Error during geocoding:', geocodeError);
-            // Continue with other addresses even if one fails
           }
         }
       }
     }
 
     onProgress?.('Restaurant updated with coordinates!');
-    return updatedRestaurant;
+    return updated;
   },
 
-  // Phase 2: Review enrichment functionality
+  // Review enrichment: update public review data, merging must_try_dishes with existing
   async updateRestaurantReviewData(
     restaurantId: string,
     reviewData: {
@@ -808,85 +435,42 @@ export const restaurantService = {
       must_try_dishes?: string[];
     }
   ): Promise<Restaurant> {
-    // If adding new dishes, merge with existing ones
     let updatedDishes = reviewData.must_try_dishes;
+
     if (reviewData.must_try_dishes) {
-      const { data: current } = await supabase
-        .from('restaurants')
-        .select('must_try_dishes')
-        .eq('id', restaurantId)
-        .single();
+      const current = await this.getRestaurantById(restaurantId);
+      const existingDishes = current.must_try_dishes || [];
+      const newDishes = reviewData.must_try_dishes;
 
-      if (current?.must_try_dishes) {
-        // Merge arrays and remove duplicates (case-insensitive)
-        const existingDishes = current.must_try_dishes || [];
-        const newDishes = reviewData.must_try_dishes;
-
-        // Don't add more dishes if we already have 5 or more
-        if (existingDishes.length >= 5) {
-          console.log(`⚠️ Restaurant already has ${existingDishes.length} must-try dishes, skipping new additions`);
-          updatedDishes = existingDishes;
-        } else {
-          // Filter out new dishes that already exist (case-insensitive comparison)
-          const uniqueNewDishes = newDishes.filter(newDish =>
-            !existingDishes.some(existingDish =>
-              existingDish.toLowerCase().trim() === newDish.toLowerCase().trim()
-            )
-          );
-
-          // Combine existing dishes with new unique ones, but cap at 5 total
-          const combinedDishes = [...existingDishes, ...uniqueNewDishes];
-          updatedDishes = combinedDishes.slice(0, 5);
-
-          if (combinedDishes.length > 5) {
-            console.log(`📝 Capped must-try dishes at 5 (had ${combinedDishes.length} total)`);
-          }
+      if (existingDishes.length >= 5) {
+        console.log(`⚠️ Restaurant already has ${existingDishes.length} must-try dishes, skipping new additions`);
+        updatedDishes = existingDishes;
+      } else {
+        const uniqueNewDishes = newDishes.filter(newDish =>
+          !existingDishes.some(existingDish =>
+            existingDish.toLowerCase().trim() === newDish.toLowerCase().trim()
+          )
+        );
+        const combinedDishes = [...existingDishes, ...uniqueNewDishes];
+        updatedDishes = combinedDishes.slice(0, 5);
+        if (combinedDishes.length > 5) {
+          console.log(`📝 Capped must-try dishes at 5 (had ${combinedDishes.length} total)`);
         }
       }
     }
 
-    const updateData = {
-      ...reviewData,
-      must_try_dishes: updatedDishes,
-      updated_at: new Date().toISOString()
-    };
-
-    const { data, error } = await supabase
-      .from('restaurants')
-      .update(updateData)
-      .eq('id', restaurantId)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error updating restaurant review data:', error);
-      throw error;
-    }
-
-    return data;
+    return this.updateRestaurant(restaurantId, { ...reviewData, must_try_dishes: updatedDishes });
   },
 
   // Get restaurants that need review enrichment
   async getRestaurantsNeedingReviews(): Promise<Restaurant[]> {
-    const { data, error } = await supabase
-      .from('restaurants')
-      .select(`
-        *,
-        locations:restaurant_addresses(*)
-      `)
-      .or(
-        'public_review_summary.is.null,' +
-        'public_rating_count.is.null,' +
-        'public_review_summary_updated_at.lt.' + new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
-      )
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching restaurants needing reviews:', error);
-      throw error;
-    }
-
-    return data || [];
+    const all: Restaurant[] = await apiFetch('/api/restaurants');
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    return all.filter(r =>
+      !r.public_review_summary ||
+      !r.public_rating_count ||
+      (r.public_review_summary_updated_at && r.public_review_summary_updated_at < thirtyDaysAgo)
+    );
   },
 
   // Get review enrichment statistics
@@ -896,38 +480,22 @@ export const restaurantService = {
     needsUpdate: number;
     lastUpdated?: string;
   }> {
-    const { data: allRestaurants, error: allError } = await supabase
-      .from('restaurants')
-      .select('public_review_summary, public_review_summary_updated_at');
-
-    if (allError) {
-      console.error('Error fetching review stats:', allError);
-      throw allError;
-    }
-
-    const total = allRestaurants?.length || 0;
-    const enriched = allRestaurants?.filter(r => r.public_review_summary).length || 0;
-
-    // Count restaurants with old summaries (> 30 days)
+    const all: Restaurant[] = await apiFetch('/api/restaurants');
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const needsUpdate = allRestaurants?.filter(r =>
+
+    const total = all.length;
+    const enriched = all.filter(r => r.public_review_summary).length;
+    const needsUpdate = all.filter(r =>
       !r.public_review_summary ||
       (r.public_review_summary_updated_at && new Date(r.public_review_summary_updated_at) < thirtyDaysAgo)
-    ).length || 0;
-
-    // Find most recent update
-    const lastUpdated = allRestaurants
-      ?.map(r => r.public_review_summary_updated_at)
+    ).length;
+    const lastUpdated = all
+      .map(r => r.public_review_summary_updated_at)
       .filter(Boolean)
       .sort()
       .pop();
 
-    return {
-      total,
-      enriched,
-      needsUpdate,
-      lastUpdated
-    };
+    return { total, enriched, needsUpdate, lastUpdated };
   }
 };
 
@@ -941,7 +509,6 @@ export const placesService = {
   updatePlace: (id: string, updates: any) => restaurantService.updateRestaurant(id, updates),
   deletePlace: (id: string) => restaurantService.deleteRestaurant(id),
   updatePlaceStatus: (id: string, status: any) => restaurantService.updateRestaurantStatus(id, status),
-  // Phase 4.1: New appreciation functions
   updatePlaceAppreciation: (id: string, appreciation: any) => restaurantService.updateRestaurantAppreciation(id, appreciation),
   updatePlaceStatusWithAppreciation: (id: string, status: any, appreciation?: any) => restaurantService.updateRestaurantStatusWithAppreciation(id, status, appreciation)
 };

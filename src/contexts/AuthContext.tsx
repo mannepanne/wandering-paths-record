@@ -1,76 +1,45 @@
+// ABOUT: Authentication context using Cloudflare Access + Google OAuth
+// ABOUT: Auth state derived from /api/auth/me; login/logout via CF Access redirects
+
 import { createContext, useContext, useEffect, useState } from 'react';
-import { User } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
+
+interface AuthUser {
+  email: string;
+}
 
 interface AuthContextType {
-  user: User | null;
+  user: AuthUser | null;
   loading: boolean;
-  signInWithEmail: (email: string) => Promise<void>;
-  signOut: () => Promise<void>;
+  signIn: () => void;
+  signInWithEmail: (email: string) => void; // kept for backwards compatibility — email param ignored
+  signOut: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
-    const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
-      setLoading(false);
-    };
-
-    getSession();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setUser(session?.user ?? null);
-        setLoading(false);
-        
-        if (event === 'SIGNED_IN') {
-          console.log('User signed in:', session?.user?.email);
-        } else if (event === 'SIGNED_OUT') {
-          console.log('User signed out');
-        }
-      }
-    );
-
-    return () => subscription.unsubscribe();
+    fetch('/api/auth/me', { credentials: 'include' })
+      .then(res => (res.ok ? res.json() : null))
+      .then(data => setUser(data?.email ? { email: data.email } : null))
+      .catch(() => setUser(null))
+      .finally(() => setLoading(false));
   }, []);
 
-  const signInWithEmail = async (email: string) => {
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: window.location.origin,
-      },
-    });
-
-    if (error) {
-      throw error;
-    }
+  const signIn = () => {
+    window.location.href = `/cdn-cgi/access/login?redirect_url=${encodeURIComponent(window.location.href)}`;
   };
 
-  const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      throw error;
-    }
-  };
-
-  const value = {
-    user,
-    loading,
-    signInWithEmail,
-    signOut,
+  const signOut = () => {
+    setUser(null);
+    window.location.href = '/cdn-cgi/access/logout';
   };
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={{ user, loading, signIn, signInWithEmail: signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );

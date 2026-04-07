@@ -1,44 +1,49 @@
 // ABOUT: Unit tests for visit service validation and CRUD operations
-// ABOUT: Tests XSS prevention, rating validation, date handling, and duplicate detection
+// ABOUT: Tests XSS prevention, rating validation, date handling, and API calls
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { visitService } from '@/services/visits';
 import type { CreateVisitInput } from '@/services/visits';
 
-// Mock Supabase
-vi.mock('@/lib/supabase', () => ({
-  supabase: {
-    from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          order: vi.fn(() => ({
-            order: vi.fn(() => ({
-              limit: vi.fn(() => Promise.resolve({ data: [], error: null })),
-            })),
-          })),
-          single: vi.fn(() => Promise.resolve({ data: null, error: null })),
-        })),
-      })),
-      insert: vi.fn(() => ({
-        select: vi.fn(() => ({
-          single: vi.fn(() => Promise.resolve({ data: null, error: null })),
-        })),
-      })),
-    })),
-    auth: {
-      getUser: vi.fn(() => Promise.resolve({
-        data: { user: { id: 'test-user-id' } },
-        error: null
-      })),
-    },
-  },
-}));
+// Default successful visit response for tests that exercise the happy path
+const mockVisit = {
+  id: 'visit-id',
+  restaurant_id: 'test-restaurant',
+  visit_date: '2026-03-01',
+  rating: 'good',
+  is_migrated_placeholder: false,
+  created_at: '2026-03-01T00:00:00Z',
+  updated_at: '2026-03-01T00:00:00Z',
+};
+
+function mockFetchOk(data: unknown = mockVisit) {
+  return vi.fn().mockResolvedValue({
+    ok: true,
+    json: () => Promise.resolve(data),
+    text: () => Promise.resolve(JSON.stringify(data)),
+  });
+}
+
+function mockFetchError(status: number, message = 'Error') {
+  return vi.fn().mockResolvedValue({
+    ok: false,
+    status,
+    statusText: message,
+    json: () => Promise.resolve({ error: message }),
+    text: () => Promise.resolve(JSON.stringify({ error: message })),
+  });
+}
+
+beforeEach(() => {
+  vi.stubGlobal('fetch', mockFetchOk());
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.clearAllMocks();
+});
 
 describe('visitService.addVisit - Validation', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   describe('XSS Prevention', () => {
     it('should reject experience notes with < character', async () => {
       const input: CreateVisitInput = {
@@ -101,7 +106,6 @@ describe('visitService.addVisit - Validation', () => {
         company_notes: 'With Sarah and Tom',
       };
 
-      // Should not throw
       await expect(visitService.addVisit(input)).resolves.toBeDefined();
     });
   });
@@ -111,7 +115,7 @@ describe('visitService.addVisit - Validation', () => {
       const input: CreateVisitInput = {
         restaurant_id: 'test-restaurant',
         visit_date: '2026-03-01',
-        rating: 'unknown' as any, // Force invalid type
+        rating: 'unknown' as any,
       };
 
       await expect(visitService.addVisit(input)).rejects.toThrow(
@@ -123,7 +127,7 @@ describe('visitService.addVisit - Validation', () => {
       const input: CreateVisitInput = {
         restaurant_id: 'test-restaurant',
         visit_date: '2026-03-01',
-        rating: 'excellent' as any, // Invalid value
+        rating: 'excellent' as any,
       };
 
       await expect(visitService.addVisit(input)).rejects.toThrow(
@@ -176,7 +180,7 @@ describe('visitService.addVisit - Validation', () => {
     it('should reject invalid date format', async () => {
       const input: CreateVisitInput = {
         restaurant_id: 'test-restaurant',
-        visit_date: '03/01/2026', // Wrong format
+        visit_date: '03/01/2026',
         rating: 'good',
       };
 
@@ -300,7 +304,6 @@ describe('visitService.addVisit - Validation', () => {
         experience_notes: '  Great meal  ',
       };
 
-      // Mocking would need to verify trimmed value, but at minimum it shouldn't throw
       await expect(visitService.addVisit(input)).resolves.toBeDefined();
     });
 
@@ -309,7 +312,7 @@ describe('visitService.addVisit - Validation', () => {
         restaurant_id: 'test-restaurant',
         visit_date: '2026-03-01',
         rating: 'good',
-        experience_notes: '   ', // Only whitespace
+        experience_notes: '   ',
       };
 
       await expect(visitService.addVisit(input)).resolves.toBeDefined();
@@ -343,28 +346,46 @@ describe('visitService.addVisit - Validation', () => {
 
 describe('visitService.getLatestVisits', () => {
   it('should return empty array when no visits found', async () => {
+    vi.stubGlobal('fetch', mockFetchOk([]));
     const result = await visitService.getLatestVisits('test-restaurant');
     expect(result).toEqual([]);
   });
 
+  it('should limit results to the requested count', async () => {
+    const visits = Array.from({ length: 10 }, (_, i) => ({ ...mockVisit, id: `visit-${i}` }));
+    vi.stubGlobal('fetch', mockFetchOk(visits));
+    const result = await visitService.getLatestVisits('test-restaurant', 3);
+    expect(result).toHaveLength(3);
+  });
+
   it('should use default limit of 5', async () => {
-    await visitService.getLatestVisits('test-restaurant');
-    // Would verify limit call in mock if we had full mock setup
+    const visits = Array.from({ length: 10 }, (_, i) => ({ ...mockVisit, id: `visit-${i}` }));
+    vi.stubGlobal('fetch', mockFetchOk(visits));
+    const result = await visitService.getLatestVisits('test-restaurant');
+    expect(result).toHaveLength(5);
   });
 });
 
 describe('visitService.getVisitCount', () => {
   it('should return 0 when no visits found', async () => {
+    vi.stubGlobal('fetch', mockFetchOk([]));
     const result = await visitService.getVisitCount('test-restaurant');
     expect(result).toBe(0);
+  });
+
+  it('should count only non-migrated visits', async () => {
+    const visits = [
+      { ...mockVisit, id: '1', is_migrated_placeholder: false },
+      { ...mockVisit, id: '2', is_migrated_placeholder: true },
+      { ...mockVisit, id: '3', is_migrated_placeholder: false },
+    ];
+    vi.stubGlobal('fetch', mockFetchOk(visits));
+    const result = await visitService.getVisitCount('test-restaurant');
+    expect(result).toBe(2);
   });
 });
 
 describe('visitService.updateVisit - Validation', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   describe('XSS Prevention', () => {
     it('should reject experience notes with HTML characters', async () => {
       const input = {
@@ -404,48 +425,6 @@ describe('visitService.updateVisit - Validation', () => {
     });
 
     it('should accept valid ratings', async () => {
-      // Mock existing visit fetch and update
-      const { supabase } = await import('@/lib/supabase');
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            single: vi.fn(() => Promise.resolve({
-              data: {
-                id: 'visit-123',
-                restaurant_id: 'restaurant-1',
-                user_id: 'test-user-id',
-                visit_date: '2026-03-01',
-                rating: 'good',
-                is_migrated_placeholder: false,
-                created_at: '2026-03-01T00:00:00Z',
-                updated_at: '2026-03-01T00:00:00Z',
-              },
-              error: null,
-            })),
-          })),
-        })),
-      } as any).mockReturnValueOnce({
-        update: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            select: vi.fn(() => ({
-              single: vi.fn(() => Promise.resolve({
-                data: {
-                  id: 'visit-123',
-                  restaurant_id: 'restaurant-1',
-                  user_id: 'test-user-id',
-                  visit_date: '2026-03-01',
-                  rating: 'great',
-                  is_migrated_placeholder: false,
-                  created_at: '2026-03-01T00:00:00Z',
-                  updated_at: '2026-03-01T12:00:00Z',
-                },
-                error: null,
-              })),
-            })),
-          })),
-        })),
-      } as any);
-
       const input = {
         visit_date: '2026-03-01',
         rating: 'great' as const,
@@ -479,48 +458,6 @@ describe('visitService.updateVisit - Validation', () => {
     });
 
     it('should accept valid dates', async () => {
-      // Mock existing visit fetch and update
-      const { supabase } = await import('@/lib/supabase');
-      vi.mocked(supabase.from).mockReturnValueOnce({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            single: vi.fn(() => Promise.resolve({
-              data: {
-                id: 'visit-123',
-                restaurant_id: 'restaurant-1',
-                user_id: 'test-user-id',
-                visit_date: '2026-02-10',
-                rating: 'good',
-                is_migrated_placeholder: false,
-                created_at: '2026-02-10T00:00:00Z',
-                updated_at: '2026-02-10T00:00:00Z',
-              },
-              error: null,
-            })),
-          })),
-        })),
-      } as any).mockReturnValueOnce({
-        update: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            select: vi.fn(() => ({
-              single: vi.fn(() => Promise.resolve({
-                data: {
-                  id: 'visit-123',
-                  restaurant_id: 'restaurant-1',
-                  user_id: 'test-user-id',
-                  visit_date: '2026-02-15',
-                  rating: 'good',
-                  is_migrated_placeholder: false,
-                  created_at: '2026-02-10T00:00:00Z',
-                  updated_at: '2026-03-01T12:00:00Z',
-                },
-                error: null,
-              })),
-            })),
-          })),
-        })),
-      } as any);
-
       const input = {
         visit_date: '2026-02-15',
         rating: 'good' as const,
@@ -558,93 +495,21 @@ describe('visitService.updateVisit - Validation', () => {
 });
 
 describe('visitService.updateVisit - Functionality', () => {
-  it('should clear migrated placeholder flag when date is changed', async () => {
-    // Mock the existing visit fetch to return a migrated placeholder
-    const { supabase } = await import('@/lib/supabase');
-    vi.mocked(supabase.from).mockReturnValue({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          single: vi.fn(() => Promise.resolve({
-            data: {
-              id: 'visit-123',
-              restaurant_id: 'restaurant-1',
-              user_id: 'test-user-id',
-              visit_date: '2025-01-01',
-              rating: 'good',
-              is_migrated_placeholder: true,
-              created_at: '2025-01-01T00:00:00Z',
-              updated_at: '2025-01-01T00:00:00Z',
-            },
-            error: null,
-          })),
-        })),
-      })),
-      update: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          select: vi.fn(() => ({
-            single: vi.fn(() => Promise.resolve({
-              data: {
-                id: 'visit-123',
-                restaurant_id: 'restaurant-1',
-                user_id: 'test-user-id',
-                visit_date: '2026-02-15',
-                rating: 'great',
-                is_migrated_placeholder: false,
-                created_at: '2025-01-01T00:00:00Z',
-                updated_at: '2026-03-01T12:00:00Z',
-              },
-              error: null,
-            })),
-          })),
-        })),
-      })),
-    } as any);
+  it('should call PUT endpoint and return updated visit', async () => {
+    const updatedVisit = { ...mockVisit, rating: 'great', is_migrated_placeholder: false };
+    vi.stubGlobal('fetch', mockFetchOk(updatedVisit));
 
-    const input = {
-      visit_date: '2026-02-15',
-      rating: 'great' as const,
-    };
-
+    const input = { visit_date: '2026-03-01', rating: 'great' as const };
     const result = await visitService.updateVisit('visit-123', input);
+
+    expect(result.rating).toBe('great');
     expect(result.is_migrated_placeholder).toBe(false);
   });
 
-  it('should handle duplicate visit date', async () => {
-    const { supabase } = await import('@/lib/supabase');
-    vi.mocked(supabase.from).mockReturnValue({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          single: vi.fn(() => Promise.resolve({
-            data: {
-              id: 'visit-123',
-              restaurant_id: 'restaurant-1',
-              user_id: 'test-user-id',
-              visit_date: '2026-02-15',
-              rating: 'good',
-              is_migrated_placeholder: false,
-              created_at: '2026-02-15T00:00:00Z',
-              updated_at: '2026-02-15T00:00:00Z',
-            },
-            error: null,
-          })),
-        })),
-      })),
-      update: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          select: vi.fn(() => ({
-            single: vi.fn(() => Promise.resolve({
-              data: null,
-              error: { code: '23505' }, // Unique constraint violation
-            })),
-          })),
-        })),
-      })),
-    } as any);
+  it('should surface duplicate date error from the API', async () => {
+    vi.stubGlobal('fetch', mockFetchError(409, 'UNIQUE constraint failed'));
 
-    const input = {
-      visit_date: '2026-02-20',
-      rating: 'great' as const,
-    };
+    const input = { visit_date: '2026-02-20', rating: 'great' as const };
 
     await expect(visitService.updateVisit('visit-123', input)).rejects.toThrow(
       'You already have a visit logged for this restaurant on 2026-02-20'
@@ -654,82 +519,19 @@ describe('visitService.updateVisit - Functionality', () => {
 
 describe('visitService.deleteVisit', () => {
   it('should delete a visit successfully', async () => {
-    const { supabase } = await import('@/lib/supabase');
-
-    // Mock select to find the visit
-    const selectMock = vi.fn(() => Promise.resolve({
-      data: {
-        id: 'visit-123',
-        user_id: 'test-user-id',
-      },
-      error: null,
-    }));
-
-    // Mock delete operation
-    const deleteMock = vi.fn(() => Promise.resolve({ error: null }));
-
-    vi.mocked(supabase.from).mockReturnValue({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          single: selectMock,
-        })),
-      })),
-      delete: vi.fn(() => ({
-        eq: deleteMock,
-      })),
-    } as any);
-
+    vi.stubGlobal('fetch', mockFetchOk({ success: true }));
     await expect(visitService.deleteVisit('visit-123')).resolves.not.toThrow();
   });
 
-  it('should throw error when visit not found', async () => {
-    const { supabase } = await import('@/lib/supabase');
-
-    // Mock select returning no visit
-    vi.mocked(supabase.from).mockReturnValue({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          single: vi.fn(() => Promise.resolve({
-            data: null,
-            error: { code: 'PGRST116', message: 'Not found' },
-          })),
-        })),
-      })),
-    } as any);
-
+  it('should throw a friendly error when visit not found', async () => {
+    vi.stubGlobal('fetch', mockFetchError(404, 'Not found'));
     await expect(visitService.deleteVisit('visit-123')).rejects.toThrow(
       'Visit not found or you do not have permission to delete it'
     );
   });
 
-  it('should handle deletion errors', async () => {
-    const { supabase } = await import('@/lib/supabase');
-
-    // Mock select to find the visit
-    const selectMock = vi.fn(() => Promise.resolve({
-      data: {
-        id: 'visit-123',
-        user_id: 'test-user-id',
-      },
-      error: null,
-    }));
-
-    // Mock delete operation failing
-    const deleteMock = vi.fn(() => Promise.resolve({
-      error: new Error('Database error'),
-    }));
-
-    vi.mocked(supabase.from).mockReturnValue({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          single: selectMock,
-        })),
-      })),
-      delete: vi.fn(() => ({
-        eq: deleteMock,
-      })),
-    } as any);
-
+  it('should throw a friendly error on other API failures', async () => {
+    vi.stubGlobal('fetch', mockFetchError(500, 'Internal Server Error'));
     await expect(visitService.deleteVisit('visit-123')).rejects.toThrow(
       'Failed to delete visit. Please try again.'
     );

@@ -8,6 +8,12 @@ main = "./src/worker.js"
 [assets]
 directory = "./dist/client"
 
+# D1 database binding
+[[d1_databases]]
+binding = "DB"
+database_name = "wandering-paths"
+database_id = "f928b168-fb21-4420-bff8-2f9320d3f22e"
+
 # Environment variables (non-sensitive)
 [vars]
 SUPABASE_URL = "https://drtjfbvudzacixvqkzav.supabase.co"

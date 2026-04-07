@@ -29,3 +29,6 @@ dist-ssr
 *.sln
 *.sw?
 coverage/
+
+# Database backups (contain real data, never commit)
+db_backup/

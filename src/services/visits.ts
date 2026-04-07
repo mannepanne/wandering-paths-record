@@ -41,10 +41,10 @@ const stripHtml = (text?: string): string | undefined => {
   const trimmed = text.trim();
   if (!trimmed) return undefined;
 
-  // Reject any HTML-like characters to prevent XSS attacks
-  // This prevents: <script>, encoded HTML entities (&lt;), event handlers, etc.
-  if (/<|>|&/.test(trimmed)) {
-    throw new Error('HTML and special characters are not allowed in notes');
+  // Reject HTML tags to prevent XSS attacks. React auto-escapes rendered text
+  // and D1 uses parameterised queries, so only < and > need blocking here.
+  if (/<|>/.test(trimmed)) {
+    throw new Error('HTML characters are not allowed in notes');
   }
 
   return trimmed;

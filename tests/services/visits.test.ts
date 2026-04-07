@@ -54,7 +54,7 @@ describe('visitService.addVisit - Validation', () => {
       };
 
       await expect(visitService.addVisit(input)).rejects.toThrow(
-        'HTML and special characters are not allowed in notes'
+        'HTML characters are not allowed in notes'
       );
     });
 
@@ -67,21 +67,19 @@ describe('visitService.addVisit - Validation', () => {
       };
 
       await expect(visitService.addVisit(input)).rejects.toThrow(
-        'HTML and special characters are not allowed in notes'
+        'HTML characters are not allowed in notes'
       );
     });
 
-    it('should reject experience notes with & character (prevents encoded HTML)', async () => {
+    it('should accept & character in notes (e.g. "Fish & Chips")', async () => {
       const input: CreateVisitInput = {
         restaurant_id: 'test-restaurant',
         visit_date: '2026-03-01',
         rating: 'good',
-        experience_notes: 'Tom &amp; Jerry',
+        experience_notes: 'Fish & Chips was great',
       };
 
-      await expect(visitService.addVisit(input)).rejects.toThrow(
-        'HTML and special characters are not allowed in notes'
-      );
+      await expect(visitService.addVisit(input)).resolves.toBeDefined();
     });
 
     it('should reject company notes with HTML characters', async () => {
@@ -93,7 +91,7 @@ describe('visitService.addVisit - Validation', () => {
       };
 
       await expect(visitService.addVisit(input)).rejects.toThrow(
-        'HTML and special characters are not allowed in notes'
+        'HTML characters are not allowed in notes'
       );
     });
 
@@ -103,7 +101,7 @@ describe('visitService.addVisit - Validation', () => {
         visit_date: '2026-03-01',
         rating: 'good',
         experience_notes: 'Amazing duck confit. Would recommend!',
-        company_notes: 'With Sarah and Tom',
+        company_notes: 'With Sarah & Tom',
       };
 
       await expect(visitService.addVisit(input)).resolves.toBeDefined();
@@ -395,7 +393,7 @@ describe('visitService.updateVisit - Validation', () => {
       };
 
       await expect(visitService.updateVisit('visit-123', input)).rejects.toThrow(
-        'HTML and special characters are not allowed in notes'
+        'HTML characters are not allowed in notes'
       );
     });
 
@@ -407,7 +405,7 @@ describe('visitService.updateVisit - Validation', () => {
       };
 
       await expect(visitService.updateVisit('visit-123', input)).rejects.toThrow(
-        'HTML and special characters are not allowed in notes'
+        'HTML characters are not allowed in notes'
       );
     });
   });

@@ -891,6 +891,7 @@ async function verifyCFAccessJWT(token, env) {
     const aud = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
     if (!aud.includes(env.CF_ACCESS_AUD)) return false;
     if (payload.exp < Math.floor(Date.now() / 1000)) return false;
+    if (payload.email !== env.AUTHORIZED_ADMIN_EMAIL) return false;
 
     const certsResp = await fetch(`${env.CF_TEAM_DOMAIN}/cdn-cgi/access/certs`);
     const { keys } = await certsResp.json();
@@ -962,6 +963,7 @@ export default {
 
     // API routes
     if (url.pathname === '/api/extract-restaurant' && request.method === 'POST') {
+      if (!await isAuthenticated(request, env)) return jsonResponse({ error: 'Unauthorised' }, 401);
       const response = await handleRestaurantExtraction(request, env);
 
       // Add CORS headers to API responses
@@ -982,6 +984,7 @@ export default {
 
     // Claude API proxy route for review summarization
     if (url.pathname === '/api/claude' && request.method === 'POST') {
+      if (!await isAuthenticated(request, env)) return jsonResponse({ error: 'Unauthorised' }, 401);
       const response = await handleClaudeRequest(request, env);
 
       // Add CORS headers to API responses
@@ -1002,6 +1005,7 @@ export default {
 
     // Google Maps API proxy route
     if (url.pathname === '/api/google-maps' && request.method === 'GET') {
+      if (!await isAuthenticated(request, env)) return jsonResponse({ error: 'Unauthorised' }, 401);
       const response = await handleGoogleMapsRequest(request, env);
 
       // Add CORS headers to API responses

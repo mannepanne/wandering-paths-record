@@ -37,7 +37,8 @@ Model versions are centralized in `src/config/claude.ts`. When Anthropic depreca
 
 ### Tech Stack
 - **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS + shadcn/ui
-- **Backend**: Supabase (PostgreSQL) + Cloudflare Workers
+- **Backend**: Cloudflare D1 (SQLite) + Cloudflare Workers
+- **Auth**: Cloudflare Access + Google OAuth (JWT verified server-side in Worker)
 - **AI**: Claude Sonnet 4.5 for restaurant extraction and review summarization
 - **Maps**: Mapbox GL JS with clustering
 - **Geo**: Google Maps Geocoding and Places APIs
@@ -94,7 +95,7 @@ interface RestaurantAddress {
 - `src/components/InteractiveMap.tsx` - Mapbox map with clustering
 
 ### Services
-- `src/services/restaurants.ts` - Supabase CRUD operations
+- `src/services/restaurants.ts` - Restaurant CRUD via Worker API
 - `src/services/claudeExtractor.ts` - AI restaurant extraction
 - `src/services/reviewEnrichmentService.ts` - Google Reviews + Claude summarization
 - `src/services/smartGeoSearch.ts` - Three-tier geo search
@@ -115,9 +116,11 @@ interface RestaurantAddress {
 The build process auto-syncs Worker asset references via `scripts/update-worker-assets.js`. This prevents MIME type errors on deployment.
 
 ### Admin Authentication
-- Magic link auth via Supabase
+- Cloudflare Access + Google OAuth (no password, no magic links)
+- Login: navigate to `/auth/login` → Google OAuth → CF-Authorization cookie set
+- JWT verified server-side in Worker via `verifyCFAccessJWT()` (RS256 + JWKS)
+- Authorized email checked in Worker: `AUTHORIZED_ADMIN_EMAIL` in wrangler.toml
 - Admin controls (edit/delete/rate) hidden from unauthenticated users
-- Authorized email: magnus.hultberg@gmail.com
 
 ## Documentation
 
@@ -127,7 +130,8 @@ The build process auto-syncs Worker asset references via `scripts/update-worker-
 
 - `REFERENCE/DEVELOPMENT.md` - **Full development workflow** (setup, commands, deployment)
 - `REFERENCE/environment-setup.md` - Secrets and API key configuration
-- `REFERENCE/supabase-setup.md` - Database schema, auth, RLS policies
+- `REFERENCE/supabase-setup.md` - Legacy: Supabase setup (migrated to D1 — see `SPECIFICATIONS/d1-migration.md`)
+- `REFERENCE/d1-setup.md` - D1 database schema and Worker API (TODO: create)
 - `REFERENCE/ai-extraction-guide.md` - How Claude extraction works
 - `REFERENCE/geo-services-guide.md` - Maps, geocoding, location search
 - `REFERENCE/claude_model_updates.md` - Updating Claude API model versions

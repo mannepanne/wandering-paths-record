@@ -287,6 +287,21 @@ IMPORTANT: If you find a hotel with a restaurant component, classify as "restaur
 
 ---
 
+## Duplicate detection
+
+After extraction returns, `AdminPanel` runs `findDuplicateCandidates` (in `src/utils/duplicateDetection.ts`) against the full restaurant list before the admin can save. A candidate is flagged as a possible duplicate when:
+
+- Its `website` or `source_url` matches an existing restaurant's `website` or `source_url` (normalised — protocol, `www.`, trailing slash, and query/fragment are stripped), OR
+- Its name matches an existing restaurant's name (case-insensitive) AND they share a city (derived from the address summary or a location row).
+
+When a match is found, a warning banner appears in the preview form with:
+- A list of matching restaurants, each with an **Edit existing** link that navigates to `/?edit=<id>`
+- An **Add as new location anyway** override that re-enables the Save button (useful for chains like Dishoom)
+
+The Save button stays disabled while matches exist and the override has not been pressed.
+
+---
+
 ## Error Handling
 
 ### Rate Limits

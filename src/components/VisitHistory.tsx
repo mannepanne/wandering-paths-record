@@ -195,7 +195,7 @@ export const VisitHistory = ({ restaurantId, onEdit, onDelete }: VisitHistoryPro
               </div>
 
               {/* Row 2: Rating Badge */}
-              <div className="mb-1">
+              <div className="mb-3">
                 <Badge
                   className={`${appreciationLevel.badgeStyle} border text-xs`}
                   variant="outline"

@@ -157,52 +157,52 @@ export const VisitHistory = ({ restaurantId, onEdit, onDelete }: VisitHistoryPro
               key={visit.id}
               className="pb-3 last:pb-0"
             >
-              {/* Visit Date, Rating Badge, and Actions */}
+              {/* Row 1: Visit Date and Edit/Delete Actions */}
               <div className="flex items-center justify-between mb-1">
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Calendar className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <span className="text-sm font-medium whitespace-nowrap">
                     {formatVisitDate(visit)}
                   </span>
                 </div>
 
-                {/* Rating Badge and Edit/Delete Actions */}
-                <div className="flex items-center gap-2">
-                  <Badge
-                    className={`${appreciationLevel.badgeStyle} border text-xs`}
-                    variant="outline"
-                  >
-                    <span className="mr-1">{appreciationLevel.icon}</span>
-                    {appreciationLevel.label}
-                  </Badge>
+                {(onEdit || onDelete) && (
+                  <div className="flex items-center gap-1 shrink-0">
+                    {onEdit && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onEdit(visit)}
+                        className="h-7 px-2 text-muted-foreground hover:text-foreground"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                        <span className="sr-only">Edit visit</span>
+                      </Button>
+                    )}
+                    {onDelete && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onDelete(visit)}
+                        className="h-7 px-2 text-muted-foreground hover:text-destructive"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        <span className="sr-only">Delete visit</span>
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
 
-                  {(onEdit || onDelete) && (
-                    <div className="flex items-center gap-1">
-                      {onEdit && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onEdit(visit)}
-                          className="h-7 px-2 text-muted-foreground hover:text-foreground"
-                        >
-                          <Edit2 className="w-3 h-3" />
-                          <span className="sr-only">Edit visit</span>
-                        </Button>
-                      )}
-                      {onDelete && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onDelete(visit)}
-                          className="h-7 px-2 text-muted-foreground hover:text-destructive"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                          <span className="sr-only">Delete visit</span>
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                </div>
+              {/* Row 2: Rating Badge */}
+              <div className="mb-1">
+                <Badge
+                  className={`${appreciationLevel.badgeStyle} border text-xs`}
+                  variant="outline"
+                >
+                  <span className="mr-1">{appreciationLevel.icon}</span>
+                  {appreciationLevel.label}
+                </Badge>
               </div>
 
               {/* Experience Notes - Truncated with click to expand */}

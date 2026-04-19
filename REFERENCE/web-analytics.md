@@ -9,7 +9,7 @@
 ## Cloudflare Web Analytics
 
 **Implementation:** Production (restaurants.hultberg.org)
-**Token:** `f71c3c28b82c4c6991ec3d41b7f1496f`
+**Token:** `0cccf50cbccc4919ab5984eb8602ca65`
 
 ### Features
 
@@ -27,7 +27,7 @@
 ```html
 <!-- Cloudflare Web Analytics -->
 <script defer src='https://static.cloudflareinsights.com/beacon.min.js'
-        data-cf-beacon='{"token": "f71c3c28b82c4c6991ec3d41b7f1496f"}'></script>
+        data-cf-beacon='{"token": "0cccf50cbccc4919ab5984eb8602ca65"}'></script>
 <!-- End Cloudflare Web Analytics -->
 ```
 
@@ -198,7 +198,7 @@ curl -I https://static.cloudflareinsights.com/beacon.min.js
 
 # Check token in HTML
 curl https://restaurants.hultberg.org | grep "data-cf-beacon"
-# Should show: {"token": "f71c3c28b82c4c6991ec3d41b7f1496f"}
+# Should show: {"token": "0cccf50cbccc4919ab5984eb8602ca65"}
 ```
 
 ### Script not loading in development

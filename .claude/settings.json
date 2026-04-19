@@ -12,7 +12,8 @@
       "Bash(npm run typecheck)",
       "Bash(npm run lint)",
       "Bash(npm run build)",
-      "Bash(npm run dev)"
+      "Bash(npm run dev)",
+      "Bash(npm run test:coverage)"
     ]
   }
 }

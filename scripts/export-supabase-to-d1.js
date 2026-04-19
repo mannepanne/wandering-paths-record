@@ -1,5 +1,7 @@
 // ABOUT: One-off export script — dumps all Supabase data to JSON backup and
-// ABOUT: D1-compatible SQL INSERT statements, ready for the D1 migration.
+// ABOUT: D1-compatible SQL INSERT statements. Used for the one-time Supabase
+// ABOUT: → D1 migration in early 2026. HISTORICAL — not part of the current
+// ABOUT: app (no Supabase connection). Kept as a record of the migration tool.
 //
 // Usage:
 //   SUPABASE_SERVICE_ROLE_KEY=<key> node scripts/export-supabase-to-d1.js

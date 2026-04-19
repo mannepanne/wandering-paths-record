@@ -397,7 +397,7 @@ npm run test:coverage
 
 ---
 
-## CI/CD Integration (Future)
+## CI/CD Integration
 
 ### Pre-Commit Hooks
 
@@ -511,5 +511,4 @@ Tests are implemented and running in CI — 159 tests across services, component
 
 ---
 
-**Status:** Specification complete, ready for implementation
-**Next Step:** Set up Vitest and write first unit tests for utilities
+**Status:** Test infrastructure in place; 159 tests passing in CI. This document describes the current testing approach and remains the reference for adding new tests.

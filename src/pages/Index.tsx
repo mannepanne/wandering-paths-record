@@ -68,7 +68,7 @@ const Index = () => {
 
   const queryClient = useQueryClient();
 
-  // Fetch places from Supabase (regular filtering without text search)
+  // Fetch places from the Worker API (regular filtering without text search)
   const {
     data: allPlaces = [],
     isLoading,

@@ -108,7 +108,7 @@ ORDER BY visit_date DESC LIMIT 1;  -- N queries
 
 **With 100 restaurants = 101 queries = slow page loads**
 
-**Solution:** Worker function maintains cached fields after every visit mutation (replaces the old PostgreSQL trigger — SQLite/D1 does not support triggers):
+**Solution:** Worker function maintains cached fields after every visit mutation (SQLite/D1 has no triggers, so this sync runs in application code):
 
 ```javascript
 // src/worker.js — syncRestaurantVisitData()

@@ -19,7 +19,7 @@ Items here are accepted risks or pragmatic choices made during development, not 
 - **Introduced:** Category system migration (January 2025)
 
 ### TD-002: Missing database constraints for category facets
-- **Location:** Supabase `restaurants` table
+- **Location:** D1 `restaurants` table
 - **Issue:** No check constraints for `cuisine_primary`, `style`, `venue` to enforce valid values (TypeScript types have enums, but database doesn't enforce)
 - **Why accepted:** Focus on feature delivery; TypeScript provides type safety at application layer
 - **Risk:** Medium - could allow invalid data if bypassing TypeScript layer

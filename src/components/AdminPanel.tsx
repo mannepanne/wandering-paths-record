@@ -17,6 +17,7 @@ import { CategoryCombobox } from "@/components/CategoryCombobox";
 import { useRestaurantExtraction } from "@/hooks/useRestaurantExtraction";
 import { ExtractedRestaurantData, ExtractedLocation, ExtractionCache } from "@/services/claudeExtractor";
 import { restaurantService } from "@/services/restaurants";
+import { findDuplicateCandidates } from "@/utils/duplicateDetection";
 import { geocodingUtility, GeocodingProgress } from "@/services/geocodingUtility";
 import { ReviewEnrichmentService, ReviewEnrichmentProgress, EnrichmentResult } from "@/services/reviewEnrichmentService";
 import { Restaurant, CUISINE_OPTIONS, STYLE_OPTIONS, VENUE_OPTIONS } from "@/types/place";
@@ -67,6 +68,23 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
   // Individual restaurant operations state
   const [individualGeocodingState, setIndividualGeocodingState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [individualReviewState, setIndividualReviewState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+
+  // Duplicate-detection state (only meaningful when adding a new restaurant)
+  const [duplicateCandidates, setDuplicateCandidates] = useState<Restaurant[]>([]);
+  const [duplicateOverride, setDuplicateOverride] = useState(false);
+
+  // Cached full restaurant list for duplicate detection.
+  // Fail-open: if the query hasn't resolved when extraction finishes,
+  // allRestaurants is [] and no matches are flagged. Extraction typically
+  // takes several seconds, so the query is resolved by the time the check
+  // runs in practice; blocking on isFetched would trade a rare silent miss
+  // for a visible UI hang, which is worse.
+  const { data: allRestaurants = [] } = useQuery({
+    queryKey: ['places', 'all-for-dedup'],
+    queryFn: () => restaurantService.getAllRestaurantsSimple(),
+    staleTime: 60_000,
+    enabled: !editingRestaurant,
+  });
 
   // Update cache stats when extraction completes
   useEffect(() => {
@@ -230,6 +248,8 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
       setNewPlaceUrl("");
       extraction.reset();
       setSaveGeocodingProgress(null);
+      setDuplicateCandidates([]);
+      setDuplicateOverride(false);
       // Refresh geocoding stats to reflect the new coordinates
       handleRefreshGeocodingStats();
       // Navigate to the edit page for the newly created restaurant using existing URL pattern
@@ -381,8 +401,7 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
     
     const extractedData = await extraction.extractFromUrl(newPlaceUrl.trim());
     if (extractedData) {
-      console.log('Raw extracted data:', extractedData);
-      
+
       // Ensure locations array exists and has proper structure
       const processedData = {
         ...extractedData,
@@ -407,8 +426,30 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
             }]
       };
       
-      console.log('Processed data for form:', processedData);
       setFormData(processedData);
+
+      if (!editingRestaurant) {
+        // Duplicate check runs once on extraction, not on subsequent form
+        // edits: manually renaming the restaurant after extraction will not
+        // re-flag a newly-matching existing entry. Acceptable — the banner
+        // is a soft guard, not a hard constraint.
+        const matches = findDuplicateCandidates(
+          {
+            name: processedData.name,
+            website: processedData.website || newPlaceUrl.trim(),
+            sourceUrl: processedData.source_url,
+            addressSummary: processedData.addressSummary,
+            locations: processedData.locations?.map(l => ({
+              city: l.city,
+              full_address: l.fullAddress,
+              location_name: l.locationName,
+            })),
+          },
+          allRestaurants,
+        );
+        setDuplicateCandidates(matches);
+        setDuplicateOverride(false);
+      }
     }
   };
 
@@ -431,6 +472,8 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
     setFormData(null);
     setNewPlaceUrl("");
     extraction.reset();
+    setDuplicateCandidates([]);
+    setDuplicateOverride(false);
   };
 
   const handleDeleteRestaurant = () => {
@@ -986,6 +1029,52 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 pt-6">
+            {!editingRestaurant && duplicateCandidates.length > 0 && (
+              <Alert className="border-burnt-orange bg-burnt-orange/10">
+                <AlertTriangle className="w-4 h-4" />
+                <AlertDescription>
+                  <div className="font-medium text-foreground mb-2">
+                    {duplicateCandidates.length === 1
+                      ? 'This looks like an existing restaurant.'
+                      : `This matches ${duplicateCandidates.length} existing restaurants.`}
+                  </div>
+                  <ul className="space-y-1 mb-3">
+                    {duplicateCandidates.map(r => (
+                      <li key={r.id} className="flex items-center gap-2 text-sm">
+                        <span className="font-medium">{r.name}</span>
+                        {r.address && <span className="text-muted-foreground">— {r.address}</span>}
+                        <Button
+                          type="button"
+                          variant="link"
+                          size="sm"
+                          className="h-auto p-0 ml-auto"
+                          onClick={() => {
+                            handleClearForm();
+                            navigate(`/?edit=${r.id}`);
+                          }}
+                        >
+                          Edit existing
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                  {!duplicateOverride ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setDuplicateOverride(true)}
+                    >
+                      Add as new location anyway
+                    </Button>
+                  ) : (
+                    <div className="text-sm text-muted-foreground italic">
+                      Proceeding as a new entry. Submit when ready.
+                    </div>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
             <form onSubmit={handleFormSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Restaurant Name - full width */}
@@ -1273,7 +1362,7 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
                 <Button
                   type="submit"
                   variant="brutalist"
-                  disabled={(createRestaurantMutation.isPending || updateRestaurantMutation.isPending) || !formData.name}
+                  disabled={(createRestaurantMutation.isPending || updateRestaurantMutation.isPending) || !formData.name || (!editingRestaurant && duplicateCandidates.length > 0 && !duplicateOverride)}
                   className="gap-2"
                 >
                   {(createRestaurantMutation.isPending || updateRestaurantMutation.isPending) ? (

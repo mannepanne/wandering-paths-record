@@ -1328,6 +1328,10 @@ export default {
         />
         <meta property="og:type" content="website" />
         <meta property="og:image" content="" />
+
+        <!-- Cloudflare Web Analytics -->
+        <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "0cccf50cbccc4919ab5984eb8602ca65"}'></script>
+        <!-- End Cloudflare Web Analytics -->
       <!-- ASSET_PLACEHOLDER_SCRIPT -->
       <!-- ASSET_PLACEHOLDER_CSS -->
     </head>

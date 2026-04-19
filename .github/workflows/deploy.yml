@@ -39,7 +39,6 @@ jobs:
           VITE_AUTHORIZED_ADMIN_EMAIL: magnus.hultberg@gmail.com
           VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
           VITE_MAPBOX_ACCESS_TOKEN: ${{ secrets.MAPBOX_ACCESS_TOKEN }}
-        # This automatically runs our asset reference updater script
 
       - name: Deploy to CloudFlare Workers
         uses: cloudflare/wrangler-action@v3

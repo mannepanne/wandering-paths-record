@@ -376,20 +376,20 @@ cat .env | grep MAPBOX
 
 **See:** `SPECIFICATIONS/GITHUB-ACTIONS-SETUP.md` for complete setup
 
-### Asset reference sync failing
+### MIME type errors on CSS / JS after deploy
 
-**Symptom:** Production site has MIME type errors for CSS/JS
+**Symptom:** Production site fails to load styles or JS; browser shows MIME type mismatch errors.
 
-**Cause:** Worker asset references not synced after build
+**Cause:** Usually a stale browser cache — the client is requesting hashed asset filenames from an older build that no longer exist, and the SPA fallback returns `index.html` (HTML) in place of the expected JS/CSS.
 
 **Solution:**
-- Build script runs `scripts/update-worker-assets.js` automatically
-- If manual sync needed:
+- Hard refresh (Cmd-Shift-R / Ctrl-Shift-R) to pick up the fresh `index.html` with current asset hashes
+- If it persists across hard refreshes, rebuild and redeploy:
 ```bash
 npm run build
-# Check dist/client for generated assets
-# Verify src/worker.js has correct references
+npx wrangler deploy
 ```
+- Verify `dist/client/assets/` contains the fingerprinted files that the built `dist/client/index.html` references
 
 ---
 

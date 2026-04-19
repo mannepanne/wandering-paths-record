@@ -942,13 +942,6 @@ export default {
     const url = new URL(request.url);
 
     // Log EVERY request to see if worker is being called at all
-    console.log('WORKER ENTRY:', request.method, url.pathname, 'v2025-09-22-09:40-FORCE-BYPASS');
-
-    // Force cache bypass for restaurant routes
-    if (url.pathname.startsWith('/restaurant/')) {
-      console.log('Restaurant route detected - FORCING CACHE BYPASS');
-    }
-
     // Handle CORS preflight requests
     if (request.method === 'OPTIONS') {
       return new Response(null, {
@@ -1285,74 +1278,11 @@ export default {
       return jsonResponse({ success: true });
     }
 
-    // Check if we're in development mode (localhost)
-    const isDevelopment = url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname.endsWith('.local');
-
-    console.log('Non-API request:', url.pathname, isDevelopment ? 'DEV-MODE' : 'PROD-MODE', 'v2025-09-26-09:30-ENV-AWARE');
-
-    if (isDevelopment) {
-      // Development mode: Let Vite handle everything
-      console.log('🔧 Development mode - passing through to Vite for:', url.pathname);
-      return fetch(request);
-    }
-
-    // Production mode: Check if this is an asset request that should be handled by CloudFlare
-    if (url.pathname.startsWith('/assets/')) {
-      console.log('📁 Asset request in production - should be handled by CloudFlare:', url.pathname);
-      // This shouldn't happen in production as assets are served directly by CloudFlare
-      // But if it does, return a 404 to indicate the asset wasn't found
-      return new Response('Asset not found', { status: 404 });
-    }
-
-    // Production SPA routes: serve the built index.html content
-    // NOTE: Asset references are automatically updated by build script
-    const indexHtmlContent = `<!doctype html>
-<html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Wandering Paths - Magnus' Restaurant Hitlist</title>
-        <meta
-            name="description"
-            content="It started with a Lovable prompt...and ended with a restaurant hitlist, a curated list of must visit restaurants."
-        />
-        <meta name="author" content="Claude and Magnus" />
-
-        <meta
-            property="og:title"
-            content="Wandering Paths - Magnus' Restaurant Hitlist"
-        />
-        <meta
-            property="og:description"
-            content="It started with a Lovable prompt...and ended with a restaurant hitlist, a curated list of must visit restaurants."
-        />
-        <meta property="og:type" content="website" />
-        <meta property="og:image" content="" />
-
-        <!-- Cloudflare Web Analytics -->
-        <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "0cccf50cbccc4919ab5984eb8602ca65"}'></script>
-        <!-- End Cloudflare Web Analytics -->
-      <!-- ASSET_PLACEHOLDER_SCRIPT -->
-      <!-- ASSET_PLACEHOLDER_CSS -->
-    </head>
-
-    <body>
-        <div id="root"></div>
-    </body>
-</html>`;
-
-    console.log('✅ Serving embedded index.html for SPA route:', url.pathname);
-
-    return new Response(indexHtmlContent, {
-      status: 200,
-      headers: {
-        'Content-Type': 'text/html; charset=utf-8',
-        'Cache-Control': 'no-cache, no-store, must-revalidate, private',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-        'X-Worker-Version': 'v2025-09-26-09:30-ENV-AWARE',
-        'X-SPA-Route': url.pathname
-      }
-    });
+    // No route matched. Static assets and SPA fallback (index.html for
+    // unmatched non-API paths) are handled by Cloudflare's asset layer via
+    // `not_found_handling = "single-page-application"` in wrangler.toml.
+    // Requests reach this point only if `run_worker_first` matched but no
+    // route handler above returned — i.e. an unknown /api/* path.
+    return jsonResponse({ error: 'Endpoint not found', path: url.pathname }, 404);
   }
 };

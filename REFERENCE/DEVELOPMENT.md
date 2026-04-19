@@ -24,7 +24,7 @@ Day-to-day development workflow for the Wandering Paths restaurant curation app.
 ```bash
 npm run dev           # Frontend dev server on port 8080
 npm run api           # Local API server on port 3001 (needed for AI extraction in dev)
-npm run build         # Production build (auto-syncs Worker asset references)
+npm run build         # Production build (runs `vite build`)
 npm run lint          # ESLint
 npx tsc --noEmit      # TypeScript check
 npx wrangler dev      # Run Worker locally with local D1 (alternative to npm run api)
@@ -141,11 +141,11 @@ GitHub Actions deploys automatically on push to `main`. Required GitHub secrets:
 ### Manual
 
 ```bash
-npm run build         # Builds frontend + auto-syncs Worker asset references
+npm run build         # Builds frontend and Worker via @cloudflare/vite-plugin
 npx wrangler deploy
 ```
 
-**Asset reference sync:** `npm run build` runs `scripts/update-worker-assets.js` which updates the Worker's embedded HTML with correct asset filenames. This prevents MIME type errors. Always use `npm run build`, not `vite build` directly.
+**Static assets + SPA routing:** the `[assets]` block in `wrangler.toml` serves `dist/client/` directly and uses `not_found_handling = "single-page-application"` so unmatched non-API paths return `index.html`. `run_worker_first = ["/api/*", "/auth/login"]` keeps those two paths on the Worker. There's no hand-rolled SPA fallback or asset-reference sync — `index.html` is the single source of truth.
 
 ### Production URLs
 

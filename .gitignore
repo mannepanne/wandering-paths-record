@@ -32,3 +32,10 @@ coverage/
 
 # Database backups (contain real data, never commit)
 db_backup/
+
+# Wrangler local state (miniflare D1 emulator, KV cache, etc.)
+.wrangler/state/
+.wrangler/tmp/
+
+# Claude Code runtime state (scheduled task locks, etc.)
+.claude/scheduled_tasks.lock

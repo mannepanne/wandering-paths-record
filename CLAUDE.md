@@ -21,7 +21,7 @@ When asked to remember anything, always add project memory in this CLAUDE.md (in
 ```bash
 npm run dev           # Start frontend dev server (port 8080)
 npm run api           # Start local API server (port 3001) - needed for AI extraction
-npm run build         # Build for production (auto-syncs asset references)
+npm run build         # Build for production
 npm run lint          # Run linter
 npx wrangler deploy   # Deploy to CloudFlare Workers
 ```
@@ -112,8 +112,8 @@ interface RestaurantAddress {
 
 **Current Model**: `claude-sonnet-4-20250514` (Sonnet 4.5)
 
-### Asset Reference Sync
-The build process auto-syncs Worker asset references via `scripts/update-worker-assets.js`. This prevents MIME type errors on deployment.
+### Static assets and SPA routing
+Cloudflare Workers Static Assets handles everything end-to-end: `dist/client/` is served directly, and `not_found_handling = "single-page-application"` in `wrangler.toml` returns `index.html` for unmatched non-API paths. `run_worker_first` keeps `/api/*` and `/auth/login` on the Worker. No hand-rolled HTML fallback in the Worker, no asset-reference sync script.
 
 ### Admin authentication
 - Cloudflare Access + Google OAuth; login via `/auth/login`, logout via `/cdn-cgi/access/logout`

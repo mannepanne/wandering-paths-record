@@ -43,6 +43,14 @@ Items here are accepted risks or pragmatic choices made during development, not 
 - **Future fix:** Add specialty filter UI and populate data via AI extraction
 - **Introduced:** Category system planning
 
+### TD-008: Stale-client MIME error on rotated asset hashes
+- **Location:** Cloudflare Workers Static Assets SPA fallback, configured in `wrangler.toml` via `not_found_handling = "single-page-application"`
+- **Issue:** When a deploy rotates asset hashes (e.g. `/assets/index-ABC.js` → `/assets/index-XYZ.js`), a client with the old `index.html` still loaded will request the deleted `/assets/old-hash.js`. The asset layer can't find it and the SPA fallback returns `index.html` (HTML, 200) in its place. The browser's MIME type protection refuses to execute HTML as JavaScript, so the script fails to load and the user sees a broken page until they hard-refresh.
+- **Why accepted:** Blast radius is tiny — only users mid-session during a deploy are affected, and `REFERENCE/troubleshooting.md` now documents the fix (hard refresh). The "proper" fix — wrapping `/assets/*` via `run_worker_first` with an `env.ASSETS.fetch()` fallback — would reintroduce custom Worker routing for static assets, reversing part of the simplification PR #26 just delivered. That's the same pattern that caused the #20 → #22 → #24 → #25 drift chain in the first place.
+- **Risk:** Low — affects only users actively loaded pre-deploy; browser MIME protection prevents corrupted execution; one hard-refresh fixes it; no data loss, no security impact.
+- **Future fix:** If Logpush shows a noticeable rate of 404s on hashed asset paths (or users report it), add a narrow `/assets/*` entry to `run_worker_first` with an `env.ASSETS.fetch()` delegation that returns a clean 404 instead of the HTML fallback. Keep the wrapper minimal to avoid re-introducing drift.
+- **Introduced:** PR #26
+
 ### TD-007: Duplicate detection has known blind spots
 - **Location:** `src/utils/duplicateDetection.ts`, `src/components/AdminPanel.tsx` (extraction handler)
 - **Issue:** Three minor limitations in the add-flow dedup guard:

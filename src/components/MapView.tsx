@@ -36,7 +36,7 @@ export const MapView = ({ isMapView, onViewToggle }: MapViewProps) => {
                     Map Integration Ready
                   </h3>
                   <p className="text-sm text-muted-foreground max-w-md">
-                    Connect to Supabase to enable interactive map features with your saved places.
+                    Interactive map features will appear here with your saved places.
                   </p>
                 </div>
                 <Button variant="brutalist" className="gap-2">

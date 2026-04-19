@@ -25,7 +25,7 @@
 - ✅ Example tests created as patterns
 
 ### Example Tests
-- **Service Test:** `tests/services/restaurants.test.ts` - Demonstrates mocking Supabase and testing async services
+- **Service Test:** `tests/services/restaurants.test.ts` - Demonstrates stubbing `fetch` and testing async service calls to the Worker API
 - **Component Test:** `tests/components/PlaceCard.test.tsx` - Shows React Testing Library patterns
 
 ### Running Tests
@@ -187,7 +187,7 @@ describe('inferCityFromLocation', () => {
 **Purpose:** Test how components work together
 
 **Priority Areas:**
-- Supabase CRUD operations with mock client
+- Worker API calls (restaurant CRUD) with stubbed `fetch`
 - Component interactions (PlaceCard, FilterBar)
 - Service layer integration (restaurant search, geocoding)
 - AI extraction workflow (mocked Claude API)
@@ -195,24 +195,29 @@ describe('inferCityFromLocation', () => {
 **Example Structure:**
 ```typescript
 // tests/services/restaurants.test.ts
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fetchRestaurants, addRestaurant } from '@/services/restaurants';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { restaurantService } from '@/services/restaurants';
 
-// Mock Supabase client
-vi.mock('@supabase/supabase-js', () => ({
-  createClient: vi.fn(() => ({
-    from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        data: [{ id: '1', name: 'Test Restaurant' }],
-        error: null
-      }))
-    }))
-  }))
-}));
+function mockFetchOk(data: unknown) {
+  return vi.fn().mockResolvedValue({
+    ok: true,
+    json: () => Promise.resolve(data),
+    text: () => Promise.resolve(JSON.stringify(data)),
+  });
+}
+
+beforeEach(() => {
+  vi.stubGlobal('fetch', mockFetchOk([{ id: '1', name: 'Test Restaurant' }]));
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.clearAllMocks();
+});
 
 describe('Restaurant Service', () => {
-  it('fetches restaurants from Supabase', async () => {
-    const restaurants = await fetchRestaurants();
+  it('fetches restaurants from the Worker API', async () => {
+    const restaurants = await restaurantService.getAll();
     expect(restaurants).toHaveLength(1);
     expect(restaurants[0].name).toBe('Test Restaurant');
   });
@@ -303,7 +308,7 @@ describe('PlaceCard', () => {
 **External Services:**
 - Anthropic Claude API (AI extraction)
 - Google Maps API (geocoding, places)
-- Supabase client (database operations)
+- Worker API calls (database operations — stub `fetch`)
 - Mapbox (map rendering)
 
 **Why Mock:**
@@ -324,28 +329,19 @@ describe('PlaceCard', () => {
 
 ### Mock Implementations
 
-Create reusable mocks in `tests/mocks/`:
+Common fetch-stub helpers live alongside the tests that use them (see `tests/services/restaurants.test.ts` for `mockFetchOk` / `mockFetchError`). Promote to a shared `tests/helpers/` module if the same helper is copied into a third test file.
 
 ```typescript
-// tests/mocks/supabase.ts
-export function createMockSupabase() {
-  const mockData = new Map();
-
-  return {
-    from: (table: string) => ({
-      select: vi.fn(() => ({
-        data: Array.from(mockData.values()),
-        error: null
-      })),
-      insert: vi.fn((data: any) => {
-        mockData.set(data.id, data);
-        return { data, error: null };
-      })
-    })
-  };
+// Example: shared fetch helper
+export function mockFetchOk(data: unknown) {
+  return vi.fn().mockResolvedValue({
+    ok: true,
+    json: () => Promise.resolve(data),
+    text: () => Promise.resolve(JSON.stringify(data)),
+  });
 }
 
-// tests/mocks/claude.ts
+// tests/mocks/claude.ts (if promoted to shared helper)
 export function createMockClaudeResponse() {
   return {
     name: 'Mock Restaurant',
@@ -401,7 +397,7 @@ npm run test:coverage
 
 ---
 
-## CI/CD Integration (Future)
+## CI/CD Integration
 
 ### Pre-Commit Hooks
 
@@ -470,18 +466,18 @@ describe('Restaurant Extraction', () => {
 
 ## Current Implementation Status
 
-**⚠️ Tests Not Yet Implemented**
+Tests are implemented and running in CI — 159 tests across services, components, pages, and utilities at the time of writing. Run `npm test` locally or `npm run test:coverage` for the coverage report.
 
-This document serves as a specification for future testing implementation. When implementing tests:
+**Where to add new tests:**
 
 1. Start with critical paths (restaurant CRUD, AI extraction)
 2. Add service layer tests before component tests
-3. Mock external services from the start
+3. Mock external services from the start (stub `fetch` for Worker API calls)
 4. Track coverage as you go
 
-**Priority Test Implementation Order:**
+**Priority areas for new test authoring:**
 1. Core utilities (JSON parsing, city inference)
-2. Supabase service layer (CRUD operations)
+2. Worker API service layer (CRUD operations via `fetch`)
 3. AI extraction logic (Claude API integration)
 4. Critical components (PlaceCard, FilterBar)
 5. Full integration workflows
@@ -515,5 +511,4 @@ This document serves as a specification for future testing implementation. When 
 
 ---
 
-**Status:** Specification complete, ready for implementation
-**Next Step:** Set up Vitest and write first unit tests for utilities
+**Status:** Test infrastructure in place; 159 tests passing in CI. This document describes the current testing approach and remains the reference for adding new tests.

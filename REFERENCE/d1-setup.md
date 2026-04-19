@@ -186,7 +186,7 @@ npx wrangler d1 execute wandering-paths --local --command="SELECT count(*) FROM 
 
 ## Data migration history
 
-The app migrated from Supabase (PostgreSQL) to Cloudflare D1 (SQLite) in early 2026. The full migration plan and data export/import process are documented in `SPECIFICATIONS/d1-migration.md`. The archived Supabase schema is at `REFERENCE/ARCHIVE/supabase-setup.md`.
+The app migrated from Supabase (PostgreSQL) to Cloudflare D1 (SQLite) in early 2026. The full migration plan and data export/import process are documented in `SPECIFICATIONS/ARCHIVE/d1-migration.md`. The archived Supabase schema is at `REFERENCE/ARCHIVE/supabase-setup.md`.
 
 ---
 
@@ -194,4 +194,4 @@ The app migrated from Supabase (PostgreSQL) to Cloudflare D1 (SQLite) in early 2
 - `scripts/d1-schema.sql` — Authoritative SQLite schema
 - `src/worker.js` — All D1 query logic
 - `REFERENCE/auth-setup.md` — JWT verification for protected routes
-- `SPECIFICATIONS/d1-migration.md` — Migration history
+- `SPECIFICATIONS/ARCHIVE/d1-migration.md` — Migration history

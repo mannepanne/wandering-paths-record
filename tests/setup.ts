@@ -14,7 +14,5 @@ afterEach(() => {
 });
 
 // Mock environment variables for tests
-process.env.VITE_SUPABASE_URL = 'https://test.supabase.co';
-process.env.VITE_SUPABASE_ANON_KEY = 'test-anon-key';
-process.env.VITE_MAPBOX_TOKEN = 'test-mapbox-token';
+process.env.VITE_MAPBOX_ACCESS_TOKEN = 'test-mapbox-token';
 process.env.VITE_GOOGLE_MAPS_API_KEY = 'test-google-key';

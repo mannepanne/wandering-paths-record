@@ -64,6 +64,15 @@ Deployed to Cloudflare Workers with:
 - Full-stack API + static assets in unified deployment
 - GitHub Actions CI/CD automation
 
+### Database and Auth Migration: Supabase → Cloudflare D1 (Complete, early 2026)
+
+Migrated off Supabase entirely:
+- **Database**: PostgreSQL (Supabase) → Cloudflare D1 (SQLite), bound to the Worker server-side via `env.DB` — no client-side database SDK
+- **Authentication**: Magic link email (Supabase Auth) → Cloudflare Access + Google OAuth, with JWT verified by the Worker on every protected endpoint
+- **Motivation**: Free the Supabase free-tier slot for a different project; D1 is a natural fit given the app already runs on Cloudflare Workers
+
+Migration spec archived at `SPECIFICATIONS/ARCHIVE/d1-migration.md`. The legacy Supabase setup is preserved at `REFERENCE/ARCHIVE/supabase-setup.md` for historical reference.
+
 ## Current System Capabilities
 
 The production system includes:
@@ -110,4 +119,4 @@ All archived documents are in `SPECIFICATIONS/ARCHIVE/`. They remain useful for:
 
 ---
 
-*Last updated: January 2026*
+*Last updated: April 2026*

@@ -112,13 +112,11 @@ When starting your project, replace the content below this line with your actual
 
 ## Active implementation phases
 
-**Current work:** Database migration from Supabase to Cloudflare D1
+**Current work:** No active implementation phase. The Supabase → Cloudflare D1 migration completed in early 2026; its spec has moved to `ARCHIVE/d1-migration.md`. `restaurant_dashboard_chat.md` is in discovery phase (not yet promoted to an active phase).
 
 ### Active specifications
 
-1. **[d1-migration.md](./d1-migration.md)** — Ready to implement
-   Migration of database and auth from Supabase to Cloudflare D1 + Cloudflare Access + Google OAuth.
-   Auth decision made. Next step: Phase 1 (schema + data migration).
+_None._ Add a new phase file here when starting the next implementation work.
 
 ### Supporting documentation
 

@@ -917,8 +917,8 @@ async function isAuthenticated(request, env) {
   return verifyCFAccessJWT(token, env);
 }
 
-// Replaces the old PostgreSQL trigger: keeps personal_appreciation and visit_count
-// in sync with the most recent visit after any change to restaurant_visits
+// Keeps personal_appreciation and visit_count in sync with the most recent visit
+// after any change to restaurant_visits (D1/SQLite has no triggers).
 async function syncRestaurantVisitData(db, restaurantId) {
   const latest = await db.prepare(
     `SELECT rating FROM restaurant_visits

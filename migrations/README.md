@@ -1,6 +1,12 @@
-# Database Migrations
+# Database Migrations — HISTORICAL
 
-This directory contains SQL migration files for the Wandering Paths restaurant database.
+> **These migrations ran against the legacy Supabase (PostgreSQL) database and are kept as a historical record.**
+>
+> The app now runs on Cloudflare D1 (SQLite). The authoritative schema lives in `scripts/d1-schema.sql`, and the migration story is documented in `SPECIFICATIONS/ARCHIVE/d1-migration.md`.
+>
+> The instructions below (Supabase dashboard, `supabase` CLI, `auth.users`, etc.) are **not applicable to the current setup** — do not follow them. They are preserved for context on how these migrations were originally applied.
+
+This directory contains SQL migration files that were applied to the original Supabase database.
 
 ## Migration History
 

@@ -250,8 +250,8 @@ const About = () => {
                 <div>
                   <h4 className="font-medium mb-2">Backend</h4>
                   <ul className="space-y-1 text-muted-foreground">
-                    <li>CloudFlare Workers</li>
-                    <li>Supabase PostgreSQL</li>
+                    <li>Cloudflare Workers</li>
+                    <li>Cloudflare D1 (SQLite)</li>
                     <li>Claude API</li>
                     <li>Google Maps API</li>
                   </ul>

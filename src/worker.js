@@ -1283,6 +1283,6 @@ export default {
     // `not_found_handling = "single-page-application"` in wrangler.toml.
     // Requests reach this point only if `run_worker_first` matched but no
     // route handler above returned — i.e. an unknown /api/* path.
-    return jsonResponse({ error: 'Endpoint not found', path: url.pathname }, 404);
+    return jsonResponse({ error: 'Endpoint not found' }, 404);
   }
 };

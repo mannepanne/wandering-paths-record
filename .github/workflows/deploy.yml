@@ -49,5 +49,4 @@ jobs:
       - name: Deployment Success
         run: |
           echo "🚀 Deployment completed successfully!"
-          echo "📄 Asset references automatically synchronized"
           echo "🌐 Production URL: https://restaurants.hultberg.org"

@@ -43,6 +43,16 @@ Items here are accepted risks or pragmatic choices made during development, not 
 - **Future fix:** Add specialty filter UI and populate data via AI extraction
 - **Introduced:** Category system planning
 
+### TD-007: Duplicate detection has known blind spots
+- **Location:** `src/utils/duplicateDetection.ts`, `src/components/AdminPanel.tsx` (extraction handler)
+- **Issue:** Three minor limitations in the add-flow dedup guard:
+  1. **Cold-load race** — if the `['places', 'all-for-dedup']` query has not resolved when extraction completes, `allRestaurants` is `[]` and matches are silently missed. Fail-open was chosen over blocking (extraction normally takes seconds; hanging the UI would be worse).
+  2. **Edit-after-extraction** — duplicate check runs once on extraction. Manually renaming the restaurant in the preview form does not re-flag a newly-matching existing entry.
+  3. **Address-only city heuristics** — `RestaurantAddress.city` is the authoritative signal. When absent, we fall back to the penultimate comma-token of `full_address` and the first token of the address summary. UK-style postcode+city clumps (`"London SE15 4SE"`) and non-standard comma orderings can produce false negatives.
+- **Why accepted:** Override button (`Add as new location anyway`) provides the escape hatch; false negatives result in the status-quo behaviour (dupe created), which is recoverable.
+- **Risk:** Low - dedup is a soft guard, not a constraint; Google Place ID matching (when introduced) will be the authoritative dedupe signal.
+- **Future fix:** Switch to `google_place_id` equality as the primary match criterion once the Google Places integration is wired into the extraction path.
+- **Introduced:** PR #16
 
 ---
 

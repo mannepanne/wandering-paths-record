@@ -73,7 +73,12 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
   const [duplicateCandidates, setDuplicateCandidates] = useState<Restaurant[]>([]);
   const [duplicateOverride, setDuplicateOverride] = useState(false);
 
-  // Cached full restaurant list for duplicate detection
+  // Cached full restaurant list for duplicate detection.
+  // Fail-open: if the query hasn't resolved when extraction finishes,
+  // allRestaurants is [] and no matches are flagged. Extraction typically
+  // takes several seconds, so the query is resolved by the time the check
+  // runs in practice; blocking on isFetched would trade a rare silent miss
+  // for a visible UI hang, which is worse.
   const { data: allRestaurants = [] } = useQuery({
     queryKey: ['places', 'all-for-dedup'],
     queryFn: () => restaurantService.getAllRestaurantsSimple(),
@@ -396,8 +401,7 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
     
     const extractedData = await extraction.extractFromUrl(newPlaceUrl.trim());
     if (extractedData) {
-      console.log('Raw extracted data:', extractedData);
-      
+
       // Ensure locations array exists and has proper structure
       const processedData = {
         ...extractedData,
@@ -422,10 +426,13 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
             }]
       };
       
-      console.log('Processed data for form:', processedData);
       setFormData(processedData);
 
       if (!editingRestaurant) {
+        // Duplicate check runs once on extraction, not on subsequent form
+        // edits: manually renaming the restaurant after extraction will not
+        // re-flag a newly-matching existing entry. Acceptable — the banner
+        // is a soft guard, not a hard constraint.
         const matches = findDuplicateCandidates(
           {
             name: processedData.name,

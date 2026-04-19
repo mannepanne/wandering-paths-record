@@ -3,7 +3,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { normaliseUrl, findDuplicateCandidates } from '@/utils/duplicateDetection';
-import type { Restaurant } from '@/types/place';
+import type { Restaurant, RestaurantAddress } from '@/types/place';
 
 function makeRestaurant(overrides: Partial<Restaurant>): Restaurant {
   return {
@@ -12,6 +12,18 @@ function makeRestaurant(overrides: Partial<Restaurant>): Restaurant {
     address: '',
     status: 'to-visit',
     personal_appreciation: 'unknown',
+    created_at: '',
+    updated_at: '',
+    ...overrides,
+  };
+}
+
+function makeLocation(overrides: Partial<RestaurantAddress>): RestaurantAddress {
+  return {
+    id: 'loc',
+    restaurant_id: 'r',
+    location_name: '',
+    full_address: '',
     created_at: '',
     updated_at: '',
     ...overrides,
@@ -37,6 +49,10 @@ describe('normaliseUrl', () => {
     expect(normaliseUrl(null)).toBe('');
     expect(normaliseUrl('')).toBe('');
   });
+
+  it('returns empty string for whitespace-only input', () => {
+    expect(normaliseUrl('   ')).toBe('');
+  });
 });
 
 describe('findDuplicateCandidates', () => {
@@ -45,6 +61,13 @@ describe('findDuplicateCandidates', () => {
     name: 'Bara Cafe',
     address: 'Peckham, London',
     website: 'https://www.baracafe.com/',
+    locations: [makeLocation({
+      id: 'bara-loc',
+      restaurant_id: 'bara-1',
+      location_name: 'Peckham',
+      full_address: '44-46 Choumert Road, London SE15 4SE',
+      city: 'London',
+    })],
   });
 
   it('matches when website differs only in protocol/www/trailing slash', () => {
@@ -56,12 +79,11 @@ describe('findDuplicateCandidates', () => {
     expect(matches[0].id).toBe('bara-1');
   });
 
-  it('matches candidate source_url against existing website', () => {
+  it('does not match when candidate source_url path differs from existing website', () => {
     const matches = findDuplicateCandidates(
       { name: 'Whatever', sourceUrl: 'https://www.baracafe.com/menu' },
       [bara],
     );
-    // Path differs so URL match should NOT fire; name differs so no match
     expect(matches).toHaveLength(0);
   });
 
@@ -94,6 +116,19 @@ describe('findDuplicateCandidates', () => {
     expect(matches).toHaveLength(0);
   });
 
+  it('does not treat a shared country term as a city match', () => {
+    const edinburgh = makeRestaurant({
+      id: 'edi',
+      name: 'The Ivy',
+      address: 'Edinburgh, United Kingdom',
+    });
+    const matches = findDuplicateCandidates(
+      { name: 'The Ivy', addressSummary: 'London, United Kingdom' },
+      [edinburgh],
+    );
+    expect(matches).toHaveLength(0);
+  });
+
   it('treats name-only match as soft match when no city info exists', () => {
     const nameOnly = makeRestaurant({ id: 'n1', name: 'Foo', address: '' });
     const matches = findDuplicateCandidates({ name: 'foo' }, [nameOnly]);
@@ -119,21 +154,69 @@ describe('findDuplicateCandidates', () => {
     expect(matches).toHaveLength(1);
   });
 
-  it('uses existing locations city when address summary is minimal', () => {
-    const withLoc = makeRestaurant({
-      id: 'x',
+  it('falls back to penultimate token of existing full_address when city column is absent', () => {
+    const legacy = makeRestaurant({
+      id: 'legacy',
       name: 'Bara Cafe',
       address: '',
-      locations: [{
-        id: 'a', restaurant_id: 'x', location_name: 'Peckham',
-        full_address: '44 Choumert Rd, London', city: 'London',
-        created_at: '', updated_at: '',
-      }],
+      locations: [makeLocation({
+        id: 'l',
+        restaurant_id: 'legacy',
+        full_address: '1 Royal Mile, Edinburgh, United Kingdom',
+      })],
+    });
+    const matches = findDuplicateCandidates(
+      {
+        name: 'Bara Cafe',
+        locations: [{ city: 'Edinburgh', full_address: '', location_name: '' }],
+      },
+      [legacy],
+    );
+    expect(matches).toHaveLength(1);
+  });
+
+  it('falls back to penultimate token of candidate full_address when city is absent', () => {
+    const existing = makeRestaurant({
+      id: 'ex',
+      name: 'Bara Cafe',
+      address: '',
+      locations: [makeLocation({ id: 'l', restaurant_id: 'ex', city: 'Brighton' })],
+    });
+    const matches = findDuplicateCandidates(
+      {
+        name: 'Bara Cafe',
+        locations: [{
+          full_address: '12 Seafront, Brighton, United Kingdom',
+          location_name: '',
+          city: '',
+        }],
+      },
+      [existing],
+    );
+    expect(matches).toHaveLength(1);
+  });
+
+  it('falls back to first token of full_address when no comma separator exists', () => {
+    const legacy = makeRestaurant({
+      id: 'legacy',
+      name: 'Bara Cafe',
+      address: '',
+      locations: [makeLocation({ id: 'l', restaurant_id: 'legacy', full_address: 'London' })],
     });
     const matches = findDuplicateCandidates(
       { name: 'Bara Cafe', addressSummary: 'London' },
-      [withLoc],
+      [legacy],
     );
+    expect(matches).toHaveLength(1);
+  });
+
+  it('ignores address fields that contain no usable tokens after trimming', () => {
+    const noisy = makeRestaurant({ id: 'noisy', name: 'Bara Cafe', address: ',,,' });
+    const matches = findDuplicateCandidates(
+      { name: 'Bara Cafe', addressSummary: 'London' },
+      [noisy],
+    );
+    // noisy has a name match but no extractable city — soft match allowed
     expect(matches).toHaveLength(1);
   });
 

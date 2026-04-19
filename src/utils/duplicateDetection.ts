@@ -26,6 +26,19 @@ function normaliseText(value?: string | null): string {
   return (value || '').trim().toLowerCase();
 }
 
+// Extract the city-ish token from a comma-joined address string.
+// First comma-token for summaries ("London" from "London, United Kingdom"),
+// or the penultimate token for full addresses when a trailing country is
+// present ("Edinburgh" from "1 Royal Mile, Edinburgh, United Kingdom").
+// Using a single token rather than every comma-split part avoids false
+// positives where two restaurants share only a country term.
+function extractCityToken(address: string, preferPenultimate: boolean): string | undefined {
+  const parts = address.split(',').map(s => s.trim()).filter(Boolean);
+  if (parts.length === 0) return undefined;
+  if (preferPenultimate && parts.length >= 2) return parts[parts.length - 2];
+  return parts[0];
+}
+
 function restaurantUrls(r: Pick<Restaurant, 'website' | 'source_url'>): string[] {
   return [normaliseUrl(r.website), normaliseUrl(r.source_url)].filter(Boolean);
 }
@@ -42,15 +55,12 @@ function citiesOfRestaurant(r: Restaurant): Set<string> {
   };
   r.locations?.forEach(loc => {
     pushFrom(loc.city);
-    // Fall back to last token of full_address for rows with no city column
     if (!loc.city && loc.full_address) {
-      const parts = loc.full_address.split(',').map(s => s.trim()).filter(Boolean);
-      if (parts.length) pushFrom(parts[parts.length - 1]);
+      pushFrom(extractCityToken(loc.full_address, true));
     }
   });
-  // address summary is often "City, Country" or just "City"
   if (r.address) {
-    r.address.split(',').map(s => s.trim()).filter(Boolean).forEach(pushFrom);
+    pushFrom(extractCityToken(r.address, false));
   }
   return cities;
 }
@@ -64,12 +74,11 @@ function citiesOfCandidate(c: DuplicateCandidate): Set<string> {
   c.locations?.forEach(loc => {
     pushFrom(loc.city);
     if (!loc.city && loc.full_address) {
-      const parts = loc.full_address.split(',').map(s => s.trim()).filter(Boolean);
-      if (parts.length) pushFrom(parts[parts.length - 1]);
+      pushFrom(extractCityToken(loc.full_address, true));
     }
   });
   if (c.addressSummary) {
-    c.addressSummary.split(',').map(s => s.trim()).filter(Boolean).forEach(pushFrom);
+    pushFrom(extractCityToken(c.addressSummary, false));
   }
   return cities;
 }

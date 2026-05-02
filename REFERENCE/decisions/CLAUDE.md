@@ -131,6 +131,9 @@ grep -r "authentication" REFERENCE/decisions/
 
 **Format:** Listed chronologically (newest first)
 
+- [2026-04-26 — SCRATCH Write approval via PreToolUse hook](./2026-04-26-scratch-write-pretooluse-hook.md) — why the hook, not an allow-list entry, is needed; upstream Write matcher defect (5 sightings)
+- [2026-04-26 — Allowlist pinning principle](./2026-04-26-allowlist-pinning-principle.md) — pin to subcommand when binary can eval code; allow at binary level when it can't
+- [2026-04-25 — PR review system threat model](./2026-04-25-pr-review-threat-model.md) — single trusted contributor scope; tightening checklist for open-source/enterprise derivatives
 - [2026-04-22 — Tiered PR review via a triage dispatcher](./2026-04-22-tiered-pr-review-dispatcher.md) — `/review-pr` dispatcher design: why triage-first, fail-closed safety posture, and when the team tier fires
 - [2026-04-22 — Opt-in config flag for the review system, with local override](./2026-04-22-prreviewmode-opt-in-config.md) — tri-state `prReviewMode` flag, canonical gate in one file, gitignored local override
 

@@ -42,3 +42,8 @@ db_backup/
 
 # Per-clone review system override (enables dogfooding without changing committed default)
 .claude/project-config.local.json
+
+# SCRATCH/ is a temporary work area for review artefacts — contents are ephemeral
+# and must not be committed. The directory itself is tracked via SCRATCH/.gitkeep.
+SCRATCH/*
+!SCRATCH/.gitkeep

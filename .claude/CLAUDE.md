@@ -162,15 +162,7 @@ We prefer free/low-cost, state-of-the-art solutions. Always use latest stable ve
 
 ### Testing strategy
 
-Tests serve dual purposes: **Validation** (verify code works) and **Directional Context** (guide AI development).
-
-**Core principles:**
-- Write tests first (TDD workflow)
-- Target high coverage (95%+ lines/functions/statements, 90%+ branches)
-- Tests are living specifications
-- Pre-commit: run tests and type-check
-
-**Complete testing guide:** [testing-strategy.md](../REFERENCE/testing-strategy.md)
+TDD: write tests first, 95%+ coverage (90%+ branches), type checking passes. Full guide: [testing-strategy.md](../REFERENCE/testing-strategy.md)
 
 ## Version control and repository management
 
@@ -230,20 +222,15 @@ The goal is tracking our work and enabling collaboration, not perfect git aesthe
 ## Claude Code specific guidelines
 
 ### Tool usage
-- Use concurrent tool calls when possible (batch independent operations)
 - Prefer Task tool for complex searches to reduce context usage
 - Use TodoWrite/TodoRead for task tracking and project visibility
+- Always prefer editing existing files over creating new ones
 
 ### Communication
 - Be concise in responses (aim for <4 lines unless detail requested)
 - Use `file_path:line_number` format when referencing code locations
 - Avoid unnecessary preamble or postamble
 - When you are using /compact, please focus on our conversation, your most recent (and most significant) learnings, and what you need to do next. If we've tackled multiple tasks, aggressively summarise the older ones, leaving more context for the more recent ones.
-
-### File operations
-- Always prefer editing existing files over creating new ones
-- Use Read tool before Write/Edit operations
-- Check file structure and patterns before making changes
 
 ### Learning and memory management
 - Use and update the project documentation frequently to capture technical insights, failed approaches, and user preferences.
@@ -282,19 +269,6 @@ The goal is sustainable progress, not perfect process.
 
 ## Documentation standards
 
-We value documentation - it enables picking up projects later and communicating knowledge to others.
+Clear, complete, actionable. Preferred format: Markdown. Always maintain README.md in project root.
 
-**Key principles:**
-- Documentation should explain how everything works and how to use/extend it
-- Preferred format: Markdown (.md)
-- Always maintain README.md in project root
-- Use lifecycle-based structure: SPECIFICATIONS/ (active), ARCHIVE/ (completed), REFERENCE/ (implementation)
-- Keep documentation current alongside code changes
-- Focus on clarity, completeness, and actionability
-
-**Writing style:**
-- **British English** - Use British spelling throughout (optimise not optimize, minimise not minimize, colour not color, etc.)
-- **Headline capitalisation** - Only capitalise the first word in headings and proper nouns, not every word (e.g., "Getting started with the project" not "Getting Started With The Project")
-- **Consistency** - Match the style of existing documentation when editing
-
-**Detailed templates and process:** [documentation-standards.md](./COLLABORATION/documentation-standards.md)
+**Writing style and templates:** [documentation-standards.md](./COLLABORATION/documentation-standards.md)

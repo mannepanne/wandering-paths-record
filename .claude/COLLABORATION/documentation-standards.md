@@ -29,7 +29,13 @@ When creating documentation, focus on these areas:
 6. Follow project documentation standards
 7. Ensure clarity, completeness, and actionability
 
-## Documentation Template
+## Writing style
+
+- **British English** — optimise not optimize, minimise not minimize, colour not color
+- **Headline capitalisation** — Only the first word and proper nouns: "Getting started with the project" not "Getting Started With The Project"
+- **Consistency** — Match the style of existing documentation when editing
+
+## Documentation template
 
 Essential headings for technical documentation:
 

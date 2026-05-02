@@ -39,3 +39,6 @@ db_backup/
 
 # Claude Code runtime state (scheduled task locks, etc.)
 .claude/scheduled_tasks.lock
+
+# Per-clone review system override (enables dogfooding without changing committed default)
+.claude/project-config.local.json

@@ -224,6 +224,7 @@ The goal is tracking our work and enabling collaboration, not perfect git aesthe
 ### Tool usage
 - Prefer Task tool for complex searches to reduce context usage
 - Use TodoWrite/TodoRead for task tracking and project visibility
+- Always prefer editing existing files over creating new ones
 
 ### Communication
 - Be concise in responses (aim for <4 lines unless detail requested)

@@ -17,7 +17,7 @@ This skill reviews a PR at the right level of depth — not too shallow, not tok
 |---|---|---|---|
 | **light** | `light-reviewer` (narrow sanity check) + `technical-writer` (temporal-language + REFERENCE/ currency) | Docs, tests, styling, comment-only changes | ~1–2 min |
 | **standard** | `code-reviewer` (full default prompt) + `technical-writer` | Typical feature work, core logic, utilities | ~2–4 min |
-| **team** | Multi-perspective team (security, product, architect, docs) with debate | Data layer (Supabase migrations, RLS), auth, CI, dependencies, secrets | ~2–7 min |
+| **team** | Multi-perspective team (security, product, architect, docs) with debate | Data layer (D1 migrations, wrangler.toml), auth, CI, dependencies, secrets | ~2–7 min |
 
 Team is auto-selected when the change touches high-blast-radius paths. You can always force team directly with `/review-pr-team N`.
 

@@ -26,7 +26,7 @@ Run the test suite:
 .claude/hooks/tests/approve-scratch-write/run-tests.sh
 ```
 
-Expected: `Tests: 7/7 passing`.
+Expected: `Tests: 7/7 passing` (6 fixture-based cases plus the executability guard).
 
 To manually confirm in a session: open a fresh Claude Code session and write any file to `SCRATCH/`. The write should complete without a permission prompt.
 
@@ -49,7 +49,7 @@ If the upstream Claude Code defect is fixed (i.e. `Write(/SCRATCH/*)` allow-list
 
 1. Verify the fix by adding only `"Write(/SCRATCH/*)"` to the `allow` array in `settings.json`, removing the hook registration from `hooks.PreToolUse`, and confirming writes to `SCRATCH/` are silenced without prompts in a fresh session.
 2. If confirmed: remove the hook registration from `settings.json`, delete `.claude/hooks/approve-scratch-write.sh`, and delete `.claude/hooks/tests/approve-scratch-write/`.
-3. Restore the `Read(/SCRATCH/*)` entries (they work correctly — only `Write` was broken).
+3. Do not remove the `Read(/SCRATCH/*)` entries — they work correctly and were never part of the hook workaround; only `Write` was broken.
 4. Update the ADR at `REFERENCE/decisions/2026-04-26-scratch-write-pretooluse-hook.md` to mark Status as Superseded and document the Claude Code version where the fix landed.
 
 ---

@@ -260,6 +260,8 @@ gh pr comment $ARGUMENTS --body-file SCRATCH/review-pr-$ARGUMENTS-team.md
 
    Then run the follow-through protocol in [`.claude/skills/post-review-follow-through.md`](../post-review-follow-through.md) — re-bucket findings by action tier, surface decisions, and create GitHub issues for anything genuinely out of scope.
 
+   If the review returned no findings, skip the protocol and emit: "No findings — nothing to follow up on."
+
 ---
 
 ### Step 4: Clean Up Team

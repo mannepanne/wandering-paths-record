@@ -2,8 +2,6 @@
 
 **Status:** ✅ Implemented - Cloudflare Web Analytics active
 
-**Related:** See `REFERENCE/technical-debt.md` → TD-005 (now resolved)
-
 ---
 
 ## Cloudflare Web Analytics
@@ -263,6 +261,5 @@ If you ever want to track specific user actions, Cloudflare Web Analytics doesn'
 ---
 
 **Related Documentation:**
-- `REFERENCE/technical-debt.md` → TD-005 (analytics implementation)
 - Cloudflare Dashboard: https://dash.cloudflare.com/
 - Cloudflare Web Analytics docs: https://developers.cloudflare.com/analytics/web-analytics/

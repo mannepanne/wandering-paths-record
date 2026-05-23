@@ -43,7 +43,7 @@ pkill -f vite && npm run dev
 
 **Note:** This is NOT a production issue - only affects local development
 
-**Related:** See `REFERENCE/technical-debt.md` → TD-003
+**Related:** See GitHub issues with `technical-debt` label
 
 ### TypeScript errors
 
@@ -460,4 +460,4 @@ If issues persist after trying these solutions:
 **Related Documentation:**
 - `REFERENCE/environment-setup.md` - Configuration and secrets
 - `REFERENCE/DEVELOPMENT.md` - Development workflow
-- `REFERENCE/technical-debt.md` - Known limitations
+- GitHub issues with `technical-debt` label — Known limitations

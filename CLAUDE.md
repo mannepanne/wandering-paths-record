@@ -136,9 +136,9 @@ Cloudflare Workers Static Assets handles everything end-to-end: `dist/client/` i
 - `REFERENCE/geo-services-guide.md` - Maps, geocoding, location search
 - `REFERENCE/claude_model_updates.md` - Updating Claude API model versions
 - `REFERENCE/troubleshooting.md` - Common issues and solutions
-- `REFERENCE/technical-debt.md` - Known limitations and future work
 - `REFERENCE/testing-strategy.md` - Testing approach
 - `REFERENCE/web-analytics.md` - Analytics setup (planned)
+- **Known issues / deferred improvements?** → [GitHub Issues with `technical-debt` label](https://github.com/mannepanne/wandering-paths-record/issues?q=label%3Atechnical-debt)
 - `REFERENCE/ARCHIVE/supabase-setup.md` - Legacy Supabase setup (archived — migrated to D1)
 
 - **Architecture decisions?** → [decisions/](./REFERENCE/decisions/) - ADRs explaining why things are this way

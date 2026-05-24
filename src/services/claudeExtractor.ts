@@ -317,6 +317,8 @@ venue (REQUIRED - pick ONE):
   Pub - British pub serving food
   Bar - Drinks-focused with food service
   Bakery - Bakery with seating/dining
+  Food Cart - Street-side cart or stall
+  Hole-in-the-Wall - Tiny, informal spot with minimal decor
 
 GUIDELINES:
 - cuisinePrimary: Choose the SINGLE best match from the allowed list. Use "European" for general Western cuisine that doesn't fit a specific country. Use "Martian" only as a last resort.

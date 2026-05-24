@@ -165,7 +165,7 @@ export const CLAUDE_MAX_TOKENS = {
 | `cuisinePrimary` | enum | ✅ | Primary cuisine category |
 | `cuisineSecondary` | enum | | Secondary for fusion only |
 | `style` | enum | ✅ | Traditional/Modern/Fusion/etc. |
-| `venue` | enum | ✅ | Restaurant/Cafe/Pub/Bar/Bakery |
+| `venue` | enum | ✅ | Restaurant/Cafe/Pub/Bar/Bakery/Food Cart/Hole-in-the-Wall |
 | `description` | string | | 2-3 sentence summary |
 | `dietaryOptions` | string | | Cooking style, ingredients |
 | `priceRange` | enum | | $/$$/$$$/$$$$ |
@@ -199,6 +199,8 @@ Martian (only if truly unclassifiable)
 - `Pub` - British pub
 - `Bar` - Drinks-focused
 - `Bakery` - Bakery with dining
+- `Food Cart` - Street-side cart or stall
+- `Hole-in-the-Wall` - Tiny, informal spot with minimal decor
 
 **Location Objects:**
 ```typescript

@@ -10,7 +10,7 @@ export type CuisineSecondary = CuisinePrimary; // Same values, used for fusion
 
 export type RestaurantStyle = 'Traditional' | 'Modern' | 'Fusion' | 'Casual' | 'Fine Dining' | 'Street Food';
 
-export type RestaurantVenue = 'Restaurant' | 'Cafe' | 'Pub' | 'Bar' | 'Bakery' | 'Food cart' | 'Hole-in-the-wall';
+export type RestaurantVenue = 'Restaurant' | 'Cafe' | 'Pub' | 'Bar' | 'Bakery' | 'Food Cart' | 'Hole-in-the-Wall';
 
 export type RestaurantSpecialty =
   | 'BBQ' | 'Seafood' | 'Steakhouse' | 'Ramen' | 'Pizza' | 'Sushi' | 'Tapas' | 'Tasting Menu' | 'Brunch' | 'Breakfast';
@@ -29,7 +29,7 @@ export const STYLE_OPTIONS: RestaurantStyle[] = [
 ];
 
 export const VENUE_OPTIONS: RestaurantVenue[] = [
-  'Restaurant', 'Cafe', 'Pub', 'Bar', 'Bakery', 'Food cart', 'Hole-in-the-wall'
+  'Restaurant', 'Cafe', 'Pub', 'Bar', 'Bakery', 'Food Cart', 'Hole-in-the-Wall'
 ];
 
 export const SPECIALTY_OPTIONS: RestaurantSpecialty[] = [

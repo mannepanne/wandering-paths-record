@@ -15,8 +15,10 @@ code (the `/api/*` JSON responses). Those don't need these headers — they're n
 HTML rendered in a browsing context. If that ever changes, set headers directly
 in `src/worker.js`.
 
-Verify locally with `npx wrangler dev` (a plain `vite preview` will *not* apply
-`_headers`), then `curl -I http://localhost:8080/`.
+Verify locally with `npx wrangler dev --port 8080` (a plain `vite preview` will
+*not* apply `_headers`), then `curl -I http://localhost:8080/`. Use port 8080
+specifically: `wrangler dev` defaults to 8787, but the Mapbox token's URL
+restrictions whitelist `localhost:8080`, so the map only renders there.
 
 ## The headers
 

@@ -111,15 +111,45 @@ async function callClaudeApi(prompt, apiKey) {
   return result.content[0].text;
 }
 
+// Browser-like User-Agent so sites serve us their real markup rather than a bot page
+const BROWSER_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+
 async function fetchPageWithProxy(url) {
+  // Primary path: fetch the target directly (no CORS restriction server-side).
+  // Avoids depending on flaky third-party proxies for the common case; proxies
+  // remain as a fallback for sites that block datacenter IPs.
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': BROWSER_USER_AGENT,
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-GB,en;q=0.9'
+      },
+      redirect: 'follow',
+      signal: AbortSignal.timeout(12000)
+    });
+    if (response.ok) {
+      const content = await response.text();
+      if (content && content.length > 500) {
+        console.log('✅ Content fetched via direct fetch, length:', content.length);
+        return content;
+      }
+      console.log('⚠️ Direct fetch returned thin content, falling back to proxies');
+    } else {
+      console.log('⚠️ Direct fetch returned status', response.status, '- falling back to proxies');
+    }
+  } catch (error) {
+    console.log('⚠️ Direct fetch failed:', error.message, '- falling back to proxies');
+  }
+
   const proxies = [
     `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
     `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`
   ];
-  
+
   for (const proxyUrl of proxies) {
     try {
-      const response = await fetch(proxyUrl);
+      const response = await fetch(proxyUrl, { signal: AbortSignal.timeout(12000) });
       if (response.ok) {
         if (proxyUrl.includes('allorigins')) {
           const data = await response.json();
@@ -338,6 +368,11 @@ app.post('/api/extract-restaurant', async (req, res) => {
     const limitedContent = meaningfulContent.slice(0, 8000); // ~2000 tokens max
     console.log('🔍 Using limited content for analysis, length:', limitedContent.length);
 
+    // Non-blocking advisory: if detection thinks this isn't a food venue we still
+    // extract, but surface a warning so the user can sanity-check rather than being
+    // hard-blocked on a false negative (e.g. wine bars, supper clubs, delis).
+    let businessTypeWarning = null;
+
     // Business type detection (skip for trusted review sites)
     if (!isTrustedReviewSite) {
       // Business type detection prompt
@@ -406,12 +441,12 @@ FOOD SERVICE PRIORITY: If a business serves food for sit-in dining (even if they
 
       const validFoodBusinessTypes = ['restaurant', 'cafe', 'bakery', 'bar', 'pub'];
       if (!validFoodBusinessTypes.includes(businessAnalysis.businessType)) {
-        return res.json({
-          success: false,
-          isNotRestaurant: true,
+        // Soft warning instead of a hard block: proceed with extraction anyway.
+        businessTypeWarning = {
           detectedType: businessAnalysis.businessType,
-          message: `This appears to be a ${businessAnalysis.businessType} website, not a restaurant. Please use manual entry instead.`
-        });
+          message: `This looks like a ${businessAnalysis.businessType} rather than a restaurant — double-check the extracted details before saving.`
+        };
+        console.log('⚠️ Non-food business type detected, continuing with warning:', businessAnalysis.businessType);
       }
     }
 
@@ -537,7 +572,8 @@ LOCATION EXTRACTION GUIDELINES:
     res.json({
       success: true,
       data: restaurantData,
-      confidence: 'high' // Simplified for now
+      confidence: 'high', // Simplified for now
+      warning: businessTypeWarning // null unless detection flagged a non-food venue
     });
 
   } catch (error) {

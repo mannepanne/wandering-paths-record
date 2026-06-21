@@ -8,6 +8,11 @@ export interface ExtractionProgress {
   details?: string;
 }
 
+export interface BusinessTypeWarning {
+  detectedType: string;
+  message: string;
+}
+
 export interface RestaurantExtractionResult {
   success: boolean;
   isNotRestaurant?: boolean;
@@ -16,6 +21,7 @@ export interface RestaurantExtractionResult {
   data?: ExtractedRestaurantData;
   confidence?: 'high' | 'medium' | 'low';
   error?: string;
+  warning?: BusinessTypeWarning | null; // Non-blocking advisory when detection flags a non-food venue
 }
 
 export interface ExtractedLocation {

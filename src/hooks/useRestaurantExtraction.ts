@@ -12,6 +12,7 @@ export interface ExtractionState {
   result?: ExtractedRestaurantData;
   isNotRestaurant?: boolean;
   detectedType?: string;
+  warning?: string; // Non-blocking advisory shown alongside a successful extraction
 }
 
 export function useRestaurantExtraction() {
@@ -88,7 +89,8 @@ export function useRestaurantExtraction() {
       setState({
         isExtracting: false,
         progress: 'Extraction complete!',
-        result: result.data
+        result: result.data,
+        warning: result.warning?.message
       });
 
       // Clear success message after 3 seconds

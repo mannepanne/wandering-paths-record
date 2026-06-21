@@ -106,7 +106,7 @@ async function callClaudeApi(prompt, apiKey) {
 // Browser-like User-Agent so sites serve us their real markup rather than a bot page
 const BROWSER_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
-async function fetchPageWithProxy(url) {
+export async function fetchPageWithProxy(url) {
   // Instagram-specific handling
   if (isInstagramUrl(url)) {
     console.log('🟣 Instagram URL detected, using specialized scraping');
@@ -428,6 +428,18 @@ function extractMeaningfulContent(html, url = '') {
 }
 
 // Handle restaurant extraction request
+// Returns a non-blocking advisory for non-food business types, or null for food
+// types. Detection no longer hard-blocks extraction — the caller attaches this
+// warning to a successful response so the user can sanity-check atypical venues.
+export function businessTypeWarningFor(businessType) {
+  const validFoodBusinessTypes = ['restaurant', 'cafe', 'bakery', 'bar', 'pub'];
+  if (validFoodBusinessTypes.includes(businessType)) return null;
+  return {
+    detectedType: businessType,
+    message: `This looks like a ${businessType} rather than a restaurant — double-check the extracted details before saving.`
+  };
+}
+
 async function handleRestaurantExtraction(request, env) {
   try {
     const { url } = await request.json();
@@ -577,9 +589,10 @@ ${isInstagramUrl ? '- Instagram food influencers or personal accounts should be 
     const businessAnalysis = extractJSONFromResponse(businessResponse);
     console.log('🔍 Business analysis:', businessAnalysis);
 
-    const validFoodBusinessTypes = ['restaurant', 'cafe', 'bakery', 'bar', 'pub'];
-    if (!validFoodBusinessTypes.includes(businessAnalysis.businessType)) {
-      // Special handling for Instagram login wall
+    const warning = businessTypeWarningFor(businessAnalysis.businessType);
+    if (warning) {
+      // Non-food classification. Instagram login walls land here too — and there we
+      // genuinely can't fetch content, so it stays a hard stop.
       if (isInstagramUrl && businessAnalysis.reasoning &&
           (businessAnalysis.reasoning.toLowerCase().includes('login') ||
            businessAnalysis.reasoning.toLowerCase().includes('instagram') && businessAnalysis.reasoning.toLowerCase().includes('code'))) {
@@ -591,10 +604,7 @@ ${isInstagramUrl ? '- Instagram food influencers or personal accounts should be 
       }
 
       // Soft warning instead of a hard block: proceed with extraction anyway.
-      businessTypeWarning = {
-        detectedType: businessAnalysis.businessType,
-        message: `This looks like a ${businessAnalysis.businessType} rather than a restaurant — double-check the extracted details before saving.`
-      };
+      businessTypeWarning = warning;
       console.log('⚠️ Non-food business type detected, continuing with warning:', businessAnalysis.businessType);
     }
     } // End of business type detection block

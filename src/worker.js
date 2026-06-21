@@ -2,7 +2,7 @@
 // Migrated from server.cjs to Workers runtime
 
 // Claude API configuration
-const CLAUDE_MODEL_VERSION = 'claude-sonnet-4-20250514';
+const CLAUDE_MODEL_VERSION = 'claude-sonnet-4-6';
 const CLAUDE_API_VERSION = '2023-06-01';
 
 // Helper function to infer city from location data

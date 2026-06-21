@@ -158,7 +158,7 @@ npx wrangler deploy
 
 Model versions are centralised in `src/config/claude.ts` (TypeScript) and as constants at the top of `server.cjs` and `src/worker.js` (Node.js files). When Anthropic deprecates a model, update these and redeploy. See `REFERENCE/claude_model_updates.md` for step-by-step instructions.
 
-**Current model:** `claude-sonnet-4-20250514` (Sonnet 4.5)
+**Current model:** `claude-sonnet-4-6` (Sonnet 4.6)
 
 ---
 

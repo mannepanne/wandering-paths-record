@@ -2,8 +2,8 @@
 
 ## Current Model Version
 
-**Current Model:** `claude-sonnet-4-20250514` (Sonnet 4.5)
-**Last Updated:** January 2025
+**Current Model:** `claude-sonnet-4-6` (Sonnet 4.6)
+**Last Updated:** June 2026 (migrated from retired `claude-sonnet-4-20250514`)
 
 ## How to Update Claude Model Version
 
@@ -67,7 +67,8 @@ git push origin main
 
 | Model Version | Period | Notes |
 |---------------|--------|-------|
-| `claude-sonnet-4-20250514` | Jan 2025 - Present | Sonnet 4.5, current version |
+| `claude-sonnet-4-6` | Jun 2026 - Present | Sonnet 4.6, current version |
+| `claude-sonnet-4-20250514` | May 2025 - Jun 2026 | Sonnet 4, retired 15 Jun 2026 (API returned 404) |
 | `claude-3-5-sonnet-20241022` | Oct 2024 - Dec 2024 | Deprecated Dec 2024 |
 | `claude-3-5-sonnet-20240620` | Jun 2024 - Oct 2024 | Deprecated Oct 2024 |
 

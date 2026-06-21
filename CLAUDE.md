@@ -39,7 +39,7 @@ Model versions are centralized in `src/config/claude.ts`. When Anthropic depreca
 - **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS + shadcn/ui
 - **Backend**: Cloudflare D1 (SQLite) + Cloudflare Workers
 - **Auth**: Cloudflare Access + Google OAuth (JWT verified server-side in Worker)
-- **AI**: Claude Sonnet 4.5 for restaurant extraction and review summarization
+- **AI**: Claude Sonnet 4.6 for restaurant extraction and review summarization
 - **Maps**: Mapbox GL JS with clustering
 - **Geo**: Google Maps Geocoding and Places APIs
 
@@ -110,7 +110,7 @@ interface RestaurantAddress {
 
 ### Claude Model Updates
 
-**Current Model**: `claude-sonnet-4-20250514` (Sonnet 4.5)
+**Current Model**: `claude-sonnet-4-6` (Sonnet 4.6)
 
 ### Static assets and SPA routing
 Cloudflare Workers Static Assets handles everything end-to-end: `dist/client/` is served directly, and `not_found_handling = "single-page-application"` in `wrangler.toml` returns `index.html` for unmatched non-API paths. `run_worker_first` keeps `/api/*` and `/auth/login` on the Worker. No hand-rolled HTML fallback in the Worker, no asset-reference sync script.

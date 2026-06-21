@@ -90,7 +90,7 @@ The Worker accesses it as `env.DB`. No connection string, no SDK initialisation.
 
 **Claude API (Anthropic):**
 - https://console.anthropic.com/settings/keys
-- Current model: `claude-sonnet-4-20250514` (configured in `src/config/claude.ts`)
+- Current model: `claude-sonnet-4-6` (configured in `src/config/claude.ts`)
 
 **Google Maps:**
 - https://console.cloud.google.com/google/maps-apis/credentials

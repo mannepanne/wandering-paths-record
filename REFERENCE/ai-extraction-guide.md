@@ -48,12 +48,12 @@ Admin Panel → restaurants.hultberg.org/api/extract-restaurant → Claude API �
 
 ## Current Model Configuration
 
-**Model:** `claude-sonnet-4-20250514` (Sonnet 4.5)
+**Model:** `claude-sonnet-4-6` (Sonnet 4.6)
 
 **Version Configuration:** `src/config/claude.ts`
 
 ```typescript
-export const CLAUDE_MODEL_VERSION = 'claude-sonnet-4-20250514';
+export const CLAUDE_MODEL_VERSION = 'claude-sonnet-4-6';
 export const CLAUDE_API_VERSION = '2023-06-01';
 export const CLAUDE_MAX_TOKENS = {
   EXTRACTION: 4000,

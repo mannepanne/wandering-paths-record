@@ -8,13 +8,14 @@
  * Update this when Anthropic releases new model versions.
  *
  * History:
- * - claude-sonnet-4-20250514: Current (Sonnet 4.5, January 2025)
+ * - claude-sonnet-4-6: Current (Sonnet 4.6)
+ * - claude-sonnet-4-20250514: Retired June 15, 2026 (Sonnet 4 — API returned 404 after retirement)
  * - claude-3-5-sonnet-20241022: Deprecated December 2024
  * - claude-3-5-sonnet-20240620: Deprecated October 2024
  *
  * See: https://docs.anthropic.com/en/docs/about-claude/models
  */
-export const CLAUDE_MODEL_VERSION = 'claude-sonnet-4-20250514';
+export const CLAUDE_MODEL_VERSION = 'claude-sonnet-4-6';
 
 /**
  * Claude API Version Header

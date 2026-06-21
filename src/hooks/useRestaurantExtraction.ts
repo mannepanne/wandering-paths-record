@@ -12,6 +12,7 @@ export interface ExtractionState {
   result?: ExtractedRestaurantData;
   isNotRestaurant?: boolean;
   detectedType?: string;
+  warning?: string; // Non-blocking advisory shown alongside a successful extraction
 }
 
 export function useRestaurantExtraction() {
@@ -67,6 +68,8 @@ export function useRestaurantExtraction() {
       clearInterval(progressInterval);
 
       if (!result.success) {
+        // NOTE: isNotRestaurant is no longer returned by the live extraction path
+        // (non-food types now soft-warn on success). Retained defensively. See TECHNICAL DEBT issue.
         if (result.isNotRestaurant) {
           setState({
             isExtracting: false,
@@ -88,7 +91,8 @@ export function useRestaurantExtraction() {
       setState({
         isExtracting: false,
         progress: 'Extraction complete!',
-        result: result.data
+        result: result.data,
+        warning: result.warning?.message
       });
 
       // Clear success message after 3 seconds

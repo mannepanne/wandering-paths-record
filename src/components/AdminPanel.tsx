@@ -887,6 +887,16 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
             </div>
           )}
           
+          {/* Non-blocking advisory: extraction succeeded but the venue may not be a restaurant */}
+          {extraction.warning && !extraction.isExtracting && (
+            <Alert className="border-orange-200 bg-orange-50">
+              <AlertTriangle className="h-4 w-4 text-orange-600" />
+              <AlertDescription className="text-orange-600">
+                {extraction.warning}
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Error/Non-restaurant Message */}
           {extraction.error && (
             <Alert className={extraction.isNotRestaurant ? "border-orange-200 bg-orange-50" : "border-red-200 bg-red-50"}>

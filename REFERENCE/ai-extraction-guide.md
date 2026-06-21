@@ -75,7 +75,7 @@ export const CLAUDE_MAX_TOKENS = {
 **Goal:** Fetch meaningful HTML from the target URL
 
 **Process:**
-1. Fetch main page via proxy services
+1. Fetch main page **directly** (server-side `fetch` with a browser User-Agent)
 2. Parse HTML to find relevant subpages:
    - Menu pages (`/menu`, `/food`, `/chef`)
    - Contact pages (`/contact`, `/location`, `/find-us`)
@@ -83,21 +83,20 @@ export const CLAUDE_MAX_TOKENS = {
 3. Fetch up to 3 additional pages
 4. Combine all content for analysis
 
-**Proxies used:**
-- `https://api.codetabs.com/v1/proxy`
-- `https://api.allorigins.win/get`
+**Fetch strategy (`fetchPageWithProxy` in `worker.js` / `server.cjs`):**
+1. **Direct fetch first.** The Worker runs server-side with no CORS restriction, so it fetches the target URL directly. This is the common case and avoids any third-party dependency.
+2. **Proxy fallback.** Only if the direct fetch fails (non-2xx, thin body, timeout) does it fall back to public CORS proxies:
+   - `https://api.codetabs.com/v1/proxy`
+   - `https://api.allorigins.win/get`
 
-**Why proxies?**
-- Avoid CORS restrictions
-- Handle JavaScript-heavy sites (partially)
-- No backend infrastructure needed
+**Why direct-first?** These free public proxies are unreliable — they rate-limit, return errors, and go down without notice. A proxy outage used to surface to the user as "Could not fetch website content". Direct fetch removes them from the critical path; they remain only for sites that block datacenter IPs.
 
 **Limitations:**
-- Single-page apps may not render fully
-- Some sites block proxies
+- Single-page apps may not render fully (no JS execution in either path)
+- Some sites block datacenter IPs — proxy fallback covers most of these
 - JavaScript-rendered content may be incomplete
 
-**Fallback:** If proxies fail, extraction uses whatever content is available (may be incomplete).
+**Fallback:** If both direct fetch and proxies fail, extraction returns "Could not fetch website content".
 
 ---
 
@@ -125,7 +124,7 @@ export const CLAUDE_MAX_TOKENS = {
 - `bar` - Drinks-focused with food
 - `pub` - British pub serving meals
 
-**Invalid types (rejected):**
+**Other types (advisory only — no longer blocking):**
 - `hotel` - Accommodation (even if has restaurant)
 - `retail` - Shops selling products
 - `gallery` - Art galleries/museums
@@ -142,10 +141,8 @@ export const CLAUDE_MAX_TOKENS = {
 }
 ```
 
-**Why this phase?**
-- Prevents adding non-restaurants to database
-- Saves API costs on irrelevant extractions
-- Improves user experience (clear error messages)
+**Soft-warning behaviour (not a hard gate):**
+Detection no longer *blocks* extraction. If the detected type isn't one of the food types above, extraction proceeds anyway and the success response carries a non-blocking `warning` object (`{ detectedType, message }`). The frontend surfaces it as an amber advisory so the user can sanity-check the extracted details rather than being forced into manual entry. This avoids false negatives on legitimate-but-atypical venues (wine bars, supper clubs, delis). The one genuine hard stop that remains is the Instagram login wall, where no content can be fetched at all.
 
 ---
 
@@ -326,12 +323,13 @@ if (response.status === 429 || errorText.includes('rate_limit_error')) {
 - Suggests retry timing
 - Frontend can show countdown timer
 
-### Proxy Failures
+### Fetch Failures
 
 **Fallback Chain:**
-1. Try `api.codetabs.com`
-2. If fails, try `api.allorigins.win`
-3. If both fail, return null content
+1. Direct server-side `fetch` of the target URL (primary path)
+2. If that fails, try `api.codetabs.com`
+3. If that fails, try `api.allorigins.win`
+4. If all fail, return null content → "Could not fetch website content"
 
 **Impact:** Extraction may fail or return incomplete data
 
@@ -409,14 +407,23 @@ const stats = ExtractionCache.getStats();
 
 ## Troubleshooting
 
-### "This appears to be a [type], not a restaurant"
+### Amber warning: "This looks like a [type] rather than a restaurant"
 
-**Cause:** Business type detection classified it as non-restaurant
+**Cause:** Business type detection classified the venue as a non-food type. This is **advisory only** — extraction still ran and the form is populated.
 
 **Solutions:**
-1. Try a review site URL instead (Timeout, Infatuation, etc.)
-2. Verify it actually is a restaurant (not just a retail bakery, hotel lobby, etc.)
-3. Use manual entry
+1. Review the extracted details and correct anything wrong, then save as normal.
+2. If the content was genuinely wrong (e.g. a hotel lobby page), edit fields or use a review site URL (Timeout, Infatuation, etc.) for richer content.
+
+### "Could not fetch website content"
+
+**Cause:** Both the direct fetch and the proxy fallback failed to retrieve the page.
+
+**Solutions:**
+1. Try again — transient network/proxy issues often clear.
+2. Verify the URL loads in a browser.
+3. For sites that block automated fetches, try a review site URL instead.
+4. Check the Worker observability logs for which path failed.
 
 ### Incomplete extraction (missing address, phone, etc.)
 
@@ -552,15 +559,19 @@ const limitedContent = allContent.slice(0, 8000); // ~2K tokens
 }
 ```
 
-**Not a Restaurant Response:**
+**Success with Non-Food Warning (advisory, not blocking):**
 ```json
 {
-  "success": false,
-  "isNotRestaurant": true,
-  "detectedType": "hotel",
-  "message": "This appears to be a hotel website, not a restaurant."
+  "success": true,
+  "data": { "...": "extracted restaurant fields" },
+  "confidence": "high",
+  "warning": {
+    "detectedType": "hotel",
+    "message": "This looks like a hotel rather than a restaurant — double-check the extracted details before saving."
+  }
 }
 ```
+On a clean restaurant match, `warning` is `null`.
 
 **Rate Limit Response:**
 ```json

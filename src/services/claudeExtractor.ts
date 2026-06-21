@@ -8,6 +8,11 @@ export interface ExtractionProgress {
   details?: string;
 }
 
+export interface BusinessTypeWarning {
+  detectedType: string;
+  message: string;
+}
+
 export interface RestaurantExtractionResult {
   success: boolean;
   isNotRestaurant?: boolean;
@@ -16,6 +21,7 @@ export interface RestaurantExtractionResult {
   data?: ExtractedRestaurantData;
   confidence?: 'high' | 'medium' | 'low';
   error?: string;
+  warning?: BusinessTypeWarning | null; // Non-blocking advisory when detection flags a non-food venue
 }
 
 export interface ExtractedLocation {
@@ -78,6 +84,10 @@ export class ClaudeExtractor {
       progressCallback?.({ step: 'Analyzing business type...' });
       const businessAnalysis = await this.analyzeBusinessType(content);
       
+      // NOTE: This method is not on the live extraction path — extractRestaurantLocal()
+      // calls the Worker (worker.js) / dev server (server.cjs), which now soft-warn on
+      // non-food types instead of hard-blocking. This hard gate is retained only because
+      // the class still owns the shared cache and types. See TECHNICAL DEBT issue.
       const validFoodBusinessTypes = ['restaurant', 'cafe', 'bakery', 'bar', 'pub'];
       if (!validFoodBusinessTypes.includes(businessAnalysis.businessType)) {
         return {

@@ -102,14 +102,45 @@ async function callClaudeApi(prompt, apiKey) {
   return result.content[0].text;
 }
 
-// Fetch page content with proxy
-async function fetchPageWithProxy(url) {
+// Fetch page content: direct server-side fetch first, public proxies as fallback
+// Browser-like User-Agent so sites serve us their real markup rather than a bot page
+const BROWSER_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+
+export async function fetchPageWithProxy(url) {
   // Instagram-specific handling
   if (isInstagramUrl(url)) {
     console.log('🟣 Instagram URL detected, using specialized scraping');
     return await fetchInstagramContent(url);
   }
 
+  // Primary path: Workers run server-side with no CORS restriction, so fetch the
+  // target directly. This avoids depending on flaky third-party proxies for the
+  // common case. Proxies remain as a fallback for sites that block datacenter IPs.
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': BROWSER_USER_AGENT,
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-GB,en;q=0.9'
+      },
+      redirect: 'follow',
+      signal: AbortSignal.timeout(12000)
+    });
+    if (response.ok) {
+      const content = await response.text();
+      if (content && content.length > 500) {
+        console.log('✅ Content fetched via direct fetch, length:', content.length);
+        return content;
+      }
+      console.log('⚠️ Direct fetch returned thin content, falling back to proxies');
+    } else {
+      console.log('⚠️ Direct fetch returned status', response.status, '- falling back to proxies');
+    }
+  } catch (error) {
+    console.log('⚠️ Direct fetch failed:', error.message, '- falling back to proxies');
+  }
+
+  // Fallback path: public CORS proxies for sites that reject direct datacenter requests
   const proxies = [
     `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
     `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`
@@ -117,7 +148,7 @@ async function fetchPageWithProxy(url) {
 
   for (const proxyUrl of proxies) {
     try {
-      const response = await fetch(proxyUrl);
+      const response = await fetch(proxyUrl, { signal: AbortSignal.timeout(12000) });
       if (response.ok) {
         if (proxyUrl.includes('allorigins')) {
           const data = await response.json();
@@ -397,6 +428,18 @@ function extractMeaningfulContent(html, url = '') {
 }
 
 // Handle restaurant extraction request
+// Returns a non-blocking advisory for non-food business types, or null for food
+// types. Detection no longer hard-blocks extraction — the caller attaches this
+// warning to a successful response so the user can sanity-check atypical venues.
+export function businessTypeWarningFor(businessType) {
+  const validFoodBusinessTypes = ['restaurant', 'cafe', 'bakery', 'bar', 'pub'];
+  if (validFoodBusinessTypes.includes(businessType)) return null;
+  return {
+    detectedType: businessType,
+    message: `This looks like a ${businessType} rather than a restaurant — double-check the extracted details before saving.`
+  };
+}
+
 async function handleRestaurantExtraction(request, env) {
   try {
     const { url } = await request.json();
@@ -464,6 +507,11 @@ async function handleRestaurantExtraction(request, env) {
 
     // Business type detection (skip for trusted review sites)
     const isInstagramUrl = url.includes('instagram.com/') || url.includes('instagr.am/');
+
+    // Non-blocking advisory: if detection thinks this isn't a food venue we still
+    // extract, but surface a warning so the user can sanity-check rather than being
+    // hard-blocked on a false negative (e.g. wine bars, supper clubs, delis).
+    let businessTypeWarning = null;
 
     if (!isTrustedReviewSite) {
       // Business type detection prompt with Instagram-specific handling
@@ -541,9 +589,10 @@ ${isInstagramUrl ? '- Instagram food influencers or personal accounts should be 
     const businessAnalysis = extractJSONFromResponse(businessResponse);
     console.log('🔍 Business analysis:', businessAnalysis);
 
-    const validFoodBusinessTypes = ['restaurant', 'cafe', 'bakery', 'bar', 'pub'];
-    if (!validFoodBusinessTypes.includes(businessAnalysis.businessType)) {
-      // Special handling for Instagram login wall
+    const warning = businessTypeWarningFor(businessAnalysis.businessType);
+    if (warning) {
+      // Non-food classification. Instagram login walls land here too — and there we
+      // genuinely can't fetch content, so it stays a hard stop.
       if (isInstagramUrl && businessAnalysis.reasoning &&
           (businessAnalysis.reasoning.toLowerCase().includes('login') ||
            businessAnalysis.reasoning.toLowerCase().includes('instagram') && businessAnalysis.reasoning.toLowerCase().includes('code'))) {
@@ -554,12 +603,9 @@ ${isInstagramUrl ? '- Instagram food influencers or personal accounts should be 
         });
       }
 
-      return Response.json({
-        success: false,
-        isNotRestaurant: true,
-        detectedType: businessAnalysis.businessType,
-        message: `This appears to be a ${businessAnalysis.businessType} website, not a restaurant. Please use manual entry instead.`
-      });
+      // Soft warning instead of a hard block: proceed with extraction anyway.
+      businessTypeWarning = warning;
+      console.log('⚠️ Non-food business type detected, continuing with warning:', businessAnalysis.businessType);
     }
     } // End of business type detection block
 
@@ -699,7 +745,8 @@ LOCATION EXTRACTION GUIDELINES:
     return Response.json({
       success: true,
       data: restaurantData,
-      confidence: 'high' // Simplified for now
+      confidence: 'high', // Simplified for now
+      warning: businessTypeWarning // null unless detection flagged a non-food venue
     });
 
   } catch (error) {

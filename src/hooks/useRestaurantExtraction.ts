@@ -68,6 +68,8 @@ export function useRestaurantExtraction() {
       clearInterval(progressInterval);
 
       if (!result.success) {
+        // NOTE: isNotRestaurant is no longer returned by the live extraction path
+        // (non-food types now soft-warn on success). Retained defensively. See TECHNICAL DEBT issue.
         if (result.isNotRestaurant) {
           setState({
             isExtracting: false,

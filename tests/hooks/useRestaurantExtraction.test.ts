@@ -61,7 +61,7 @@ describe('useRestaurantExtraction', () => {
     expect(result.current.warning).toBeUndefined();
   });
 
-  it('clears any prior warning when a new extraction starts', async () => {
+  it('replaces a prior warning on a subsequent successful extraction', async () => {
     vi.mocked(extractRestaurantLocal).mockResolvedValue(
       mockResult({ warning: { detectedType: 'bar', message: 'Looks like a bar.' } })
     );
@@ -79,5 +79,29 @@ describe('useRestaurantExtraction', () => {
       await result.current.extractFromUrl('https://example.com');
     });
     expect(result.current.warning).toBeUndefined();
+  });
+
+  it('clears a prior warning when a subsequent extraction fails', async () => {
+    vi.mocked(extractRestaurantLocal).mockResolvedValue(
+      mockResult({ warning: { detectedType: 'retail', message: 'Looks like retail.' } })
+    );
+
+    const { result } = renderHook(() => useRestaurantExtraction());
+
+    await act(async () => {
+      await result.current.extractFromUrl('https://example.com');
+    });
+    expect(result.current.warning).toBe('Looks like retail.');
+
+    // A failed extraction must not leave the stale advisory hanging around
+    vi.mocked(extractRestaurantLocal).mockResolvedValue({
+      success: false,
+      error: 'Could not fetch website content',
+    });
+    await act(async () => {
+      await result.current.extractFromUrl('https://example.com');
+    });
+    expect(result.current.warning).toBeUndefined();
+    expect(result.current.error).toBe('Could not fetch website content');
   });
 });

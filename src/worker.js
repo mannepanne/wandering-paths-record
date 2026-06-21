@@ -102,7 +102,7 @@ async function callClaudeApi(prompt, apiKey) {
   return result.content[0].text;
 }
 
-// Fetch page content with proxy
+// Fetch page content: direct server-side fetch first, public proxies as fallback
 // Browser-like User-Agent so sites serve us their real markup rather than a bot page
 const BROWSER_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 

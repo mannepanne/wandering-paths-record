@@ -310,16 +310,15 @@ npx wrangler tail
 - Use manual entry for problematic restaurants
 - For review sites (Timeout, Infatuation), extraction works better than direct restaurant sites
 
-### Business type detection failing
+### Business type detection warning
 
-**Symptom:** Restaurant rejected as "not a restaurant"
+**Symptom:** Amber advisory "This looks like a [type] rather than a restaurant"
 
-**Cause:** AI incorrectly classified the business type
+**Cause:** AI classified the venue as a non-food type. This is **advisory only** — extraction still ran and the form is populated.
 
 **Solution:**
-- Use trusted review site URLs instead (theinfatuation.com, timeout.com, etc.)
-- These sites bypass business type detection
-- Manually enter restaurant details as fallback
+- Review the extracted details, correct anything wrong, and save as normal.
+- If the content was genuinely wrong, try a trusted review site URL (theinfatuation.com, timeout.com, etc.) — these bypass business type detection.
 
 ---
 

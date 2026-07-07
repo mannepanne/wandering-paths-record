@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import RestaurantDetails from "./pages/RestaurantDetails";
 import RestaurantVisits from "./pages/RestaurantVisits";
 import About from "./pages/About";
+import WhereNext from "./pages/WhereNext";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/restaurant/:id" element={<RestaurantDetails />} />
             <Route path="/restaurant/:id/visits" element={<RestaurantVisits />} />
             <Route path="/about" element={<About />} />
+            <Route path="/where-next" element={<WhereNext />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

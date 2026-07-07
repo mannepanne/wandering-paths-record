@@ -87,6 +87,7 @@ interface RestaurantAddress {
 - `src/pages/Index.tsx` - Main restaurant list/map interface
 - `src/pages/About.tsx` - About page explaining appreciation system
 - `src/pages/RestaurantDetails.tsx` - Individual restaurant view
+- `src/pages/WhereNext.tsx` - "Where next?" inspiration page (rails over to-visit places); logic in `src/lib/whereNext.ts`
 
 ### Components
 - `src/components/PlaceCard.tsx` - Restaurant cards with multi-location display

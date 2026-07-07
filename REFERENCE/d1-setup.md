@@ -167,6 +167,10 @@ Auth is checked by reading the `CF-Authorization` cookie and verifying the JWT. 
 For local development, the Worker uses a local D1 instance managed by Wrangler.
 
 ```bash
+# Seed a fresh local D1 (schema + sample data) in one step — run this before the
+# first `npm run dev` on a new clone, otherwise the app errors with "no such table: restaurants"
+npm run db:seed:local
+
 # Start Worker in local dev mode (uses local D1, not production)
 npx wrangler dev
 

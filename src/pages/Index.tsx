@@ -525,6 +525,17 @@ const Index = () => {
 
           <div className="flex gap-2">
             <Button
+              asChild
+              variant="brutalist"
+              size="sm"
+              className="gap-2 bg-burnt-orange hover:bg-burnt-orange/90 text-white"
+            >
+              <Link to="/where-next">
+                <Compass className="w-4 h-4" />
+                Where next?
+              </Link>
+            </Button>
+            <Button
               variant="brutalist"
               size="sm"
               className="gap-2 bg-olive-green hover:bg-olive-green/90 text-white"

@@ -155,7 +155,7 @@ export const PlaceCard = ({ place, onStatusChange, onAppreciationChange, onEdit,
                   <MapPinned className="w-4 h-4" />
                 </Button>
               )}
-              {place.personal_rating && place.status === 'visited' && (
+              {!!place.personal_rating && place.status === 'visited' && (
                 <div className="flex items-center gap-1">
                   <span className="text-xs font-mono text-muted-foreground">Me:</span>
                   {renderStars(place.personal_rating)}
@@ -194,7 +194,7 @@ export const PlaceCard = ({ place, onStatusChange, onAppreciationChange, onEdit,
           </div>
 
           {/* Visit count */}
-          {place.visit_count && place.visit_count > 1 && (
+          {!!place.visit_count && place.visit_count > 1 && (
             <div className="flex items-center gap-1 text-sm text-muted-foreground">
               <Clock className="w-4 h-4" />
               <span>Visited {place.visit_count} times</span>
@@ -259,7 +259,7 @@ export const PlaceCard = ({ place, onStatusChange, onAppreciationChange, onEdit,
                   </Tooltip>
                 </div>
               )}
-              {place.public_rating && (
+              {!!place.public_rating && (
                 <div
                   className="flex items-center gap-1 cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
                   onClick={(e) => {

@@ -348,3 +348,52 @@ describe('RestaurantDetails - back link origin', () => {
     expect(screen.getByRole('button', { name: /back to list/i })).toBeInTheDocument();
   });
 });
+
+describe('RestaurantDetails - falsy-zero guards', () => {
+  // Detects a bare "0" rendered as a direct text node — the failure mode of a
+  // falsy `0 && <JSX>` guard, where React prints the number instead of hiding it.
+  const hasBareZeroTextNode = (container: HTMLElement) =>
+    Array.from(container.querySelectorAll('*')).some((el) =>
+      Array.from(el.childNodes).some(
+        (n) => n.nodeType === Node.TEXT_NODE && n.textContent?.trim() === '0',
+      ),
+    );
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(restaurantService.getRestaurantByIdWithLocations).mockResolvedValue({
+      id: 'test-restaurant-id',
+      name: 'Test Restaurant',
+      address: 'Test Address',
+      status: 'to-visit',
+      atmosphere: 'A relaxed, community-focused venue.',
+      visit_count: 0,
+      public_rating: 0,
+      public_rating_count: 0,
+      locations: [{
+        id: 'loc-1',
+        restaurant_id: 'test-restaurant-id',
+        location_name: 'Main Location',
+        full_address: '123 Test St',
+        latitude: 51.5,
+        longitude: -0.1,
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      }],
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+    });
+    vi.mocked(visitService.getLatestVisits).mockResolvedValue([]);
+    vi.mocked(visitService.getVisitCount).mockResolvedValue(0);
+  });
+
+  it('does not render a stray "0" when numeric fields are 0', async () => {
+    const { container } = render(<RestaurantDetails />, { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(screen.getByText('A relaxed, community-focused venue.')).toBeInTheDocument();
+    });
+
+    expect(hasBareZeroTextNode(container)).toBe(false);
+  });
+});

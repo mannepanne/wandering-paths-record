@@ -4,6 +4,7 @@
 import { ReactNode } from "react";
 import { Restaurant } from "@/types/place";
 import { PlaceCard } from "@/components/PlaceCard";
+import { hasCoordinates } from "@/lib/whereNext";
 
 interface WhereNextRailProps {
   title: string;
@@ -11,9 +12,11 @@ interface WhereNextRailProps {
   places: Restaurant[];
   /** Optional trailing control, e.g. the Surprise me reroll button. */
   action?: ReactNode;
+  /** Passed to each card to enable the "show on map" icon (mappable places only). */
+  onShowOnMap?: (place: Restaurant) => void;
 }
 
-export const WhereNextRail = ({ title, subtitle, places, action }: WhereNextRailProps) => {
+export const WhereNextRail = ({ title, subtitle, places, action, onShowOnMap }: WhereNextRailProps) => {
   if (places.length === 0) return null;
 
   return (
@@ -28,7 +31,11 @@ export const WhereNextRail = ({ title, subtitle, places, action }: WhereNextRail
       <div className="space-y-4">
         {places.map((place) => (
           // No edit/status/appreciation handlers — cards are read-only here.
-          <PlaceCard key={place.id} place={place} />
+          <PlaceCard
+            key={place.id}
+            place={place}
+            onShowOnMap={onShowOnMap && hasCoordinates(place) ? onShowOnMap : undefined}
+          />
         ))}
       </div>
     </section>

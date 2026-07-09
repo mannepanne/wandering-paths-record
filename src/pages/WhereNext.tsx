@@ -9,12 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { restaurantService } from "@/services/restaurants";
 import { WhereNextRail } from "@/components/WhereNextRail";
+import { WhereNextMap } from "@/components/WhereNextMap";
 import {
   freshlyAdded,
   agingList,
   acclaimedUnvisited,
   surpriseCandidates,
   nextSurprise,
+  resolveFocus,
 } from "@/lib/whereNext";
 
 const WhereNext = () => {
@@ -31,6 +33,9 @@ const WhereNext = () => {
   const [surpriseSeed, setSurpriseSeed] = useState(() => Math.floor(Math.random() * 100000));
   const [surpriseId, setSurpriseId] = useState<string | null>(null);
 
+  // Focus map: null tracks the current surprise pick; an id pins that place (reroll leaves it put).
+  const [focusedId, setFocusedId] = useState<string | null>(null);
+
   const fresh = useMemo(() => freshlyAdded(places), [places]);
   const aging = useMemo(() => agingList(places), [places]);
   const acclaimed = useMemo(() => acclaimedUnvisited(places), [places]);
@@ -40,9 +45,16 @@ const WhereNext = () => {
     [candidates, surpriseId, surpriseSeed],
   );
 
+  const focused = useMemo(
+    () => resolveFocus(focusedId, surprise, places),
+    [focusedId, surprise, places],
+  );
+
   const reroll = () => {
     setSurpriseId(surprise?.id ?? null);
     setSurpriseSeed(Math.floor(Math.random() * 100000));
+    // Rerolling re-follows the surprise pick, even if a card was previously pinned.
+    setFocusedId(null);
   };
 
   const header = (
@@ -109,25 +121,37 @@ const WhereNext = () => {
 
     return (
       <div className="space-y-12">
-        {/* Surprise me — its own hero row */}
-        <div className="max-w-sm">
-          <WhereNextRail
-            title="Surprise me"
-            subtitle="One pick at random — reroll for another"
-            places={surprise ? [surprise] : []}
-            action={
-              <Button variant="brutalist" size="sm" className="gap-2" onClick={reroll}>
-                <Shuffle className="w-4 h-4" />
-                Reroll
-              </Button>
-            }
-          />
+        {/* Surprise me on the left, focus map spanning the two columns to its right */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
+          <div className="md:col-span-1">
+            <WhereNextRail
+              title="Surprise me"
+              subtitle="One pick at random — reroll for another"
+              places={surprise ? [surprise] : []}
+              action={
+                <Button variant="brutalist" size="sm" className="gap-2" onClick={reroll}>
+                  <Shuffle className="w-4 h-4" />
+                  Reroll
+                </Button>
+              }
+              onShowOnMap={(place) => setFocusedId(place.id)}
+            />
+          </div>
+          <div className="md:col-span-2 min-h-[20rem]">
+            <WhereNextMap restaurant={focused} />
+          </div>
         </div>
 
         {/* Three columns side by side */}
         <div className={`grid grid-cols-1 ${gridColsClass} gap-6 items-start`}>
           {columns.map((c) => (
-            <WhereNextRail key={c.key} title={c.title} subtitle={c.subtitle} places={c.places} />
+            <WhereNextRail
+              key={c.key}
+              title={c.title}
+              subtitle={c.subtitle}
+              places={c.places}
+              onShowOnMap={(place) => setFocusedId(place.id)}
+            />
           ))}
         </div>
       </div>

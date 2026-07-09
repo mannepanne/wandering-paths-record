@@ -630,7 +630,7 @@ const RestaurantDetails = () => {
                             </Tooltip>
                           </div>
                         )}
-                        {restaurant.public_rating && (
+                        {!!restaurant.public_rating && (
                           <div
                             className="flex items-center gap-1 cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
                             onClick={() => window.open(getGoogleMapsUrl(restaurant, restaurant.locations?.[0]), '_blank')}
@@ -639,7 +639,7 @@ const RestaurantDetails = () => {
                             <Star className="w-4 h-4 fill-burnt-orange text-burnt-orange" />
                             <span className="font-mono">
                               {restaurant.public_rating}/5
-                              {restaurant.public_rating_count && (
+                              {!!restaurant.public_rating_count && (
                                 <span className="ml-1">based on {restaurant.public_rating_count} ratings</span>
                               )}
                             </span>
@@ -703,7 +703,7 @@ const RestaurantDetails = () => {
                       </div>
                     )}
 
-                    {restaurant.visit_count && restaurant.visit_count > 1 && (
+                    {!!restaurant.visit_count && restaurant.visit_count > 1 && (
                       <div className="flex items-center gap-2 text-muted-foreground pt-4">
                         <Clock className="w-4 h-4" />
                         <span>Visited {restaurant.visit_count} times</span>
@@ -799,7 +799,7 @@ const RestaurantDetails = () => {
                             </Tooltip>
                           </div>
                         )}
-                        {restaurant.public_rating && (
+                        {!!restaurant.public_rating && (
                           <div
                             className="flex items-center gap-1 cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
                             onClick={() => window.open(getGoogleMapsUrl(restaurant, restaurant.locations?.[0]), '_blank')}
@@ -808,7 +808,7 @@ const RestaurantDetails = () => {
                             <Star className="w-4 h-4 fill-burnt-orange text-burnt-orange" />
                             <span className="font-mono">
                               {restaurant.public_rating}/5
-                              {restaurant.public_rating_count && (
+                              {!!restaurant.public_rating_count && (
                                 <span className="ml-1">based on {restaurant.public_rating_count} ratings</span>
                               )}
                             </span>
@@ -830,7 +830,7 @@ const RestaurantDetails = () => {
                       </div>
                     )}
 
-                    {restaurant.visit_count && restaurant.visit_count > 1 && (
+                    {!!restaurant.visit_count && restaurant.visit_count > 1 && (
                       <div className="flex items-center gap-2 text-muted-foreground pt-4">
                         <Clock className="w-4 h-4" />
                         <span>Visited {restaurant.visit_count} times</span>

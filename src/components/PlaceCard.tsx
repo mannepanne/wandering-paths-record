@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { MapPin, Star, Globe, Clock, Heart } from "lucide-react";
+import { MapPin, Star, Globe, Clock, Heart, MapPinned } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Restaurant, PersonalAppreciation, RestaurantStatus, APPRECIATION_LEVELS } from "@/types/place";
 import { AppreciationPicker } from "@/components/AppreciationPicker";
@@ -13,9 +13,11 @@ interface PlaceCardProps {
   onStatusChange?: (id: string, status: RestaurantStatus, appreciation?: PersonalAppreciation) => void;
   onAppreciationChange?: (id: string, appreciation: PersonalAppreciation) => void;
   onEdit?: (id: string) => void;
+  /** When set, shows a top-right icon that focuses this place on an external map (Where Next?). */
+  onShowOnMap?: (place: Restaurant) => void;
 }
 
-export const PlaceCard = ({ place, onStatusChange, onAppreciationChange, onEdit }: PlaceCardProps) => {
+export const PlaceCard = ({ place, onStatusChange, onAppreciationChange, onEdit, onShowOnMap }: PlaceCardProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [showAppreciationPicker, setShowAppreciationPicker] = useState(false);
@@ -138,6 +140,21 @@ export const PlaceCard = ({ place, onStatusChange, onAppreciationChange, onEdit 
               </div>
             </div>
             <div className="flex flex-col items-end gap-1">
+              {onShowOnMap && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground hover:text-burnt-orange"
+                  title="Show on map"
+                  aria-label={`Show ${place.name} on the map`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onShowOnMap(place);
+                  }}
+                >
+                  <MapPinned className="w-4 h-4" />
+                </Button>
+              )}
               {place.personal_rating && place.status === 'visited' && (
                 <div className="flex items-center gap-1">
                   <span className="text-xs font-mono text-muted-foreground">Me:</span>

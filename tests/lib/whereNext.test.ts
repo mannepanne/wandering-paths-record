@@ -10,8 +10,12 @@ import {
   acclaimedUnvisited,
   surpriseCandidates,
   nextSurprise,
+  restaurantMarkers,
+  hasCoordinates,
+  resolveFocus,
   ACCLAIMED_FLOOR,
 } from '@/lib/whereNext';
+import type { RestaurantAddress } from '@/types/place';
 
 function makeRestaurant(overrides: Partial<Restaurant>): Restaurant {
   return {
@@ -174,5 +178,82 @@ describe('surpriseCandidates', () => {
       makeRestaurant({ id: 'b', status: 'visited' }),
     ];
     expect(surpriseCandidates(places).map((p) => p.id)).toEqual(['a']);
+  });
+});
+
+function makeLocation(overrides: Partial<RestaurantAddress>): RestaurantAddress {
+  return {
+    id: 'loc',
+    restaurant_id: 'r',
+    location_name: '',
+    full_address: '',
+    created_at: '',
+    updated_at: '',
+    ...overrides,
+  };
+}
+
+describe('restaurantMarkers', () => {
+  it('returns one self-labelled marker per located branch', () => {
+    const r = makeRestaurant({
+      name: 'Dishoom',
+      locations: [
+        makeLocation({ id: 'l1', location_name: 'Shoreditch', latitude: 51.5, longitude: -0.1 }),
+        makeLocation({ id: 'l2', location_name: 'Covent Garden', latitude: 51.51, longitude: -0.12 }),
+      ],
+    });
+    expect(restaurantMarkers(r)).toEqual([
+      { latitude: 51.5, longitude: -0.1, label: 'Dishoom — Shoreditch' },
+      { latitude: 51.51, longitude: -0.12, label: 'Dishoom — Covent Garden' },
+    ]);
+  });
+
+  it('skips branches missing coordinates', () => {
+    const r = makeRestaurant({
+      name: 'Dishoom',
+      locations: [
+        makeLocation({ id: 'l1', location_name: 'Shoreditch', latitude: 51.5, longitude: -0.1 }),
+        makeLocation({ id: 'l2', location_name: 'Nowhere' }),
+      ],
+    });
+    expect(restaurantMarkers(r)).toHaveLength(1);
+  });
+
+  it('falls back to restaurant-level coordinates when there are no locations', () => {
+    const r = makeRestaurant({ name: 'Solo', latitude: 40, longitude: -70 });
+    expect(restaurantMarkers(r)).toEqual([{ latitude: 40, longitude: -70, label: 'Solo' }]);
+  });
+
+  it('returns [] when nothing has coordinates', () => {
+    expect(restaurantMarkers(makeRestaurant({ name: 'Ghost' }))).toEqual([]);
+    expect(restaurantMarkers(makeRestaurant({ locations: [makeLocation({})] }))).toEqual([]);
+  });
+});
+
+describe('hasCoordinates', () => {
+  it('is true only when a marker resolves', () => {
+    expect(hasCoordinates(makeRestaurant({ latitude: 1, longitude: 2 }))).toBe(true);
+    expect(hasCoordinates(makeRestaurant({}))).toBe(false);
+  });
+});
+
+describe('resolveFocus', () => {
+  const places = makePlaces(3); // p0, p1, p2
+  const surprise = places[1];
+
+  it('tracks the surprise pick when no id is pinned', () => {
+    expect(resolveFocus(null, surprise, places)?.id).toBe('p1');
+  });
+
+  it('pins the chosen place regardless of the surprise', () => {
+    expect(resolveFocus('p2', surprise, places)?.id).toBe('p2');
+  });
+
+  it('returns null when the pinned id no longer resolves', () => {
+    expect(resolveFocus('gone', surprise, places)).toBeNull();
+  });
+
+  it('returns null when tracking surprise but there is none', () => {
+    expect(resolveFocus(null, null, places)).toBeNull();
   });
 });

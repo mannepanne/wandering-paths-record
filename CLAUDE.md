@@ -48,7 +48,7 @@ Model versions are centralized in `src/config/claude.ts`. When Anthropic depreca
 - **Multi-Location Support**: Restaurant chains with individual addresses (e.g., Dishoom with 8 locations)
 - **Smart Search**: Three-tier search (text, proximity, city fallback)
 - **GPS "Near Me"**: Find restaurants within walking distance
-- **Where Next?**: Inspiration page (`/where-next`) surfacing to-visit places via rails (freshly added, acclaimed, longest-waiting, surprise)
+- **Where Next?**: Inspiration page (`/where-next`) surfacing to-visit places via rails (freshly added, acclaimed, longest-waiting, surprise); a focus map beside the Surprise card shows the current pick's location, and each card's map icon re-focuses it (all branches for multi-location places)
 - **Personal Appreciation**: Behavioral rating scale (skip/fine/recommend/must-visit)
 - **Public Reviews**: Google Places integration for ratings and AI-summarized reviews
 
@@ -88,7 +88,7 @@ interface RestaurantAddress {
 - `src/pages/Index.tsx` - Main restaurant list/map interface
 - `src/pages/About.tsx` - About page explaining appreciation system
 - `src/pages/RestaurantDetails.tsx` - Individual restaurant view
-- `src/pages/WhereNext.tsx` - "Where next?" inspiration page (rails over to-visit places); logic in `src/lib/whereNext.ts`
+- `src/pages/WhereNext.tsx` - "Where next?" inspiration page (rails over to-visit places); logic in `src/lib/whereNext.ts`, focus map in `src/components/WhereNextMap.tsx`
 
 ### Components
 - `src/components/PlaceCard.tsx` - Restaurant cards with multi-location display

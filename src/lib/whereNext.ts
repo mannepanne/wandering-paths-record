@@ -55,6 +55,54 @@ export function surpriseCandidates(places: Restaurant[]): Restaurant[] {
   return toVisit(places);
 }
 
+/** A single map marker: a coordinate plus the label to show in its callout. */
+export interface WhereNextMarker {
+  latitude: number;
+  longitude: number;
+  label: string;
+}
+
+/**
+ * Resolve the map markers for a restaurant, mirroring InteractiveMap's fallback:
+ * every location with coordinates when present, otherwise the legacy
+ * restaurant-level coordinate. Multi-location markers self-label with their
+ * branch name so each callout is unambiguous. Returns [] when nothing has coordinates.
+ */
+export function restaurantMarkers(restaurant: Restaurant): WhereNextMarker[] {
+  if (restaurant.locations && restaurant.locations.length > 0) {
+    return restaurant.locations
+      .filter((loc) => typeof loc.latitude === "number" && typeof loc.longitude === "number")
+      .map((loc) => ({
+        latitude: loc.latitude!,
+        longitude: loc.longitude!,
+        label: loc.location_name ? `${restaurant.name} — ${loc.location_name}` : restaurant.name,
+      }));
+  }
+  if (typeof restaurant.latitude === "number" && typeof restaurant.longitude === "number") {
+    return [{ latitude: restaurant.latitude, longitude: restaurant.longitude, label: restaurant.name }];
+  }
+  return [];
+}
+
+/** True when a restaurant has at least one mappable coordinate. */
+export function hasCoordinates(restaurant: Restaurant): boolean {
+  return restaurantMarkers(restaurant).length > 0;
+}
+
+/**
+ * Resolve which restaurant the focus map should show. A null `focusedId` tracks
+ * the current surprise pick (so rerolling moves the map); any id pins that place
+ * (so rerolling leaves the map put). Returns null when the id no longer resolves.
+ */
+export function resolveFocus(
+  focusedId: string | null,
+  surprise: Restaurant | null,
+  places: Restaurant[],
+): Restaurant | null {
+  if (focusedId === null) return surprise;
+  return places.find((p) => p.id === focusedId) ?? null;
+}
+
 /**
  * Pick a surprise place. Excludes `currentId` (the place already shown) so a reroll
  * always changes the pick when more than one candidate exists. With a single

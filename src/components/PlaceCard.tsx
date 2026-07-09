@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { MapPin, Star, Globe, Clock, Heart } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Restaurant, PersonalAppreciation, RestaurantStatus, APPRECIATION_LEVELS } from "@/types/place";
 import { AppreciationPicker } from "@/components/AppreciationPicker";
 
@@ -17,11 +17,13 @@ interface PlaceCardProps {
 
 export const PlaceCard = ({ place, onStatusChange, onAppreciationChange, onEdit }: PlaceCardProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [showAppreciationPicker, setShowAppreciationPicker] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<RestaurantStatus | null>(null);
 
   const handleCardClick = () => {
-    navigate(`/restaurant/${place.id}`);
+    // Remember where the user came from so the detail page's back link can return here.
+    navigate(`/restaurant/${place.id}`, { state: { from: location.pathname } });
   };
   const getPriceColor = (priceRange?: string) => {
     switch (priceRange) {

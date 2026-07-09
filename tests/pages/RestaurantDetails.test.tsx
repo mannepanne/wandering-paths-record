@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter } from 'react-router-dom';
+import { BrowserRouter, MemoryRouter } from 'react-router-dom';
 import RestaurantDetails from '@/pages/RestaurantDetails';
 import { visitService } from '@/services/visits';
 import { restaurantService } from '@/services/restaurants';
@@ -313,5 +313,38 @@ describe('RestaurantDetails - Visit Deletion', () => {
     expect(calls.some(call =>
       call[0]?.queryKey?.[0] === 'restaurants'
     )).toBe(true);
+  });
+});
+
+describe('RestaurantDetails - back link origin', () => {
+  const renderWithState = (state?: { from?: string }) =>
+    render(
+      <MemoryRouter initialEntries={[{ pathname: '/restaurant/test-restaurant-id', state }]}>
+        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+          <RestaurantDetails />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    );
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Keep the page in its loading state — the back button renders there, no data needed.
+    vi.mocked(restaurantService.getRestaurantByIdWithLocations).mockReturnValue(new Promise(() => {}));
+  });
+
+  it('labels the back link "Back to Where next" when arriving from the Where Next page', () => {
+    renderWithState({ from: '/where-next' });
+    expect(screen.getByRole('button', { name: /back to where next/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /back to list/i })).not.toBeInTheDocument();
+  });
+
+  it('falls back to "Back to List" when there is no origin state', () => {
+    renderWithState(undefined);
+    expect(screen.getByRole('button', { name: /back to list/i })).toBeInTheDocument();
+  });
+
+  it('falls back to "Back to List" when arriving from somewhere other than Where Next', () => {
+    renderWithState({ from: '/' });
+    expect(screen.getByRole('button', { name: /back to list/i })).toBeInTheDocument();
   });
 });

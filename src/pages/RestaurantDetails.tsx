@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,14 @@ import { useToast } from "@/hooks/use-toast";
 const RestaurantDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
+
+  // Return to wherever the user came from. "Where next?" gets a tailored label;
+  // everything else (and direct loads/refreshes, where state is absent) falls back to the list.
+  const cameFromWhereNext = (location.state as { from?: string } | null)?.from === "/where-next";
+  const backTo = cameFromWhereNext ? "/where-next" : "/";
+  const backLabel = cameFromWhereNext ? "Back to Where next" : "Back to List";
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [showAllDishes, setShowAllDishes] = useState(false);
@@ -352,11 +359,11 @@ const RestaurantDetails = () => {
           <div className="container mx-auto flex items-center max-w-6xl">
             <Button 
               variant="ghost" 
-              onClick={() => navigate('/')}
+              onClick={() => navigate(backTo)}
               className="gap-2"
             >
               <ArrowLeft className="w-4 h-4" />
-              Back to List
+              {backLabel}
             </Button>
           </div>
         </nav>
@@ -380,11 +387,11 @@ const RestaurantDetails = () => {
           <div className="container mx-auto flex items-center max-w-6xl">
             <Button 
               variant="ghost" 
-              onClick={() => navigate('/')}
+              onClick={() => navigate(backTo)}
               className="gap-2"
             >
               <ArrowLeft className="w-4 h-4" />
-              Back to List
+              {backLabel}
             </Button>
           </div>
         </nav>
@@ -409,11 +416,11 @@ const RestaurantDetails = () => {
         <div className="container mx-auto flex items-center justify-between max-w-6xl">
           <Button
             variant="ghost"
-            onClick={() => navigate('/')}
+            onClick={() => navigate(backTo)}
             className="gap-2"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to List
+            {backLabel}
           </Button>
 
           {/* Admin buttons - only show if user is logged in */}

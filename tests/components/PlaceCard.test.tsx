@@ -37,6 +37,24 @@ const renderAt = (pathname: string) =>
     </MemoryRouter>,
   );
 
+// Detects a bare "0" rendered as a direct text node — the failure mode of a
+// falsy `0 && <JSX>` guard, where React prints the number instead of hiding it.
+const hasBareZeroTextNode = (container: HTMLElement) =>
+  Array.from(container.querySelectorAll('*')).some((el) =>
+    Array.from(el.childNodes).some(
+      (n) => n.nodeType === Node.TEXT_NODE && n.textContent?.trim() === '0',
+    ),
+  );
+
+const renderCard = (place: Restaurant) =>
+  render(
+    <MemoryRouter>
+      <TooltipProvider>
+        <PlaceCard place={place} />
+      </TooltipProvider>
+    </MemoryRouter>,
+  );
+
 describe('PlaceCard navigation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -52,5 +70,24 @@ describe('PlaceCard navigation', () => {
     renderAt('/');
     fireEvent.click(screen.getByText('Test Restaurant'));
     expect(mockNavigate).toHaveBeenCalledWith('/restaurant/r1', { state: { from: '/' } });
+  });
+});
+
+describe('PlaceCard falsy-zero guards', () => {
+  it('does not render a stray "0" when numeric fields are 0', () => {
+    const { container } = renderCard(
+      makeRestaurant({
+        status: 'visited',
+        visit_count: 0,
+        public_rating: 0,
+        personal_rating: 0,
+      }),
+    );
+    expect(hasBareZeroTextNode(container)).toBe(false);
+  });
+
+  it('still renders the visit count when visited more than once', () => {
+    renderCard(makeRestaurant({ status: 'visited', visit_count: 3 }));
+    expect(screen.getByText('Visited 3 times')).toBeInTheDocument();
   });
 });

@@ -131,6 +131,7 @@ grep -r "authentication" REFERENCE/decisions/
 
 **Format:** Listed chronologically (newest first)
 
+- [2026-07-09 — Reviewer agents fan out and report to an orchestrator; they do not debate each other](./2026-07-09-fan-out-review-synthesis.md) — why the multi-round "collaborative discussion" phase was removed from `/review-pr-team` and `/review-spec`, why pure fan-out plus orchestrator synthesis captures the value debate produced (severity recalibration) without its unbounded cost, and why unresolved disagreements now surface to the human rather than being negotiated away.
 - [2026-04-26 — SCRATCH Write approval via PreToolUse hook](./2026-04-26-scratch-write-pretooluse-hook.md) — why the hook, not an allow-list entry, is needed; upstream Write matcher defect (5 sightings)
 - [2026-04-26 — Allowlist pinning principle](./2026-04-26-allowlist-pinning-principle.md) — pin to subcommand when binary can eval code; allow at binary level when it can't
 - [2026-04-25 — PR review system threat model](./2026-04-25-pr-review-threat-model.md) — single trusted contributor scope; tightening checklist for open-source/enterprise derivatives

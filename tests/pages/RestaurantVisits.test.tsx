@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter } from 'react-router-dom';
+import { BrowserRouter, MemoryRouter } from 'react-router-dom';
 import RestaurantVisits from '@/pages/RestaurantVisits';
 import { visitService } from '@/services/visits';
 import { restaurantService } from '@/services/restaurants';
@@ -302,7 +302,29 @@ describe('RestaurantVisits Page', () => {
         fireEvent.click(backButton);
       }, { timeout: 3000 });
 
-      expect(mockNavigate).toHaveBeenCalledWith('/restaurant/test-restaurant-id');
+      expect(mockNavigate).toHaveBeenCalledWith('/restaurant/test-restaurant-id', {
+        state: { from: undefined },
+      });
+    });
+
+    it('forwards the origin back to the detail page so its label is preserved', async () => {
+      const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      render(
+        <MemoryRouter initialEntries={[{ pathname: '/restaurant/test-restaurant-id/visits', state: { from: '/where-next' } }]}>
+          <QueryClientProvider client={queryClient}>
+            <RestaurantVisits />
+          </QueryClientProvider>
+        </MemoryRouter>,
+      );
+
+      await waitFor(() => {
+        const backButton = screen.getByRole('button', { name: /back to test restaurant/i });
+        fireEvent.click(backButton);
+      }, { timeout: 3000 });
+
+      expect(mockNavigate).toHaveBeenCalledWith('/restaurant/test-restaurant-id', {
+        state: { from: '/where-next' },
+      });
     });
 
     it('should open website in new tab', async () => {

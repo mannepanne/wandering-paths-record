@@ -4,7 +4,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { BrowserRouter } from 'react-router-dom';
+import { BrowserRouter, MemoryRouter } from 'react-router-dom';
 import { VisitHistory } from '@/components/VisitHistory';
 import { visitService } from '@/services/visits';
 import type { RestaurantVisit } from '@/types/place';
@@ -120,7 +120,25 @@ describe('VisitHistory', () => {
     const link = await screen.findByText('view all');
 
     fireEvent.click(link);
-    expect(mockNavigate).toHaveBeenCalledWith('/restaurant/r1/visits');
+    expect(mockNavigate).toHaveBeenCalledWith('/restaurant/r1/visits', {
+      state: { from: undefined },
+    });
+  });
+
+  it('forwards the detail page origin into the visits route', async () => {
+    vi.mocked(visitService.getLatestVisits).mockResolvedValue([makeVisit()]);
+    vi.mocked(visitService.getVisitCount).mockResolvedValue(5);
+
+    render(
+      <MemoryRouter initialEntries={[{ pathname: '/restaurant/r1', state: { from: '/where-next' } }]}>
+        <VisitHistory restaurantId="r1" />
+      </MemoryRouter>,
+    );
+    fireEvent.click(await screen.findByText('view all'));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/restaurant/r1/visits', {
+      state: { from: '/where-next' },
+    });
   });
 
   it('truncates long notes and expands on click', async () => {

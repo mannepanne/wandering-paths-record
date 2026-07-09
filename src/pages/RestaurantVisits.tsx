@@ -2,7 +2,7 @@
 // ABOUT: Shows restaurant header, description, and full visit timeline with stats
 
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,15 @@ import { useQueryClient } from "@tanstack/react-query";
 const RestaurantVisits = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
+
+  // Preserve the detail page's origin across the round-trip, so returning to it
+  // keeps the correct back-link label (e.g. "Back to Where next").
+  const backToDetail = () =>
+    navigate(`/restaurant/${id}`, {
+      state: { from: (location.state as { from?: string } | null)?.from },
+    });
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -242,7 +250,7 @@ const RestaurantVisits = () => {
           <div className="container mx-auto flex items-center max-w-6xl">
             <Button
               variant="ghost"
-              onClick={() => navigate(`/restaurant/${id}`)}
+              onClick={backToDetail}
               className="gap-2"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -275,7 +283,7 @@ const RestaurantVisits = () => {
         <div className="container mx-auto flex items-center max-w-6xl">
           <Button
             variant="ghost"
-            onClick={() => navigate(`/restaurant/${id}`)}
+            onClick={backToDetail}
             className="gap-2"
           >
             <ArrowLeft className="w-4 h-4" />

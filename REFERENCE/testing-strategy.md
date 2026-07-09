@@ -466,7 +466,7 @@ describe('Restaurant Extraction', () => {
 
 ## Current Implementation Status
 
-Tests are implemented and running in CI — 196 tests across services, components, pages, hooks, and utilities at the time of writing. Run `npm test` locally or `npm run test:coverage` for the coverage report.
+Tests are implemented and running in CI — 203 tests across services, components, pages, hooks, and utilities at the time of writing. Run `npm test` locally or `npm run test:coverage` for the coverage report.
 
 **Where to add new tests:**
 
@@ -511,4 +511,4 @@ Tests are implemented and running in CI — 196 tests across services, component
 
 ---
 
-**Status:** Test infrastructure in place; 196 tests passing in CI. This document describes the current testing approach and remains the reference for adding new tests.
+**Status:** Test infrastructure in place; 203 tests passing in CI. This document describes the current testing approach and remains the reference for adding new tests.

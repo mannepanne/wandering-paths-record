@@ -10,7 +10,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "api": "node server.cjs",
-    "db:seed:local": "wrangler d1 execute wandering-paths --local --file=scripts/d1-schema.sql && wrangler d1 execute wandering-paths --local --command=\"DELETE FROM restaurant_visits; DELETE FROM restaurant_addresses; DELETE FROM restaurants;\" && wrangler d1 execute wandering-paths --local --file=db_backup/d1-seed.sql",
+    "db:seed:local": "wrangler d1 execute wandering-paths --local --file=scripts/d1-schema.sql && wrangler d1 execute wandering-paths --local --command=\"DELETE FROM restaurant_visits; DELETE FROM restaurant_addresses; DELETE FROM restaurants;\" && wrangler d1 execute wandering-paths --local --file=scripts/d1-seed.sample.sql",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",

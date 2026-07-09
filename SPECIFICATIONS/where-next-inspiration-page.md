@@ -12,8 +12,14 @@ page **re-fetches** the restaurant list via its own query (it does NOT share Ind
 174 restaurants are in the database, most unvisited. Existing search already answers "I'm
 going to area X — what's nearby?" (use case 1). There is **no** tool for "inspire me — surface
 a place worth going to next" (use case 2). This phase adds a `/where-next` page that presents a
-stack of small, named, transparent "rails" (Netflix rows), each a legible heuristic over the
-restaurant list. Every suggestion's reason is visible in its rail title — no opaque scoring, no ML.
+stack of small, named, transparent "rails", each a legible heuristic over the restaurant list.
+Every suggestion's reason is visible in its rail title — no opaque scoring, no ML.
+
+**Shipped layout note:** the rails render as **"Surprise me" on its own hero row on top, then
+Freshly added / Acclaimed & unvisited / Been waiting a while as three side-by-side columns**
+(vertical card stacks; collapses to one column on mobile). This replaced the originally-planned
+horizontal-scroll rows — vertical columns suit the tall `PlaceCard` far better, so no compact
+card variant was needed. Empty columns are dropped and the grid reflows.
 
 ---
 
@@ -104,9 +110,9 @@ tests/
   └── pages/WhereNext.test.tsx
 ```
 Presentation reuses `PlaceCard` in **read-only mode** (no edit/status/appreciation handlers).
-PlaceCard is a tall vertical card, so a **compact variant is expected work**, not a maybe —
-budget for it if horizontal rails of the full card look wrong. (Component tests must wrap
-`TooltipProvider`, as PlaceCard uses a radix Tooltip.)
+PlaceCard is a tall vertical card. The shipped layout stacks cards **vertically within each
+column**, which fits the full card well — no compact variant was needed. (Component tests must
+wrap `TooltipProvider`, as PlaceCard uses a radix Tooltip.)
 
 **Files to modify:**
 ```
@@ -135,12 +141,17 @@ None. `created_at` (ISO TEXT, `datetime('now')` default — lexicographically so
 
 ### Coverage targets
 - Lines/Functions/Statements 95%+, Branches 90%+ on new code.
+- **Achieved:** `whereNext.ts` (the logic) 100% across the board. `WhereNext.tsx` is 100%
+  lines/statements/functions but ~77% branches — the uncovered branches are defensive
+  null-guards (`surprise?.id ?? null`, the single-column grid fallback, `surprise ? [surprise] : []`)
+  that the earlier `candidates.length > 0` gate makes unreachable. Accepted rather than tested
+  against impossible states.
 
 ### Manual testing checklist
 - [ ] Header button opens `/where-next`; back link returns.
 - [ ] Each rail shows correct places, order, and count against real data.
 - [ ] Reroll changes the surprise pick.
-- [ ] Responsive: rails scroll horizontally on mobile and desktop.
+- [ ] Responsive: three columns side by side on desktop, collapsing to one on mobile.
 - [ ] Keyboard accessible (button, reroll, rail navigation).
 
 ---

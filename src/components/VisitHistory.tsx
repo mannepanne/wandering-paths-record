@@ -2,7 +2,7 @@
 // ABOUT: Shows latest 2 visits with link to full history page
 
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,7 @@ interface VisitHistoryProps {
 
 export const VisitHistory = ({ restaurantId, onEdit, onDelete }: VisitHistoryProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [visits, setVisits] = useState<RestaurantVisit[]>([]);
   const [totalVisitCount, setTotalVisitCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
@@ -136,7 +137,12 @@ export const VisitHistory = ({ restaurantId, onEdit, onDelete }: VisitHistoryPro
             <>
               {totalVisitCount} visits,{' '}
               <button
-                onClick={() => navigate(`/restaurant/${restaurantId}/visits`)}
+                onClick={() =>
+                  // Forward the detail page's origin so the round-trip back keeps its label.
+                  navigate(`/restaurant/${restaurantId}/visits`, {
+                    state: { from: (location.state as { from?: string } | null)?.from },
+                  })
+                }
                 className="text-burnt-orange hover:text-burnt-orange/80 font-normal transition-colors"
               >
                 view all

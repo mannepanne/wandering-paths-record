@@ -131,6 +131,7 @@ grep -r "authentication" REFERENCE/decisions/
 
 **Format:** Listed chronologically (newest first)
 
+- [2026-07-09 — Reviewer agents are read-only, and PR reviewers run in an isolated worktree](./2026-07-09-read-only-reviewer-agents.md) — why a reviewer must never `git checkout` (it silently strands the operator's commits), why the root cause was agents being told to use the `Read` tool on files the PR changed, why `git show FETCH_HEAD:<path>` is the correct read, why a `deny` rule or safety-harness pattern is the wrong layer (session-wide, can't see subagents), and why `/review-spec` is deliberately exempt from worktree isolation.
 - [2026-07-09 — Reviewer agents fan out and report to an orchestrator; they do not debate each other](./2026-07-09-fan-out-review-synthesis.md) — why the multi-round "collaborative discussion" phase was removed from `/review-pr-team` and `/review-spec`, why pure fan-out plus orchestrator synthesis captures the value debate produced (severity recalibration) without its unbounded cost, and why unresolved disagreements now surface to the human rather than being negotiated away.
 - [2026-04-26 — SCRATCH Write approval via PreToolUse hook](./2026-04-26-scratch-write-pretooluse-hook.md) — why the hook, not an allow-list entry, is needed; upstream Write matcher defect (5 sightings)
 - [2026-04-26 — Allowlist pinning principle](./2026-04-26-allowlist-pinning-principle.md) — pin to subcommand when binary can eval code; allow at binary level when it can't

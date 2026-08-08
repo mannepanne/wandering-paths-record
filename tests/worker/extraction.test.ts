@@ -3,12 +3,12 @@
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
 // @ts-expect-error — worker.js is plain JS with no type declarations
-import { fetchPageWithProxy, businessTypeWarningFor } from '@/worker';
+import { fetchPageContent, classifyHttpStatus, fetchErrorResponse, businessTypeWarningFor } from '@/worker';
 
 const TARGET = 'https://example-restaurant.com';
 const GOOD_HTML = '<html><body>' + 'x'.repeat(600) + '</body></html>'; // > 500 chars
 
-// Build a fake Response with just the bits fetchPageWithProxy reads.
+// Build a fake Response with just the bits fetchPageContent reads.
 function res({ ok = true, status = 200, text = '', json = undefined }: {
   ok?: boolean; status?: number; text?: string; json?: unknown;
 }) {
@@ -20,77 +20,95 @@ function res({ ok = true, status = 200, text = '', json = undefined }: {
   };
 }
 
-const isCodetabs = (u: string) => u.includes('codetabs');
-const isAllorigins = (u: string) => u.includes('allorigins');
-const isProxy = (u: string) => isCodetabs(u) || isAllorigins(u);
-
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.clearAllMocks();
 });
 
-describe('fetchPageWithProxy — direct-fetch-first fallback chain', () => {
-  it('returns direct-fetch content and never touches a proxy on the happy path', async () => {
-    const fetchMock = vi.fn((url: string) =>
-      Promise.resolve(isProxy(url) ? res({ text: 'PROXY' }) : res({ text: GOOD_HTML }))
-    );
+describe('fetchPageContent — direct server-side fetch', () => {
+  it('returns the page content on the happy path with a single direct fetch', async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(res({ text: GOOD_HTML })));
     vi.stubGlobal('fetch', fetchMock);
 
-    const content = await fetchPageWithProxy(TARGET);
+    const result = await fetchPageContent(TARGET);
 
-    expect(content).toBe(GOOD_HTML);
+    expect(result).toEqual({ content: GOOD_HTML });
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock.mock.calls[0][0]).toBe(TARGET); // direct, not a proxy
+    expect(fetchMock.mock.calls[0][0]).toBe(TARGET);
   });
 
-  it('falls back to a proxy when the direct fetch returns thin content', async () => {
-    const fetchMock = vi.fn((url: string) =>
-      Promise.resolve(isProxy(url) ? res({ text: 'PROXY_CONTENT' }) : res({ text: 'tiny' }))
-    );
-    vi.stubGlobal('fetch', fetchMock);
+  it('reports "blocked" when the direct fetch returns thin content (bot-challenge page)', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(res({ text: 'tiny' }))));
 
-    const content = await fetchPageWithProxy(TARGET);
-
-    expect(content).toBe('PROXY_CONTENT');
-    expect(fetchMock.mock.calls.some(c => isProxy(c[0] as string))).toBe(true);
+    expect(await fetchPageContent(TARGET)).toEqual({ error: 'blocked' });
   });
 
-  it('falls back to a proxy when the direct fetch returns a non-2xx status', async () => {
-    const fetchMock = vi.fn((url: string) =>
-      Promise.resolve(isProxy(url) ? res({ text: 'PROXY_CONTENT' }) : res({ ok: false, status: 403, text: '' }))
-    );
-    vi.stubGlobal('fetch', fetchMock);
+  it('reports "blocked" when the direct fetch returns 403 (access refused)', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(res({ ok: false, status: 403, text: '' }))));
 
-    expect(await fetchPageWithProxy(TARGET)).toBe('PROXY_CONTENT');
+    expect(await fetchPageContent(TARGET)).toEqual({ error: 'blocked' });
   });
 
-  it('falls back to a proxy when the direct fetch throws (timeout/network)', async () => {
-    const fetchMock = vi.fn((url: string) =>
-      isProxy(url) ? Promise.resolve(res({ text: 'PROXY_CONTENT' })) : Promise.reject(new Error('timed out'))
-    );
-    vi.stubGlobal('fetch', fetchMock);
+  it('reports "not-found" when the direct fetch returns 404 (a wrong URL, not bot protection)', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(res({ ok: false, status: 404, text: '' }))));
 
-    expect(await fetchPageWithProxy(TARGET)).toBe('PROXY_CONTENT');
+    expect(await fetchPageContent(TARGET)).toEqual({ error: 'not-found' });
   });
 
-  it('parses allorigins JSON shape and uses it when codetabs fails', async () => {
-    const fetchMock = vi.fn((url: string) => {
-      if (isAllorigins(url)) return Promise.resolve(res({ json: { contents: 'ALLORIGINS_HTML' } }));
-      if (isCodetabs(url)) return Promise.resolve(res({ ok: false, status: 400, text: '' }));
-      return Promise.reject(new Error('direct blocked')); // direct fetch fails
-    });
-    vi.stubGlobal('fetch', fetchMock);
+  it('reports "unreachable" when the site returns a 5xx (broken/overloaded origin)', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(res({ ok: false, status: 503, text: '' }))));
 
-    expect(await fetchPageWithProxy(TARGET)).toBe('ALLORIGINS_HTML');
+    expect(await fetchPageContent(TARGET)).toEqual({ error: 'unreachable' });
   });
 
-  it('returns null when direct fetch and all proxies fail', async () => {
-    const fetchMock = vi.fn((url: string) =>
-      isProxy(url) ? Promise.resolve(res({ ok: false, status: 500, text: '' })) : Promise.reject(new Error('blocked'))
-    );
-    vi.stubGlobal('fetch', fetchMock);
+  it('reports "unreachable" when the direct fetch throws (timeout/network)', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new Error('timed out'))));
 
-    expect(await fetchPageWithProxy(TARGET)).toBeNull();
+    expect(await fetchPageContent(TARGET)).toEqual({ error: 'unreachable' });
+  });
+});
+
+describe('classifyHttpStatus — status → failure reason', () => {
+  it('treats 404 and 410 as not-found (a wrong URL, never "bot protection")', () => {
+    expect(classifyHttpStatus(404)).toBe('not-found');
+    expect(classifyHttpStatus(410)).toBe('not-found');
+  });
+
+  it('treats 401 and 403 as blocked (access refused)', () => {
+    expect(classifyHttpStatus(401)).toBe('blocked');
+    expect(classifyHttpStatus(403)).toBe('blocked');
+  });
+
+  it('treats 5xx and 429 as unreachable (broken/overloaded, retry)', () => {
+    expect(classifyHttpStatus(500)).toBe('unreachable');
+    expect(classifyHttpStatus(503)).toBe('unreachable');
+    expect(classifyHttpStatus(429)).toBe('unreachable');
+  });
+});
+
+describe('fetchErrorResponse — reason → HTTP status + user message', () => {
+  it('blocked → 422 and names bot protection + manual entry', () => {
+    const r = fetchErrorResponse('blocked');
+    expect(r.status).toBe(422);
+    expect(r.message.toLowerCase()).toContain('bot protection');
+    expect(r.message.toLowerCase()).toContain('manual entry');
+  });
+
+  it('not-found → 404 and points at the URL, NOT bot protection', () => {
+    const r = fetchErrorResponse('not-found');
+    expect(r.status).toBe(404);
+    expect(r.message.toLowerCase()).toContain('url');
+    expect(r.message.toLowerCase()).not.toContain('bot protection');
+  });
+
+  it('unreachable → 502 and suggests the site may be down', () => {
+    const r = fetchErrorResponse('unreachable');
+    expect(r.status).toBe(502);
+    expect(r.message.toLowerCase()).toContain('down');
+  });
+
+  it('defaults an unknown reason to the unreachable response', () => {
+    expect(fetchErrorResponse('something-else').status).toBe(502);
   });
 });
 

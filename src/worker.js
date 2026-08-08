@@ -102,20 +102,57 @@ async function callClaudeApi(prompt, apiKey) {
   return result.content[0].text;
 }
 
-// Fetch page content: direct server-side fetch first, public proxies as fallback
 // Browser-like User-Agent so sites serve us their real markup rather than a bot page
 const BROWSER_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
-export async function fetchPageWithProxy(url) {
+// Map an HTTP status the target returned to a failure reason. Kept a pure,
+// exported function so the classification is unit-testable in isolation.
+//   'not-found'    — the page is gone (404/410); the URL is likely wrong, not blocked
+//   'blocked'      — access refused (401/403); anti-bot / auth wall
+//   'unreachable'  — anything else non-2xx (5xx, 429, …); site broken/overloaded, retry
+export function classifyHttpStatus(status) {
+  if (status === 404 || status === 410) return 'not-found';
+  if (status === 401 || status === 403) return 'blocked';
+  return 'unreachable';
+}
+
+// Map a fetch failure reason to the HTTP status + user-facing message the
+// extraction endpoint returns. Pure and exported so the copy is unit-testable.
+export function fetchErrorResponse(reason) {
+  switch (reason) {
+    case 'blocked':
+      return {
+        status: 422,
+        message: 'This site blocks automated access (bot protection), so its details can’t be extracted automatically. Add it using manual entry instead.'
+      };
+    case 'not-found':
+      return {
+        status: 404,
+        message: 'We couldn’t find a page at that URL — double-check the address, or add it using manual entry.'
+      };
+    default: // 'unreachable'
+      return {
+        status: 502,
+        message: 'Could not reach the website — it may be down or slow to respond. Check the URL, or add it using manual entry.'
+      };
+  }
+}
+
+// Fetch page content by fetching the target directly from the Worker. Workers run
+// server-side with no CORS restriction, so this handles the common case without
+// depending on third-party proxies. Returns:
+//   { content }                on success
+//   { error: 'blocked' }       access refused: a bot-challenge / thin body / 401 / 403
+//   { error: 'not-found' }     the page is gone (404 / 410) — usually a wrong URL
+//   { error: 'unreachable' }   the request threw, or the site returned a 5xx / 429
+export async function fetchPageContent(url) {
   // Instagram-specific handling
   if (isInstagramUrl(url)) {
     console.log('🟣 Instagram URL detected, using specialized scraping');
-    return await fetchInstagramContent(url);
+    const content = await fetchInstagramContent(url);
+    return content ? { content } : { error: 'blocked' };
   }
 
-  // Primary path: Workers run server-side with no CORS restriction, so fetch the
-  // target directly. This avoids depending on flaky third-party proxies for the
-  // common case. Proxies remain as a fallback for sites that block datacenter IPs.
   try {
     const response = await fetch(url, {
       headers: {
@@ -130,38 +167,20 @@ export async function fetchPageWithProxy(url) {
       const content = await response.text();
       if (content && content.length > 500) {
         console.log('✅ Content fetched via direct fetch, length:', content.length);
-        return content;
+        return { content };
       }
-      console.log('⚠️ Direct fetch returned thin content, falling back to proxies');
-    } else {
-      console.log('⚠️ Direct fetch returned status', response.status, '- falling back to proxies');
+      // A 200 with a tiny body is the tell-tale sign of a bot-challenge interstitial
+      // ("checking your browser") served to non-residential IPs.
+      console.log('⚠️ Direct fetch returned thin content — likely a bot-challenge page');
+      return { error: 'blocked' };
     }
+    const reason = classifyHttpStatus(response.status);
+    console.log('⚠️ Direct fetch returned status', response.status, '→', reason);
+    return { error: reason };
   } catch (error) {
-    console.log('⚠️ Direct fetch failed:', error.message, '- falling back to proxies');
+    console.log('⚠️ Direct fetch failed:', error.message);
+    return { error: 'unreachable' };
   }
-
-  // Fallback path: public CORS proxies for sites that reject direct datacenter requests
-  const proxies = [
-    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
-    `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`
-  ];
-
-  for (const proxyUrl of proxies) {
-    try {
-      const response = await fetch(proxyUrl, { signal: AbortSignal.timeout(12000) });
-      if (response.ok) {
-        if (proxyUrl.includes('allorigins')) {
-          const data = await response.json();
-          return data.contents;
-        } else {
-          return await response.text();
-        }
-      }
-    } catch (error) {
-      continue;
-    }
-  }
-  return null;
 }
 
 // Check if URL is Instagram
@@ -487,13 +506,16 @@ async function handleRestaurantExtraction(request, env) {
     }
 
     // Fetch main page content
-    const mainContent = await fetchPageWithProxy(url);
-    if (!mainContent) {
+    const fetchResult = await fetchPageContent(url);
+    if (fetchResult.error) {
+      const { status, message } = fetchErrorResponse(fetchResult.error);
       return Response.json({
         success: false,
-        error: 'Could not fetch website content'
-      }, { status: 500 });
+        reason: fetchResult.error, // 'blocked' | 'not-found' | 'unreachable'
+        error: message
+      }, { status });
     }
+    const mainContent = fetchResult.content;
 
     console.log('📄 Content fetched, length:', mainContent.length);
 

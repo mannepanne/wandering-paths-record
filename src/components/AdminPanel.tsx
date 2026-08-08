@@ -468,6 +468,23 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
     setFormData(prev => prev ? { ...prev, [field]: value } : { [field]: value });
   };
 
+  // Open a blank form for manual entry, seeded with whatever URL was typed.
+  // Reused by the persistent "add manually" link and every extraction-failure
+  // path (bot-protected sites, wrong URLs, unreachable sites) so the user is
+  // never stuck when automatic extraction can't help.
+  const startManualEntry = () => {
+    extraction.clearError();
+    setFormData({
+      name: '',
+      website: newPlaceUrl.trim() || '',
+      addressSummary: '',
+      cuisine: '',
+      source: '',
+      source_url: '',
+      locations: []
+    });
+  };
+
   const handleClearForm = () => {
     setFormData(null);
     setNewPlaceUrl("");
@@ -866,7 +883,22 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
               )}
             </Button>
           </div>
-          
+
+          {/* Manual entry escape hatch: always available for sites that can't be
+              auto-extracted (bot-protected, JS-only, or simply not online yet) */}
+          {!editingRestaurant && !formData && !extraction.isExtracting && !extraction.error && (
+            <div className="text-sm text-charcoal/70">
+              Can’t extract, or already know the details?{' '}
+              <Button
+                variant="link"
+                onClick={startManualEntry}
+                className="h-auto p-0 text-burnt-orange"
+              >
+                Add it manually
+              </Button>
+            </div>
+          )}
+
           {/* Progress Indicator */}
           {extraction.isExtracting && (
             <div className="flex items-center gap-3 p-3 bg-olive-green/10 rounded-md">
@@ -903,29 +935,16 @@ export const AdminPanel = ({ onBack, editingRestaurant }: AdminPanelProps) => {
               <AlertTriangle className={`h-4 w-4 ${extraction.isNotRestaurant ? "text-orange-600" : "text-red-600"}`} />
               <AlertDescription className={extraction.isNotRestaurant ? "text-orange-600" : "text-red-600"}>
                 {extraction.error}
-                {extraction.isNotRestaurant && (
-                  <div className="mt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        extraction.clearError();
-                        setFormData({
-                          name: '',
-                          website: newPlaceUrl,
-                          addressSummary: '',
-                          cuisine: '',
-                          source: '',
-                          source_url: '',
-                          locations: []
-                        });
-                      }}
-                      className="text-orange-600 border-orange-300"
-                    >
-                      Use Manual Entry Instead
-                    </Button>
-                  </div>
-                )}
+                <div className="mt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={startManualEntry}
+                    className={extraction.isNotRestaurant ? "text-orange-600 border-orange-300" : "text-red-600 border-red-300"}
+                  >
+                    Use Manual Entry Instead
+                  </Button>
+                </div>
               </AlertDescription>
             </Alert>
           )}

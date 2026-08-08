@@ -105,14 +105,46 @@ async function callClaudeApi(prompt, apiKey) {
 // Browser-like User-Agent so sites serve us their real markup rather than a bot page
 const BROWSER_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
+// Map an HTTP status the target returned to a failure reason. Kept a pure,
+// exported function so the classification is unit-testable in isolation.
+//   'not-found'    — the page is gone (404/410); the URL is likely wrong, not blocked
+//   'blocked'      — access refused (401/403); anti-bot / auth wall
+//   'unreachable'  — anything else non-2xx (5xx, 429, …); site broken/overloaded, retry
+export function classifyHttpStatus(status) {
+  if (status === 404 || status === 410) return 'not-found';
+  if (status === 401 || status === 403) return 'blocked';
+  return 'unreachable';
+}
+
+// Map a fetch failure reason to the HTTP status + user-facing message the
+// extraction endpoint returns. Pure and exported so the copy is unit-testable.
+export function fetchErrorResponse(reason) {
+  switch (reason) {
+    case 'blocked':
+      return {
+        status: 422,
+        message: 'This site blocks automated access (bot protection), so its details can’t be extracted automatically. Add it using manual entry instead.'
+      };
+    case 'not-found':
+      return {
+        status: 404,
+        message: 'We couldn’t find a page at that URL — double-check the address, or add it using manual entry.'
+      };
+    default: // 'unreachable'
+      return {
+        status: 502,
+        message: 'Could not reach the website — it may be down or slow to respond. Check the URL, or add it using manual entry.'
+      };
+  }
+}
+
 // Fetch page content by fetching the target directly from the Worker. Workers run
 // server-side with no CORS restriction, so this handles the common case without
 // depending on third-party proxies. Returns:
-//   { content }               on success
-//   { error: 'blocked' }      the site answered but served a bot-challenge / thin
-//                             body / non-2xx — its own anti-bot protection refusing
-//                             a datacenter request; a proxy would be challenged too
-//   { error: 'unreachable' }  the request threw (timeout / network / DNS)
+//   { content }                on success
+//   { error: 'blocked' }       access refused: a bot-challenge / thin body / 401 / 403
+//   { error: 'not-found' }     the page is gone (404 / 410) — usually a wrong URL
+//   { error: 'unreachable' }   the request threw, or the site returned a 5xx / 429
 export async function fetchPageContent(url) {
   // Instagram-specific handling
   if (isInstagramUrl(url)) {
@@ -142,8 +174,9 @@ export async function fetchPageContent(url) {
       console.log('⚠️ Direct fetch returned thin content — likely a bot-challenge page');
       return { error: 'blocked' };
     }
-    console.log('⚠️ Direct fetch returned status', response.status, '— likely blocking automated access');
-    return { error: 'blocked' };
+    const reason = classifyHttpStatus(response.status);
+    console.log('⚠️ Direct fetch returned status', response.status, '→', reason);
+    return { error: reason };
   } catch (error) {
     console.log('⚠️ Direct fetch failed:', error.message);
     return { error: 'unreachable' };
@@ -474,15 +507,13 @@ async function handleRestaurantExtraction(request, env) {
 
     // Fetch main page content
     const fetchResult = await fetchPageContent(url);
-    if (!fetchResult.content) {
-      const blocked = fetchResult.error === 'blocked';
+    if (fetchResult.error) {
+      const { status, message } = fetchErrorResponse(fetchResult.error);
       return Response.json({
         success: false,
-        reason: fetchResult.error, // 'blocked' | 'unreachable'
-        error: blocked
-          ? 'This site blocks automated access (bot protection), so its details can’t be extracted automatically. Add it using manual entry instead.'
-          : 'Could not reach the website — it may be down or slow to respond. Check the URL, or add it using manual entry.'
-      }, { status: blocked ? 422 : 502 });
+        reason: fetchResult.error, // 'blocked' | 'not-found' | 'unreachable'
+        error: message
+      }, { status });
     }
     const mainContent = fetchResult.content;
 

@@ -30,9 +30,8 @@ Admin Panel → localhost:3001/api/extract-restaurant → Claude API → Restaur
 ```
 
 - Runs on Express server (port 3001)
-- Uses proxies to fetch website content
-- Calls Claude API directly
-- Returns JSON response
+- Calls Claude API directly, returns JSON response
+- **Diverges from production:** still uses the old direct-fetch-then-public-CORS-proxy chain and the generic `500 / "Could not fetch website content"` error. This runs from a residential IP, so it rarely hits the bot-challenge the Worker does — which is why the divergence is tolerated rather than kept in lockstep. The new classified errors below are Worker-only.
 
 ### Production (worker.js)
 
@@ -41,7 +40,7 @@ Admin Panel → restaurants.hultberg.org/api/extract-restaurant → Claude API �
 ```
 
 - Runs in Cloudflare Workers runtime
-- Same extraction logic as local dev
+- **Direct fetch only, no proxy fallback**, with classified failure reasons (`blocked` / `not-found` / `unreachable`) — see "Fetch strategy" below
 - Uses Cloudflare Workers KV for potential caching
 
 ---
@@ -85,19 +84,20 @@ export const CLAUDE_MAX_TOKENS = {
 
 **Fetch strategy (`fetchPageContent` in `worker.js`):**
 - **Direct fetch only.** The Worker runs server-side with no CORS restriction, so it fetches the target URL directly with a browser-like User-Agent. No third-party proxy dependency.
-- The result is classified so the user gets an actionable message:
+- The result is classified so the user gets an actionable message. `classifyHttpStatus` maps the status to a reason and `fetchErrorResponse` maps the reason to an HTTP status + message (both pure, exported, unit-tested):
   - `{ content }` — success (HTTP 200 with a body over 500 chars)
-  - `{ error: 'blocked' }` — the site answered but served a bot-challenge / thin body / non-2xx. Its own anti-bot protection is refusing a datacenter request.
-  - `{ error: 'unreachable' }` — the request threw (timeout / network / DNS)
+  - `{ error: 'blocked' }` — access refused: a bot-challenge / thin body / 401 / 403. Anti-bot protection refusing a datacenter request. → **HTTP 422**
+  - `{ error: 'not-found' }` — the page is gone (404 / 410), usually a wrong or stale URL — *not* bot protection. → **HTTP 404**
+  - `{ error: 'unreachable' }` — the request threw (timeout / network / DNS), or the site returned a 5xx / 429 (broken/overloaded, retry). → **HTTP 502**
 
-**Why no proxy fallback?** Public CORS proxies (previously `api.codetabs.com` and `api.allorigins.win`) proved unreliable — they rate-limit, return errors, and go down without notice, and their outages surfaced to the user as a misleading "Could not fetch website content". They were also datacenter-hosted, so they got the same bot-challenge as the direct fetch for the sites that most needed a fallback. They were removed; direct fetch handles the common case.
+**Why no proxy fallback?** Public CORS proxies (`api.codetabs.com`, `api.allorigins.win`) proved unreliable — they rate-limit, return errors, and go down without notice, and their outages surfaced to the user as a misleading "Could not fetch website content". They were also datacenter-hosted, so they got the same bot-challenge as the direct fetch for the sites that most needed a fallback. They were removed from the Worker's main fetch path; direct fetch handles the common case. (They still linger in the Instagram-specific path in `worker.js` and in `server.cjs` — see debt note below.)
 
 **Limitations:**
 - Single-page apps may not render fully (no JS execution)
 - **Sites with anti-bot protection block datacenter IPs.** These serve a real page to residential browsers but a "checking your browser" challenge to the Worker. No server-side scraper hosted in a datacenter can reliably get past this — these need manual entry. Extraction returns a `blocked` error telling the user exactly that.
 - JavaScript-rendered content may be incomplete
 
-**Failure messages:** A `blocked` result tells the user the site blocks automated access and to use manual entry (HTTP 422). An `unreachable` result tells them the site may be down and to check the URL (HTTP 502).
+**Failure messages:** `blocked` tells the user the site blocks automated access and to use manual entry (HTTP 422). `not-found` tells them the page wasn't found and to double-check the address (HTTP 404). `unreachable` tells them the site may be down and to check the URL (HTTP 502).
 
 ---
 
@@ -328,8 +328,9 @@ if (response.status === 429 || errorText.includes('rate_limit_error')) {
 
 **What happens:**
 1. Direct server-side `fetch` of the target URL (the only path)
-2. `blocked` — site answered with a bot-challenge / thin body / non-2xx → "This site blocks automated access (bot protection)…" (HTTP 422)
-3. `unreachable` — request threw (timeout / network / DNS) → "Could not reach the website…" (HTTP 502)
+2. `blocked` — bot-challenge / thin body / 401 / 403 → "This site blocks automated access (bot protection)…" (HTTP 422)
+3. `not-found` — 404 / 410 → "We couldn’t find a page at that URL…" (HTTP 404)
+4. `unreachable` — request threw (timeout / network / DNS) or a 5xx / 429 → "Could not reach the website…" (HTTP 502)
 
 **Impact:** Extraction fails; the message tells the user which case it is.
 
@@ -417,19 +418,27 @@ const stats = ExtractionCache.getStats();
 
 ### "This site blocks automated access (bot protection)…"
 
-**Cause:** The direct fetch reached the site, but it served a bot-challenge / thin / non-2xx response (a `blocked` result). The site's anti-bot protection is refusing the Worker's datacenter IP even though it serves a real page to a normal browser.
+**Cause:** The direct fetch reached the site, but it served a bot-challenge / thin body / 401 / 403 (a `blocked` result). The site's anti-bot protection is refusing the Worker's datacenter IP even though it serves a real page to a normal browser.
 
 **Solutions:**
 1. Use **manual entry** — no server-side scraper hosted in a datacenter can reliably beat this challenge.
 2. Try a review site URL (Timeout, Infatuation, etc.) — those are usually not bot-protected.
-3. The Worker log shows the branch: `thin content` or `returned status NNN`.
+3. The Worker log shows the branch: `thin content` or `returned status NNN → <reason>`.
+
+### "We couldn’t find a page at that URL…"
+
+**Cause:** The site returned 404 / 410 (a `not-found` result) — the URL is most likely wrong, mistyped, or the page has moved.
+
+**Solutions:**
+1. Double-check the address for typos, or open it in a browser to find the live URL.
+2. Fall back to manual entry.
 
 ### "Could not reach the website…"
 
-**Cause:** The direct fetch threw — timeout, network, or DNS failure (an `unreachable` result).
+**Cause:** The direct fetch threw — timeout, network, or DNS failure — or the site returned a 5xx / 429 (an `unreachable` result).
 
 **Solutions:**
-1. Try again — transient network issues often clear.
+1. Try again — transient network / overload issues often clear.
 2. Verify the URL loads in a browser and is spelled correctly.
 3. Fall back to manual entry.
 

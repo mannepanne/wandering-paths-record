@@ -96,12 +96,12 @@ describe('useRestaurantExtraction', () => {
     // A failed extraction must not leave the stale advisory hanging around
     vi.mocked(extractRestaurantLocal).mockResolvedValue({
       success: false,
-      error: 'Could not fetch website content',
+      error: 'Could not reach the website — it may be down or slow to respond.',
     });
     await act(async () => {
       await result.current.extractFromUrl('https://example.com');
     });
     expect(result.current.warning).toBeUndefined();
-    expect(result.current.error).toBe('Could not fetch website content');
+    expect(result.current.error).toBe('Could not reach the website — it may be down or slow to respond.');
   });
 });

@@ -102,20 +102,25 @@ async function callClaudeApi(prompt, apiKey) {
   return result.content[0].text;
 }
 
-// Fetch page content: direct server-side fetch first, public proxies as fallback
 // Browser-like User-Agent so sites serve us their real markup rather than a bot page
 const BROWSER_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
-export async function fetchPageWithProxy(url) {
+// Fetch page content by fetching the target directly from the Worker. Workers run
+// server-side with no CORS restriction, so this handles the common case without
+// depending on third-party proxies. Returns:
+//   { content }               on success
+//   { error: 'blocked' }      the site answered but served a bot-challenge / thin
+//                             body / non-2xx — its own anti-bot protection refusing
+//                             a datacenter request; a proxy would be challenged too
+//   { error: 'unreachable' }  the request threw (timeout / network / DNS)
+export async function fetchPageContent(url) {
   // Instagram-specific handling
   if (isInstagramUrl(url)) {
     console.log('🟣 Instagram URL detected, using specialized scraping');
-    return await fetchInstagramContent(url);
+    const content = await fetchInstagramContent(url);
+    return content ? { content } : { error: 'blocked' };
   }
 
-  // Primary path: Workers run server-side with no CORS restriction, so fetch the
-  // target directly. This avoids depending on flaky third-party proxies for the
-  // common case. Proxies remain as a fallback for sites that block datacenter IPs.
   try {
     const response = await fetch(url, {
       headers: {
@@ -130,38 +135,19 @@ export async function fetchPageWithProxy(url) {
       const content = await response.text();
       if (content && content.length > 500) {
         console.log('✅ Content fetched via direct fetch, length:', content.length);
-        return content;
+        return { content };
       }
-      console.log('⚠️ Direct fetch returned thin content, falling back to proxies');
-    } else {
-      console.log('⚠️ Direct fetch returned status', response.status, '- falling back to proxies');
+      // A 200 with a tiny body is the tell-tale sign of a bot-challenge interstitial
+      // ("checking your browser") served to non-residential IPs.
+      console.log('⚠️ Direct fetch returned thin content — likely a bot-challenge page');
+      return { error: 'blocked' };
     }
+    console.log('⚠️ Direct fetch returned status', response.status, '— likely blocking automated access');
+    return { error: 'blocked' };
   } catch (error) {
-    console.log('⚠️ Direct fetch failed:', error.message, '- falling back to proxies');
+    console.log('⚠️ Direct fetch failed:', error.message);
+    return { error: 'unreachable' };
   }
-
-  // Fallback path: public CORS proxies for sites that reject direct datacenter requests
-  const proxies = [
-    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
-    `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`
-  ];
-
-  for (const proxyUrl of proxies) {
-    try {
-      const response = await fetch(proxyUrl, { signal: AbortSignal.timeout(12000) });
-      if (response.ok) {
-        if (proxyUrl.includes('allorigins')) {
-          const data = await response.json();
-          return data.contents;
-        } else {
-          return await response.text();
-        }
-      }
-    } catch (error) {
-      continue;
-    }
-  }
-  return null;
 }
 
 // Check if URL is Instagram
@@ -487,13 +473,18 @@ async function handleRestaurantExtraction(request, env) {
     }
 
     // Fetch main page content
-    const mainContent = await fetchPageWithProxy(url);
-    if (!mainContent) {
+    const fetchResult = await fetchPageContent(url);
+    if (!fetchResult.content) {
+      const blocked = fetchResult.error === 'blocked';
       return Response.json({
         success: false,
-        error: 'Could not fetch website content'
-      }, { status: 500 });
+        reason: fetchResult.error, // 'blocked' | 'unreachable'
+        error: blocked
+          ? 'This site blocks automated access (bot protection), so its details can’t be extracted automatically. Add it using manual entry instead.'
+          : 'Could not reach the website — it may be down or slow to respond. Check the URL, or add it using manual entry.'
+      }, { status: blocked ? 422 : 502 });
     }
+    const mainContent = fetchResult.content;
 
     console.log('📄 Content fetched, length:', mainContent.length);
 

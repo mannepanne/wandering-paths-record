@@ -83,20 +83,21 @@ export const CLAUDE_MAX_TOKENS = {
 3. Fetch up to 3 additional pages
 4. Combine all content for analysis
 
-**Fetch strategy (`fetchPageWithProxy` in `worker.js` / `server.cjs`):**
-1. **Direct fetch first.** The Worker runs server-side with no CORS restriction, so it fetches the target URL directly. This is the common case and avoids any third-party dependency.
-2. **Proxy fallback.** Only if the direct fetch fails (non-2xx, thin body, timeout) does it fall back to public CORS proxies:
-   - `https://api.codetabs.com/v1/proxy`
-   - `https://api.allorigins.win/get`
+**Fetch strategy (`fetchPageContent` in `worker.js`):**
+- **Direct fetch only.** The Worker runs server-side with no CORS restriction, so it fetches the target URL directly with a browser-like User-Agent. No third-party proxy dependency.
+- The result is classified so the user gets an actionable message:
+  - `{ content }` — success (HTTP 200 with a body over 500 chars)
+  - `{ error: 'blocked' }` — the site answered but served a bot-challenge / thin body / non-2xx. Its own anti-bot protection is refusing a datacenter request.
+  - `{ error: 'unreachable' }` — the request threw (timeout / network / DNS)
 
-**Why direct-first?** These free public proxies are unreliable — they rate-limit, return errors, and go down without notice. A proxy outage used to surface to the user as "Could not fetch website content". Direct fetch removes them from the critical path; they remain only for sites that block datacenter IPs.
+**Why no proxy fallback?** Public CORS proxies (previously `api.codetabs.com` and `api.allorigins.win`) proved unreliable — they rate-limit, return errors, and go down without notice, and their outages surfaced to the user as a misleading "Could not fetch website content". They were also datacenter-hosted, so they got the same bot-challenge as the direct fetch for the sites that most needed a fallback. They were removed; direct fetch handles the common case.
 
 **Limitations:**
-- Single-page apps may not render fully (no JS execution in either path)
-- Some sites block datacenter IPs — proxy fallback covers most of these
+- Single-page apps may not render fully (no JS execution)
+- **Sites with anti-bot protection block datacenter IPs.** These serve a real page to residential browsers but a "checking your browser" challenge to the Worker. No server-side scraper hosted in a datacenter can reliably get past this — these need manual entry. Extraction returns a `blocked` error telling the user exactly that.
 - JavaScript-rendered content may be incomplete
 
-**Fallback:** If both direct fetch and proxies fail, extraction returns "Could not fetch website content".
+**Failure messages:** A `blocked` result tells the user the site blocks automated access and to use manual entry (HTTP 422). An `unreachable` result tells them the site may be down and to check the URL (HTTP 502).
 
 ---
 
@@ -325,17 +326,16 @@ if (response.status === 429 || errorText.includes('rate_limit_error')) {
 
 ### Fetch Failures
 
-**Fallback Chain:**
-1. Direct server-side `fetch` of the target URL (primary path)
-2. If that fails, try `api.codetabs.com`
-3. If that fails, try `api.allorigins.win`
-4. If all fail, return null content → "Could not fetch website content"
+**What happens:**
+1. Direct server-side `fetch` of the target URL (the only path)
+2. `blocked` — site answered with a bot-challenge / thin body / non-2xx → "This site blocks automated access (bot protection)…" (HTTP 422)
+3. `unreachable` — request threw (timeout / network / DNS) → "Could not reach the website…" (HTTP 502)
 
-**Impact:** Extraction may fail or return incomplete data
+**Impact:** Extraction fails; the message tells the user which case it is.
 
 **Mitigation:** Ask user to try:
-- Different URL (review site vs. restaurant site)
-- Manual entry as fallback
+- Different URL (review site vs. restaurant site) — a review site often isn't bot-protected
+- Manual entry as fallback (the only option for bot-protected sites)
 
 ### JSON Parsing Errors
 
@@ -415,28 +415,35 @@ const stats = ExtractionCache.getStats();
 1. Review the extracted details and correct anything wrong, then save as normal.
 2. If the content was genuinely wrong (e.g. a hotel lobby page), edit fields or use a review site URL (Timeout, Infatuation, etc.) for richer content.
 
-### "Could not fetch website content"
+### "This site blocks automated access (bot protection)…"
 
-**Cause:** Both the direct fetch and the proxy fallback failed to retrieve the page.
+**Cause:** The direct fetch reached the site, but it served a bot-challenge / thin / non-2xx response (a `blocked` result). The site's anti-bot protection is refusing the Worker's datacenter IP even though it serves a real page to a normal browser.
 
 **Solutions:**
-1. Try again — transient network/proxy issues often clear.
-2. Verify the URL loads in a browser.
-3. For sites that block automated fetches, try a review site URL instead.
-4. Check the Worker observability logs for which path failed.
+1. Use **manual entry** — no server-side scraper hosted in a datacenter can reliably beat this challenge.
+2. Try a review site URL (Timeout, Infatuation, etc.) — those are usually not bot-protected.
+3. The Worker log shows the branch: `thin content` or `returned status NNN`.
+
+### "Could not reach the website…"
+
+**Cause:** The direct fetch threw — timeout, network, or DNS failure (an `unreachable` result).
+
+**Solutions:**
+1. Try again — transient network issues often clear.
+2. Verify the URL loads in a browser and is spelled correctly.
+3. Fall back to manual entry.
 
 ### Incomplete extraction (missing address, phone, etc.)
 
 **Causes:**
 - Website structure not crawler-friendly
 - Content behind JavaScript/authentication
-- Proxies failed to fetch
 
 **Solutions:**
 1. Try again (AI responses vary)
 2. Use review site URL
 3. Fill missing fields manually after extraction
-4. Check browser console for proxy errors
+4. Check the Worker observability logs for the fetch branch
 
 ### Rate limit errors
 

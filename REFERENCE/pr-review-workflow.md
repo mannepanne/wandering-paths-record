@@ -108,7 +108,7 @@ If the triage decision looks wrong, you can interrupt and force a deeper tier wi
 3. **Devil's Advocate** — strategy: is this the right thing to build? Simpler alternatives? Wrong assumptions?
 
 **Phase 1:** Independent review — each reviewer reads the spec and relevant codebase context simultaneously. They do not communicate with each other.
-**Phase 2:** Synthesis — Claude holds all three reports at once, deduplicates, reconciles disagreements, and produces a unified output with an overall recommendation (APPROVED / APPROVED WITH CONDITIONS / NEEDS REVISION)
+**Phase 2:** Synthesis — Claude holds all three reports at once, deduplicates, reconciles disagreements, and produces a unified output with the recommendation on the first line (APPROVED / APPROVED WITH CONDITIONS / NEEDS REVISION), one line per finding, and a divergences section for anything the reports did not settle. The whole assessment fits on one screen unless it has more than eight findings.
 
 The synthesis pairs the lenses deliberately: an alternative the Devil's Advocate proposes is checked against whether the Technical Skeptic costed it as actually simpler; a gap the Requirements Auditor found is weighed against what the Skeptic says filling it costs. Where the reports disagree and nothing settles it, both positions are shown rather than a false consensus.
 
@@ -185,10 +185,12 @@ If a change lands in `light` that deserves deeper review, the failure mode is *s
 - Documentation review: REFERENCE/ currency, CLAUDE.md updates, ABOUT comments, no temporal language
 
 Output format:
-- ✅ **Well Done** – What's good
+- ✅ **Well Done** – What's good (at most three sentences)
 - 🔴 **Critical Issues** – Must fix (blocking)
 - ⚠️ **Suggestions** – Should consider (not blocking)
 - 💡 **Nice-to-Haves** – Optional improvements
+
+Every finding is one to three lines: location, severity, evidence, fix. All reviewer agents inherit this from the [output style contract](../.claude/agents/CLAUDE.md#output-style-contract).
 
 **Team tier:** See the `/review-pr-team` section below.
 
@@ -231,9 +233,10 @@ Output format:
 - The synthesis step reconciles them — a 🔴 raised on an assumption that another reviewer's report disproves gets demoted, and the reasoning is shown
 
 **Output includes:**
-- Findings corroborated by more than one reviewer (the strongest signal in the review)
-- Severity disagreements, either reconciled with the evidence that settled them or recorded as unresolved
-- A single recommendation: BLOCK MERGE / APPROVE WITH CHANGES / APPROVE
+- A single recommendation on the first line: BLOCK MERGE / APPROVE WITH CHANGES / APPROVE
+- One line per finding, with the reviewers who raised it as tags at the end of the line. Two or more tags means the finding was corroborated independently
+- Severity disagreements, either reconciled on the finding's line with the evidence that settled them, or marked unresolved at the higher severity
+- A "Solid" section of at most three sentences, and no per-reviewer count block. The review fits on one screen unless it has more than eight findings; see [`decisions/2026-09-12-plain-review-output.md`](./decisions/2026-09-12-plain-review-output.md)
 
 **Why reviewers don't debate each other.** They did until July 2026. The discussion phase ran long for diminishing returns; its one real product — recalibrating a severity when one reviewer lacked context another had — is something the orchestrator does directly from the reports. See [`decisions/2026-07-09-fan-out-review-synthesis.md`](./decisions/2026-07-09-fan-out-review-synthesis.md).
 
@@ -370,7 +373,7 @@ git diff                 # Review your own changes first
 
 ### Review posted but nothing seems wrong
 - Green light is valuable signal
-- Check "Well Done" section for validation
+- Check the strengths section for validation: "Well Done" in a standard-tier comment, "Solid" in a team-tier one. Three sentences at most, by design
 - Proceed with confidence
 
 ### Want more detail on specific issue
